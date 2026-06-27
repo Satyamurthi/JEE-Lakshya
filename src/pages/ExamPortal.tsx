@@ -344,7 +344,7 @@ const ExamPortal = () => {
         </div>
 
         {/* Question Palette - Desktop Sidebar */}
-        <aside className={`fixed inset-y-0 right-0 z-40 w-80 bg-white border-l border-slate-200 transform ${showPalette ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none`}>
+        <aside className={`fixed lg:relative inset-y-0 lg:inset-auto right-0 lg:right-auto z-40 lg:z-0 w-80 h-full bg-white border-l border-slate-200 transform ${showPalette ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none`}>
           <div className="p-6 border-b border-slate-100 flex items-center justify-between">
              <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Palette</h3>
              <button onClick={() => setShowPalette(false)} className="lg:hidden p-2 text-slate-400 hover:text-slate-600">
