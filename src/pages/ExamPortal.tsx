@@ -112,7 +112,7 @@ const ExamPortal = () => {
     setQuestions(examQuestions);
     setConfig(examConfig);
     
-    const totalDurationSeconds = (examConfig.duration || 180) * 60;
+    const totalDurationSeconds = (examConfig.duration || Math.ceil(examQuestions.length * 2) || 180) * 60;
     const remaining = Math.max(0, totalDurationSeconds - elapsedSeconds);
     setTimeLeft(remaining);
 
@@ -130,7 +130,7 @@ const ExamPortal = () => {
     if (questions.length === 0) return;
 
     const timer = setInterval(() => {
-      let totalDurationSeconds = (config?.duration || 180) * 60;
+      let totalDurationSeconds = (config?.duration || Math.ceil(questions.length * 2) || 180) * 60;
       let startTime = null;
 
       const activeSession = localStorage.getItem('active_session');
