@@ -21,6 +21,59 @@ const ExamPortal = () => {
 
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
 
+  const handleSubmit = useCallback(async () => {
+    setIsSubmitting(true);
+    try {
+      let score = 0;
+      const results = questions.map((q, i) => {
+        const userAnswer = answers[i];
+        const isCorrect = userAnswer === q.correctAnswer;
+        if (isCorrect) score += 4;
+        else if (userAnswer !== undefined) score -= 1;
+        
+        return {
+          ...q,
+          userAnswer,
+          isCorrect
+        };
+      });
+
+      const attemptData = {
+        user_id: profile.id,
+        user_name: profile.full_name,
+        score,
+        total_marks: questions.length * 4,
+        accuracy: questions.length > 0 ? Math.round((results.filter(r => r.isCorrect).length / questions.length) * 100) : 0,
+        config,
+        questions: results,
+        submitted_at: new Date().toISOString()
+      };
+
+      await submitExamAttempt(attemptData);
+      
+      // Clear session
+      localStorage.removeItem('active_session');
+      localStorage.removeItem('active_exam_questions');
+      localStorage.removeItem('active_exam_config');
+      
+      // Clear dynamic start time keys
+      if (config) {
+        const sessionKey = `start_time_${config.type}_${config.date || config.chapter || 'practice'}`;
+        localStorage.removeItem(sessionKey);
+      }
+      
+      // Store result for analytics page
+      localStorage.setItem('last_exam_result', JSON.stringify(attemptData));
+      
+      navigate('/results');
+    } catch (err) {
+      console.error("Submission failed:", err);
+      alert("Submission failed. Please check your connection.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [questions, answers, config, profile, navigate]);
+
   // Load Exam Data
   useEffect(() => {
     const activeSession = localStorage.getItem('active_session');
@@ -29,14 +82,26 @@ const ExamPortal = () => {
 
     let examQuestions = [];
     let examConfig = null;
+    let elapsedSeconds = 0;
 
     if (activeSession) {
       const session = JSON.parse(activeSession);
       examQuestions = session.questions;
       examConfig = { type: session.type, duration: session.durationMinutes };
+      if (session.startTime) {
+        elapsedSeconds = Math.floor((Date.now() - session.startTime) / 1000);
+      }
     } else if (dailyChallenge && dailyConfig) {
       examQuestions = JSON.parse(dailyChallenge);
       examConfig = JSON.parse(dailyConfig);
+
+      const sessionKey = `start_time_${examConfig.type}_${examConfig.date || examConfig.chapter || 'practice'}`;
+      let savedStart = localStorage.getItem(sessionKey);
+      if (!savedStart) {
+        savedStart = Date.now().toString();
+        localStorage.setItem(sessionKey, savedStart);
+      }
+      elapsedSeconds = Math.floor((Date.now() - parseInt(savedStart)) / 1000);
     }
 
     if (!examQuestions || examQuestions.length === 0) {
@@ -46,7 +111,10 @@ const ExamPortal = () => {
 
     setQuestions(examQuestions);
     setConfig(examConfig);
-    setTimeLeft((examConfig.duration || 180) * 60);
+    
+    const totalDurationSeconds = (examConfig.duration || 180) * 60;
+    const remaining = Math.max(0, totalDurationSeconds - elapsedSeconds);
+    setTimeLeft(remaining);
 
     // Initialize status
     const initialStatus: any = {};
@@ -59,17 +127,49 @@ const ExamPortal = () => {
 
   // Timer Logic
   useEffect(() => {
-    if (timeLeft <= 0) {
-      if (questions.length > 0) handleSubmit();
-      return;
-    }
+    if (questions.length === 0) return;
 
     const timer = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+      let totalDurationSeconds = (config?.duration || 180) * 60;
+      let startTime = null;
+
+      const activeSession = localStorage.getItem('active_session');
+      if (activeSession) {
+        try {
+          const session = JSON.parse(activeSession);
+          startTime = session.startTime;
+        } catch (e) {}
+      } else if (config) {
+        const sessionKey = `start_time_${config.type}_${config.date || config.chapter || 'practice'}`;
+        const savedStart = localStorage.getItem(sessionKey);
+        if (savedStart) startTime = parseInt(savedStart);
+      }
+
+      if (startTime) {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const remaining = Math.max(0, totalDurationSeconds - elapsed);
+        
+        setTimeLeft(remaining);
+        
+        if (remaining <= 0) {
+          clearInterval(timer);
+          handleSubmit();
+        }
+      } else {
+        // Fallback tick
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            handleSubmit();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, questions.length, handleSubmit]);
+  }, [questions.length, config, handleSubmit]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -121,52 +221,7 @@ const ExamPortal = () => {
     }
   };
 
-  const handleSubmit = useCallback(async () => {
-    setIsSubmitting(true);
-    try {
-      let score = 0;
-      const results = questions.map((q, i) => {
-        const userAnswer = answers[i];
-        const isCorrect = userAnswer === q.correctAnswer;
-        if (isCorrect) score += 4;
-        else if (userAnswer !== undefined) score -= 1;
-        
-        return {
-          ...q,
-          userAnswer,
-          isCorrect
-        };
-      });
 
-      const attemptData = {
-        user_id: profile.id,
-        user_name: profile.full_name,
-        score,
-        total_marks: questions.length * 4,
-        accuracy: Math.round((results.filter(r => r.isCorrect).length / questions.length) * 100),
-        config,
-        questions: results,
-        submitted_at: new Date().toISOString()
-      };
-
-      await submitExamAttempt(attemptData);
-      
-      // Clear session
-      localStorage.removeItem('active_session');
-      localStorage.removeItem('active_exam_questions');
-      localStorage.removeItem('active_exam_config');
-      
-      // Store result for analytics page
-      localStorage.setItem('last_exam_result', JSON.stringify(attemptData));
-      
-      navigate('/results');
-    } catch (err) {
-      console.error("Submission failed:", err);
-      alert("Submission failed. Please check your connection.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [questions, answers, config, profile, navigate]);
 
   if (questions.length === 0) return null;
 

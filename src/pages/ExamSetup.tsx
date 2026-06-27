@@ -23,40 +23,67 @@ const ExamSetup = () => {
   const preparePaper = async () => {
     setIsPreparing(true);
     setPreparedQuestions([]);
-    setPreparationLogs(["Initializing AI Engine..."]);
+    setPreparationLogs(["Initializing Generation Flow..."]);
     
     const resetProgress = { ...progress };
     selectedSubjects.forEach(s => resetProgress[s] = 'pending');
     setProgress(resetProgress);
     
     try {
-      const allPrepared: any[] = [];
       const totalPerSubject = questionCounts.mcq + questionCounts.numerical;
+      const { saveQuestionsToDB, fetchQuestionsFromDB } = await import('../supabase');
 
-      for (const sub of selectedSubjects) {
+      const generationPromises = selectedSubjects.map(async (sub) => {
         setProgress(prev => ({ ...prev, [sub]: 'loading' }));
-        setPreparationLogs(prev => [...prev, `Requesting ${sub} questions...`]);
+        setPreparationLogs(prev => [...prev, `Attempting AI generation for ${sub}...`]);
         
-        const questions = await generateJEEQuestions(
-            sub, 
-            totalPerSubject, 
-            examType,
-            undefined,
-            undefined,
-            undefined,
-            { mcq: questionCounts.mcq, numerical: questionCounts.numerical }
-        );
+        let questions: any[] = [];
+        let source = "AI engine";
+
+        try {
+          questions = await generateJEEQuestions(
+              sub, 
+              totalPerSubject, 
+              examType,
+              undefined,
+              undefined,
+              undefined,
+              { mcq: questionCounts.mcq, numerical: questionCounts.numerical }
+          );
+
+          if (questions && questions.length > 0) {
+              setPreparationLogs(prev => [...prev, `Saving ${sub} AI questions to database...`]);
+              await saveQuestionsToDB(questions);
+          }
+        } catch (aiErr: any) {
+          setPreparationLogs(prev => [...prev, `⚠️ AI failed for ${sub}. Falling back to DB...`]);
+          source = "Database Fallback";
+          try {
+            questions = await fetchQuestionsFromDB(
+              sub,
+              undefined,
+              undefined,
+              questionCounts.mcq,
+              questionCounts.numerical
+            );
+          } catch (dbErr: any) {
+            console.error(`[ExamSetup] Database fallback failed for ${sub}:`, dbErr);
+          }
+        }
         
         if (questions && questions.length > 0) {
-            allPrepared.push(...questions);
-            const source = questions[0].id.startsWith('ai') ? 'AI engine' : questions[0].id.startsWith('hf') ? 'Hugging Face Dataset' : 'Local Archive';
             setPreparationLogs(prev => [...prev, `✅ ${sub} prepared via ${source}`]);
             setProgress(prev => ({ ...prev, [sub]: 'done' }));
+            return questions;
         } else {
             setPreparationLogs(prev => [...prev, `❌ ${sub} failed completely.`]);
             setProgress(prev => ({ ...prev, [sub]: 'error' }));
+            return [];
         }
-      }
+      });
+
+      const results = await Promise.all(generationPromises);
+      const allPrepared = results.flat();
       
       setPreparedQuestions(allPrepared);
       setPreparationLogs(prev => [...prev, "Paper Synthesis Complete."]);
@@ -70,7 +97,7 @@ const ExamSetup = () => {
 
   const launchExam = () => {
     const qCount = preparedQuestions.length;
-    const duration = Math.ceil(qCount * 2.4);
+    const duration = Math.ceil(qCount * 2);
     const sessionData = {
       type: examType,
       questions: preparedQuestions,
@@ -86,7 +113,7 @@ const ExamSetup = () => {
   };
 
   const totalQuestions = selectedSubjects.length * (questionCounts.mcq + questionCounts.numerical);
-  const estimatedTime = Math.ceil(totalQuestions * 2.4);
+  const estimatedTime = Math.ceil(totalQuestions * 2);
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 pb-12">

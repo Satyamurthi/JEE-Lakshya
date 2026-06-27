@@ -80,9 +80,26 @@ const Signup = () => {
           return;
         }
       } else {
-        setError("Supabase not configured. Enrollment is currently disabled.");
-        setIsLoading(false);
-        return;
+        // Local XAMPP Auth Fallback
+        try {
+          const res = await fetch('http://localhost/api/auth.php?action=signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fullName, email, password })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            // Local signup success
+          } else {
+            setError(data.error || "Local enrollment failed.");
+            setIsLoading(false);
+            return;
+          }
+        } catch (e) {
+          setError("Local XAMPP enrollment backend is unreachable.");
+          setIsLoading(false);
+          return;
+        }
       }
 
       setIsSuccess(true);

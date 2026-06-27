@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Loader2, Crown, Zap, Trash2, Copy, X, Eye, CheckCircle2, Sliders, Atom, Beaker, FunctionSquare, FileUp, FileText, AlertTriangle, Terminal, File, Settings2, Sparkles, Database, ShieldAlert, XCircle, Settings } from 'lucide-react';
-import { supabase, getAllProfiles, updateProfileStatus, deleteProfile, createDailyChallenge, getDailyAttempts, getAllDailyChallenges } from '../supabase';
+import { supabase, getAllProfiles, updateProfileStatus, deleteProfile, createDailyChallenge, getDailyAttempts, getAllDailyChallenges, fetchQuestionsFromDB } from '../supabase';
 import { generateFullJEEDailyPaper, parseDocumentToQuestions } from '../geminiService';
 import { NCERT_CHAPTERS } from '../constants';
 import MathText from '../components/MathText';
@@ -212,10 +212,10 @@ const Admin = () => {
     const lp = localStorage.getItem('user_profile');
     if (lp) {
         try {
-            return JSON.parse(lp).email || 'name@admin.com';
-        } catch { return 'name@admin.com'; }
+            return JSON.parse(lp).email || '';
+        } catch { return ''; }
     }
-    return 'name@admin.com';
+    return '';
   });
   const [signInPassword, setSignInPassword] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -368,31 +368,18 @@ with check (true);
 DO $$
 DECLARE
   new_user_id UUID := gen_random_uuid();
-  satyu_id UUID := gen_random_uuid();
 BEGIN
-  -- Provision name@admin.com
-  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'name@admin.com') THEN
+  -- Provision Admin Account
+  -- REPLACE 'admin@example.com' and 'yourpassword' with your desired credentials
+  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@example.com') THEN
     INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-    VALUES ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', 'name@admin.com', crypt('admin123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name": "System Admin"}', now(), now());
+    VALUES ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', 'admin@example.com', crypt('yourpassword', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name": "System Admin"}', now(), now());
   END IF;
   
-  -- Provision satyu000@gmail.com (Primary Admin)
-  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'satyu000@gmail.com') THEN
-    INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-    VALUES ('00000000-0000-0000-0000-000000000000', satyu_id, 'authenticated', 'authenticated', 'satyu000@gmail.com', crypt('1@Vishruth', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name": "Satyu Admin"}', now(), now());
-  ELSE
-    -- Update password if user already exists
-    UPDATE auth.users SET encrypted_password = crypt('1@Vishruth', gen_salt('bf')) WHERE email = 'satyu000@gmail.com';
-  END IF;
-  
-  -- Ensure admins exist in profiles with correct password and status
+  -- Ensure admin exists in profiles with approved status and password stored
   INSERT INTO public.profiles (id, email, full_name, role, status, password)
-  SELECT id, email, 'System Admin', 'admin', 'approved', 'admin123' FROM auth.users WHERE email = 'name@admin.com'
-  ON CONFLICT (email) DO UPDATE SET role = 'admin', status = 'approved', password = 'admin123';
-
-  INSERT INTO public.profiles (id, email, full_name, role, status, password)
-  SELECT id, email, 'Satyu Admin', 'admin', 'approved', '1@Vishruth' FROM auth.users WHERE email = 'satyu000@gmail.com'
-  ON CONFLICT (email) DO UPDATE SET role = 'admin', status = 'approved', password = '1@Vishruth';
+  SELECT id, email, 'System Admin', 'admin', 'approved', 'yourpassword' FROM auth.users WHERE email = 'admin@example.com'
+  ON CONFLICT (email) DO UPDATE SET role = 'admin', status = 'approved', password = 'yourpassword';
 END $$;
 
 -- 5. APP TABLES RLS
@@ -495,8 +482,48 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
           const result = await generateFullJEEDailyPaper(generationConfig);
           setParsedQuestions([...result.physics, ...result.chemistry, ...result.mathematics]);
           setToast({ message: "Generation Complete!", type: 'success' });
-      } catch (e) { setToast({ message: "Generation Failed", type: 'error' }); }
-      finally { setIsGeneratingAI(false); }
+      } catch (e: any) {
+          console.warn("AI generation failed, falling back to database...", e);
+          setToast({ message: "AI Generation failed. Fetching from database...", type: 'error' });
+          try {
+              const [physicsQs, chemistryQs, mathQs] = await Promise.all([
+                  fetchQuestionsFromDB(
+                      'Physics',
+                      generationConfig.physics.chapters[0] || undefined,
+                      generationConfig.physics.topics,
+                      generationConfig.physics.mcq,
+                      generationConfig.physics.numerical
+                  ),
+                  fetchQuestionsFromDB(
+                      'Chemistry',
+                      generationConfig.chemistry.chapters[0] || undefined,
+                      generationConfig.chemistry.topics,
+                      generationConfig.chemistry.mcq,
+                      generationConfig.chemistry.numerical
+                  ),
+                  fetchQuestionsFromDB(
+                      'Mathematics',
+                      generationConfig.mathematics.chapters[0] || undefined,
+                      generationConfig.mathematics.topics,
+                      generationConfig.mathematics.mcq,
+                      generationConfig.mathematics.numerical
+                  )
+              ]);
+              
+              const allDBQs = [...physicsQs, ...chemistryQs, ...mathQs];
+              if (allDBQs.length > 0) {
+                  setParsedQuestions(allDBQs);
+                  setToast({ message: "Loaded questions from database successfully", type: 'success' });
+              } else {
+                  throw new Error("No questions found in database.");
+              }
+          } catch (dbErr: any) {
+              console.error("Database fallback failed:", dbErr);
+              setToast({ message: "Generation & database fetch both failed.", type: 'error' });
+          }
+      } finally {
+          setIsGeneratingAI(false);
+      }
   };
 
   const handleParseDocument = async () => {
@@ -547,7 +574,7 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                         <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                         <p className="text-[11px] font-bold text-amber-800 leading-relaxed">
                             Cloud writes (Approve/Reject/Delete) require a valid Supabase Auth session. 
-                            Default admin: <code className="bg-amber-100 px-1 rounded">name@admin.com</code>
+                            Please sign in with your administrator credentials.
                         </p>
                     </div>
 
@@ -559,7 +586,7 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                                 value={signInEmail}
                                 onChange={(e) => setSignInEmail(e.target.value)}
                                 className="w-full mt-2 p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                placeholder="name@admin.com"
+                                placeholder="admin@example.com"
                                 required
                             />
                         </div>
@@ -857,6 +884,10 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                         </button>
                     </div>
 
+                    <p className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-100 rounded-xl p-3 text-center leading-normal">
+                      ⚡ <span className="font-extrabold text-slate-700">Performance Alert:</span> AI question generation is now parallelized. It will complete within <span className="font-extrabold text-indigo-600">30 to 60 seconds</span>. Please do not refresh the page.
+                    </p>
+
                     {/* Config Rows - Restored exact style from image */}
                     {!hideConfig && (
                         <div className="space-y-4 overflow-hidden">
@@ -948,7 +979,7 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                                             <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{q.type}</span>
                                         </div>
                                         <MathText className="text-sm font-bold text-slate-700 leading-relaxed">
-                                            {q.statement.substring(0, 200) + (q.statement.length > 200 ? '...' : '')}
+                                            {q.statement}
                                         </MathText>
                                     </div>
                                 ))}

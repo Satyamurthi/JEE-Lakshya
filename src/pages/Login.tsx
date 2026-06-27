@@ -28,7 +28,7 @@ const Login = () => {
       if (supabase) {
         // Attempt real Supabase Auth sign in first (essential for RLS)
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: email.includes('@') ? email : `${email}@admin.com`, // Handle username-only login for admin
+          email: email,
           password: password
         });
 
@@ -54,9 +54,26 @@ const Login = () => {
           }
         }
       } else {
-        setError("Supabase not configured. Authorization is currently disabled.");
-        setIsLoading(false);
-        return;
+        // Local XAMPP Auth Fallback
+        try {
+          const res = await fetch('http://localhost/api/auth.php?action=login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            user = data.user;
+          } else {
+            setError(data.error || "Local authentication failed.");
+            setIsLoading(false);
+            return;
+          }
+        } catch (e) {
+          setError("Local XAMPP authentication backend is unreachable.");
+          setIsLoading(false);
+          return;
+        }
       }
 
       if (!user) {
@@ -186,12 +203,6 @@ const Login = () => {
             <p className="text-slate-400 font-bold text-xs tracking-tight">
               New Aspirant? <Link to="/signup" className="text-indigo-600 hover:underline">Enroll Now</Link>
             </p>
-            <button 
-              onClick={() => { setEmail('name@admin.com'); setPassword('admin123'); }}
-              className="text-[10px] font-black text-slate-300 hover:text-indigo-500 uppercase tracking-widest transition-colors"
-            >
-              System Admin Access (Demo)
-            </button>
           </div>
       </div>
     </div>

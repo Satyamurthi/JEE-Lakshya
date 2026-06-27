@@ -17,6 +17,7 @@ import Results from './pages/Results';
 import Admin from './pages/Admin';
 import Practice from './pages/Practice';
 import Daily from './pages/Daily';
+import Settings from './pages/Settings';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -58,13 +59,13 @@ const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean
     <>
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden"
+          className="no-print fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={toggle}
         />
       )}
       
       <div 
-        className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-slate-900/95 backdrop-blur-2xl border-r border-white/5 shadow-2xl transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] flex flex-col`}
+        className={`no-print fixed inset-y-0 left-0 z-50 w-[280px] bg-slate-900/95 backdrop-blur-2xl border-r border-white/5 shadow-2xl transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] flex flex-col`}
       >
         <div className="p-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -146,7 +147,7 @@ const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean
 const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   return (
-    <header className="sticky top-0 z-30 lg:ml-[280px] transition-all pt-4 px-6 sm:px-10 pb-2">
+    <header className="sticky top-0 z-30 lg:ml-[280px] transition-all pt-4 px-6 sm:px-10 pb-2 no-print">
       <div className="glass-panel rounded-[2rem] px-6 h-20 flex items-center justify-between shadow-sm shadow-slate-200/50">
         <div className="flex items-center gap-6 flex-1">
           <button onClick={toggleSidebar} className="lg:hidden p-3 bg-white text-slate-600 border border-slate-100 rounded-xl shadow-sm active:scale-95 transition-all">
@@ -187,7 +188,7 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
 };
 
 const BackgroundBlobs = () => (
-  <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 select-none">
+  <div className="no-print fixed inset-0 overflow-hidden pointer-events-none -z-10 select-none">
     <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-indigo-200/40 rounded-full mix-blend-multiply filter blur-[120px] opacity-40 animate-blob"></div>
     <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-cyan-200/40 rounded-full mix-blend-multiply filter blur-[120px] opacity-40 animate-blob animation-delay-2000"></div>
     <div className="absolute -bottom-32 left-1/3 w-[600px] h-[600px] bg-pink-200/40 rounded-full mix-blend-multiply filter blur-[120px] opacity-40 animate-blob animation-delay-4000"></div>
@@ -281,6 +282,7 @@ const AppContent = () => {
                         <Route path="/analytics" element={<Analytics />} />
                         <Route path="/history" element={<History />} />
                         <Route path="/results" element={<Results />} />
+                        <Route path="/settings" element={<Settings />} />
                         <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>

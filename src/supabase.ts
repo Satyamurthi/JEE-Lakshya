@@ -53,7 +53,21 @@ const generateId = () => {
 
 export const saveQuestionsToDB = async (questions: any[]) => {
   const formattedQuestions = questions.map(q => ({ ...q, id: q.id || generateId() }));
-  if (!supabase) return;
+  if (!supabase) {
+    try {
+      const res = await fetch('http://localhost/api/questions.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formattedQuestions)
+      });
+      if (!res.ok) {
+        console.warn("Local DB questions save failed with status:", res.status);
+      }
+    } catch (e) {
+      console.warn("Local XAMPP questions save failed:", e);
+    }
+    return;
+  }
   try {
     await supabase.from('questions').upsert(formattedQuestions, { onConflict: 'statement' });
   } catch (e) {
@@ -62,15 +76,39 @@ export const saveQuestionsToDB = async (questions: any[]) => {
 };
 
 export const fetchQuestionsFromDB = async (subject?: string, chapter?: string, topics?: string[], mcqCount: number = 10, numericalCount: number = 0) => {
-  if (!supabase) return [];
+  if (!supabase) {
+    try {
+      let url = `http://localhost/api/questions.php?mcqCount=${mcqCount}&numericalCount=${numericalCount}`;
+      if (subject) url += `&subject=${encodeURIComponent(subject)}`;
+      if (chapter) url += `&chapter=${encodeURIComponent(chapter)}`;
+      const res = await fetch(url);
+      return await res.json() || [];
+    } catch (e) {
+      console.warn("Local XAMPP questions fetch failed:", e);
+      return [];
+    }
+  }
   try {
     const fetchByType = async (type: string, count: number) => {
         if (count <= 0) return [];
-        let query = supabase.from('questions').select('*').eq('type', type);
+        let query = supabase.from('questions').select('id').eq('type', type);
         if (subject) query = query.eq('subject', subject);
         if (chapter) query = query.eq('chapter', chapter);
         if (topics && topics.length > 0) query = query.in('concept', topics); // Assuming 'concept' is used for topics in DB
-        const { data, error } = await query.limit(count).order('created_at', { ascending: false });
+        
+        const { data: idData, error: idError } = await query;
+        if (idError) throw idError;
+        if (!idData || idData.length === 0) return [];
+        
+        // Pick random set of IDs
+        const shuffledIds = idData
+          .map(x => x.id)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, count);
+        
+        if (shuffledIds.length === 0) return [];
+        
+        const { data, error } = await supabase.from('questions').select('*').in('id', shuffledIds);
         if (error) throw error;
         return data || [];
     };
@@ -88,7 +126,19 @@ export const fetchQuestionsFromDB = async (subject?: string, chapter?: string, t
 };
 
 export const submitExamAttempt = async (attempt: any) => {
-  if (!supabase) return { data: null, error: "Supabase not configured" };
+  if (!supabase) {
+    try {
+      const res = await fetch('http://localhost/api/exam_attempts.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attempt)
+      });
+      const data = await res.json();
+      return { data, error: null };
+    } catch (e: any) {
+      return { data: null, error: e.message || "Local attempt submit failed" };
+    }
+  }
   try {
     const { data, error } = await supabase.from('exam_attempts').insert(attempt).select().single();
     return { data, error };
@@ -98,7 +148,14 @@ export const submitExamAttempt = async (attempt: any) => {
 };
 
 export const getUserExamAttempts = async (userId: string) => {
-  if (!supabase) return [];
+  if (!supabase) {
+    try {
+      const res = await fetch(`http://localhost/api/exam_attempts.php?user_id=${encodeURIComponent(userId)}`);
+      return await res.json() || [];
+    } catch (e) {
+      return [];
+    }
+  }
   try {
     const { data, error } = await supabase.from('exam_attempts').select('*').eq('user_id', userId).order('submitted_at', { ascending: false });
     if (error) return [];

@@ -21,69 +21,67 @@ const Practice = () => {
     if (!selectedSubject || !selectedChapter) return;
     
     setIsPreparing(true);
+    let questions: any[] = [];
+    let source = "Gemini AI";
+    
     try {
-      let questions = await fetchQuestionsFromDB(
-        selectedSubject, 
-        selectedChapter, 
-        selectedTopics, 
-        mcqCount, 
-        numericalCount
+      console.log("[Practice] Attempting AI generation first...");
+      const { generateJEEQuestions } = await import('../geminiService');
+      const { saveQuestionsToDB } = await import('../supabase');
+      const { Subject, ExamType } = await import('../types');
+      
+      const subjectEnum = selectedSubject === 'Physics' ? Subject.Physics : 
+                         selectedSubject === 'Chemistry' ? Subject.Chemistry : 
+                         Subject.Mathematics;
+
+      questions = await generateJEEQuestions(
+        subjectEnum,
+        mcqCount + numericalCount,
+        ExamType.Advanced,
+        [selectedChapter],
+        'Medium',
+        selectedTopics,
+        { mcq: mcqCount, numerical: numericalCount }
       );
-      
-      if (questions.length === 0) {
-        // If no questions in DB, try generating them with AI
-        console.log("No questions in DB, generating with AI...");
-        try {
-          const { generateJEEQuestions } = await import('../geminiService');
-          const { saveQuestionsToDB } = await import('../supabase');
-          const { Subject, ExamType } = await import('../types');
-          
-          const subjectEnum = selectedSubject === 'Physics' ? Subject.Physics : 
-                             selectedSubject === 'Chemistry' ? Subject.Chemistry : 
-                             Subject.Mathematics;
 
-          questions = await generateJEEQuestions(
-            subjectEnum,
-            mcqCount + numericalCount,
-            ExamType.Advanced,
-            [selectedChapter],
-            'Medium',
-            selectedTopics,
-            { mcq: mcqCount, numerical: numericalCount }
-          );
-
-          if (questions.length > 0) {
-            // Save to DB for future use
-            await saveQuestionsToDB(questions);
-          }
-        } catch (aiErr: any) {
-          console.error("AI Generation failed:", aiErr);
-          alert("No questions found in database and AI generation failed. Please check your API key or try a different selection.");
-          return;
-        }
+      if (questions && questions.length > 0) {
+        console.log("[Practice] AI generation succeeded. Storing questions in database...");
+        await saveQuestionsToDB(questions);
       }
-      
-      if (questions.length === 0) {
-        alert("No questions found for these criteria. Try adjusting your selection!");
-        return;
+    } catch (aiErr: any) {
+      console.warn("[Practice] AI generation failed or was bypassed. Falling back to database...", aiErr);
+      source = "Local/Cloud Database";
+      try {
+        questions = await fetchQuestionsFromDB(
+          selectedSubject, 
+          selectedChapter, 
+          selectedTopics, 
+          mcqCount, 
+          numericalCount
+        );
+      } catch (dbErr: any) {
+        console.error("[Practice] Database fetch fallback failed:", dbErr);
       }
-
-      localStorage.setItem('active_exam_questions', JSON.stringify(questions));
-      localStorage.setItem('active_exam_config', JSON.stringify({
-        type: 'Chapter Practice',
-        subject: selectedSubject,
-        chapter: selectedChapter,
-        topics: selectedTopics,
-        duration: (mcqCount + numericalCount) * 2 // 2 minutes per question
-      }));
-      
-      navigate('/exam-portal');
-    } catch (err) {
-      console.error("Error starting practice:", err);
-      alert("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsPreparing(false);
     }
+    
+    if (!questions || questions.length === 0) {
+      setIsPreparing(false);
+      alert("AI Generation failed and no fallback questions were found in the database. Please verify your API Key in Settings or check database status.");
+      return;
+    }
+
+    localStorage.setItem('active_exam_questions', JSON.stringify(questions));
+    localStorage.setItem('active_exam_config', JSON.stringify({
+      type: 'Chapter Practice',
+      subject: selectedSubject,
+      chapter: selectedChapter,
+      topics: selectedTopics,
+      source: source,
+      duration: (mcqCount + numericalCount) * 2 // 2 minutes per question
+    }));
+    
+    setIsPreparing(false);
+    navigate('/exam-portal');
   };
 
   const filteredChapters = selectedSubject 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Trophy, Target, CheckCircle2, XCircle, AlertCircle, Brain, Sparkles,
-  ArrowLeft, Download, Share2
+  ArrowLeft, Download, Share2, AlertTriangle, X
 } from 'lucide-react';
 import MathText from '../components/MathText';
 
@@ -10,6 +10,7 @@ const Results = () => {
   const navigate = useNavigate();
   const [result, setResult] = useState<any>(null);
   const [activeSubject, setActiveSubject] = useState<string>('All');
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
   useEffect(() => {
     const lastResult = localStorage.getItem('last_exam_result');
@@ -19,6 +20,13 @@ const Results = () => {
       navigate('/history');
     }
   }, [navigate]);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   if (!result) return null;
 
@@ -36,6 +44,50 @@ const Results = () => {
     totalMarks: result.total_marks
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        setToast({ message: "Report copied to clipboard!", type: 'success' });
+      })
+      .catch(() => {
+        setToast({ message: "Failed to copy report", type: 'error' });
+      });
+  };
+
+  const handleShare = async () => {
+    const examType = result.config?.type || 'Examination';
+    const scoreStr = `${stats.score}/${stats.totalMarks}`;
+    const accStr = `${stats.accuracy}%`;
+    const breakdown = subjects.filter(s => s !== 'All').map(sub => {
+      const subQs = result.questions.filter((q: any) => q.subject === sub);
+      const subCorrect = subQs.filter((q: any) => q.isCorrect).length;
+      const subAcc = subQs.length > 0 ? Math.round((subCorrect / subQs.length) * 100) : 0;
+      return `${sub}: Accuracy ${subAcc}%, Correct: ${subCorrect}/${subQs.length}`;
+    }).join('\n');
+
+    const shareText = `📊 JEE Nexus AI - ${examType} Performance Report\n\n` +
+      `🏆 Final Score: ${scoreStr}\n` +
+      `🎯 Accuracy: ${accStr}\n` +
+      `✅ Correct Questions: ${stats.correct}\n` +
+      `❌ Incorrect Questions: ${stats.incorrect}\n\n` +
+      `📚 Subject Breakdown:\n${breakdown}\n\n` +
+      `Keep learning and practicing on JEE Nexus AI! 🚀`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `JEE Nexus AI - ${examType} Report`,
+          text: shareText,
+        });
+        setToast({ message: "Report shared successfully", type: 'success' });
+      } catch (err) {
+        copyToClipboard(shareText);
+      }
+    } else {
+      copyToClipboard(shareText);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
@@ -43,7 +95,7 @@ const Results = () => {
         <div className="flex items-center gap-6">
           <button 
             onClick={() => navigate('/history')}
-            className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-slate-900 transition-all shadow-sm"
+            className="no-print p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-slate-900 transition-all shadow-sm"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -58,11 +110,17 @@ const Results = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 flex items-center gap-2 hover:bg-slate-50 transition-all">
+        <div className="no-print flex items-center gap-3">
+          <button 
+            onClick={() => window.print()}
+            className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 flex items-center gap-2 hover:bg-slate-50 transition-all"
+          >
             <Download className="w-3.5 h-3.5" /> Export PDF
           </button>
-          <button className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10">
+          <button 
+            onClick={handleShare}
+            className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10"
+          >
             <Share2 className="w-3.5 h-3.5" /> Share Report
           </button>
         </div>
@@ -114,7 +172,7 @@ const Results = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Question Review */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="no-print flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
              <div className="flex gap-2">
                 {subjects.map(sub => (
                   <button
@@ -260,6 +318,17 @@ const Results = () => {
            </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`no-print fixed bottom-8 right-8 z-[200] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-right duration-300 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+            {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+            <p className="text-xs font-black uppercase tracking-widest">{toast.message}</p>
+            <button onClick={() => setToast(null)} className="ml-4 p-1 hover:bg-white/20 rounded-lg transition-colors">
+                <X className="w-4 h-4" />
+            </button>
+        </div>
+      )}
     </div>
   );
 };

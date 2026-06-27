@@ -1,6 +1,6 @@
 
 
-import { Brain, Target, History, Settings, ChevronRight, LayoutGrid, BookOpen, Clock, Activity, Award, User, LogOut, Flame, CalendarClock } from 'lucide-react';
+import { Brain, Target, History, Settings, ChevronRight, LayoutGrid, BookOpen, Clock, Activity, Award, User, LogOut, Flame, CalendarClock, Sliders } from 'lucide-react';
 
 export const APP_NAME = "JEE Nexus AI";
 
@@ -67,5 +67,6 @@ export const MENU_ITEMS = [
   { id: 'practice', label: 'Chapter Practice', icon: <BookOpen className="w-5 h-5" />, path: '/practice' },
   { id: 'history', label: 'History', icon: <History className="w-5 h-5" />, path: '/history' },
   { id: 'analysis', label: 'AI Analytics', icon: <Activity className="w-5 h-5" />, path: '/analytics' },
-  { id: 'admin', label: 'Admin Panel', icon: <Settings className="w-5 h-5" />, path: '/admin' },
+  { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" />, path: '/settings' },
+  { id: 'admin', label: 'Admin Panel', icon: <Sliders className="w-5 h-5" />, path: '/admin' },
 ];

@@ -4,3 +4,59 @@
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  main, .lg\:ml-\[280px\] {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Target the 4 summary cards specifically */
+  .grid.grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4 {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 15px !important;
+  }
+
+  /* Make main layout flow vertically */
+  .lg\:grid-cols-12 {
+    display: block !important;
+  }
+
+  /* Prevent question cards breaking across pages */
+  .bg-white {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 20px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Enforce exact background colors for correctness badges */
+  .bg-slate-900,
+  .bg-emerald-500,
+  .bg-rose-500,
+  .bg-indigo-50,
+  .bg-emerald-50,
+  .bg-rose-50,
+  .bg-indigo-50\/50,
+  .bg-slate-50\/50,
+  .bg-slate-100 {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

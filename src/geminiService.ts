@@ -1,15 +1,29 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Subject, ExamType, Question } from "./types";
 
-const PRIMARY_MODEL = "gemini-2.5-pro";
+const PRIMARY_MODEL = "gemini-2.5-flash";
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const getAIClient = () => {
-    const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
+const getAIClient = (overrideKey?: string) => {
+    const apiKey = overrideKey || localStorage.getItem('user_gemini_api_key') || process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
         throw new Error("AI Generation Failed: Gemini API Key is not configured.");
     }
     return new GoogleGenAI({ apiKey });
+};
+
+export const verifyGeminiAPIKey = async (apiKey: string): Promise<boolean> => {
+  try {
+    const ai = getAIClient(apiKey);
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: "Respond with exactly the word 'OK' if you can read this.",
+    });
+    return response.text?.trim().toUpperCase().includes("OK") || false;
+  } catch (e: any) {
+    console.error("Gemini API Key verification failed:", e);
+    throw new Error(e.message || "Invalid API key or network error.");
+  }
 };
 
 const questionSchema: Schema = {
@@ -36,11 +50,8 @@ const questionSchema: Schema = {
   }
 };
 
-export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }): Promise<Question[]> => {
+const generateJEEQuestionsBatch = async (subject: Subject, count: number, mcqTarget: number, numTarget: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], batchIdx: number = 0, totalBatches: number = 1): Promise<Question[]> => {
   const allQuestions: Question[] = [];
-  let totalMcqTarget = distribution ? distribution.mcq : Math.ceil(count * 0.8);
-  let totalNumTarget = distribution ? distribution.numerical : count - totalMcqTarget;
-  
   const isFullSyllabus = !chapters || chapters.length === 0;
   let topicFocus = isFullSyllabus ? "Full Syllabus" : `Chapters: ${chapters.join(', ')}`;
   if (topics && topics.length > 0) {
@@ -48,18 +59,16 @@ export const generateJEEQuestions = async (subject: Subject, count: number, type
   }
 
   try {
-      console.log(`[AI] Generating ${count} unique questions for ${subject} (MCQ: ${totalMcqTarget}, Num: ${totalNumTarget})...`);
-      
+      console.log(`[AI] [Batch ${batchIdx + 1} of ${totalBatches}] Generating ${count} questions for ${subject} (Batch Target: ${mcqTarget} MCQ, ${numTarget} Num)...`);
       const sessionEntropy = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-      
       const systemInstruction = `You are an expert JEE coach. Your goal is to generate HIGHLY UNIQUE, ORIGINAL, and concept-heavy problems. Do not provide common textbook problems. Use LaTeX for all math. Ensure output matches the exact JSON schema provided. The questions must be correctly formed and sufficient for JEE Advanced level.`;
       
       const prompt = `BatchID: ${sessionEntropy}. 
       Generate EXACTLY ${count} COMPLETELY UNIQUE and NEVER-BEFORE-SEEN questions for ${subject} (${type} level). 
       
       DISTRIBUTION:
-      - Exactly ${totalMcqTarget} Multiple Choice Questions (type: "MCQ")
-      - Exactly ${totalNumTarget} Numerical Value Questions (type: "Numerical")
+      - Exactly ${mcqTarget} Multiple Choice Questions (type: "MCQ")
+      - Exactly ${numTarget} Numerical Value Questions (type: "Numerical")
       
       Scope: ${topicFocus}. 
       Mandatory: Do NOT repeat problems from standard mock tests or previous batches. Vary the parameters, numerical values, and conceptual combinations.
@@ -98,51 +107,68 @@ export const generateJEEQuestions = async (subject: Subject, count: number, type
               }
           } catch (parseErr) {
               console.warn("[AI] JSON Parse Failure on Gemini response.", parseErr);
-              console.log("Raw Response received:", text);
+              throw new Error("Failed to parse AI response into JSON format.");
           }
       }
   } catch (e: any) {
-      console.error("[AI] Gemini API failure:", e.message);
+      console.error(`[AI] [Batch ${batchIdx + 1}] Gemini API failure:`, e.message);
+      throw e;
   }
 
-  let finalMcqs = allQuestions.filter(q => q.type === 'MCQ').slice(0, totalMcqTarget);
-  let finalNums = allQuestions.filter(q => q.type === 'Numerical').slice(0, totalNumTarget);
+  let finalMcqs = allQuestions.filter(q => q.type === 'MCQ').slice(0, mcqTarget);
+  let finalNums = allQuestions.filter(q => q.type === 'Numerical').slice(0, numTarget);
 
-  // PADDING LOGIC: Ensure exact counts are met even if AI under-delivers
-  while (finalMcqs.length < totalMcqTarget) {
-      finalMcqs.push({
-          id: `placeholder-mcq-${Date.now()}-${finalMcqs.length}`,
-          subject: subject,
-          chapter: chapters?.[0] || "General",
-          type: "MCQ",
-          difficulty: "Medium",
-          statement: "AI failed to generate this MCQ. Please regenerate the paper for a complete set.",
-          options: ["Option A", "Option B", "Option C", "Option D"],
-          correctAnswer: "A",
-          solution: "N/A",
-          explanation: "Placeholder due to AI generation shortfall.",
-          concept: "N/A",
-          markingScheme: { positive: 4, negative: 1 }
-      });
-  }
-
-  while (finalNums.length < totalNumTarget) {
-      finalNums.push({
-          id: `placeholder-num-${Date.now()}-${finalNums.length}`,
-          subject: subject,
-          chapter: chapters?.[0] || "General",
-          type: "Numerical",
-          difficulty: "Medium",
-          statement: "AI failed to generate this numerical question. Please regenerate the paper for a complete set.",
-          correctAnswer: "0",
-          solution: "N/A",
-          explanation: "Placeholder due to AI generation shortfall.",
-          concept: "N/A",
-          markingScheme: { positive: 4, negative: 0 }
-      });
+  if (finalMcqs.length < mcqTarget || finalNums.length < numTarget) {
+      throw new Error(`AI generated incomplete set of questions for batch ${batchIdx + 1} (${finalMcqs.length}/${mcqTarget} MCQs and ${finalNums.length}/${numTarget} Numericals).`);
   }
 
   return [...finalMcqs, ...finalNums];
+};
+
+export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }): Promise<Question[]> => {
+  let totalMcqTarget = distribution ? distribution.mcq : Math.ceil(count * 0.8);
+  let totalNumTarget = distribution ? distribution.numerical : count - totalMcqTarget;
+  
+  const BATCH_SIZE = 10;
+  const batches: { mcq: number; numerical: number }[] = [];
+  
+  let remainingMcq = totalMcqTarget;
+  let remainingNum = totalNumTarget;
+  
+  while (remainingMcq > 0 || remainingNum > 0) {
+      let batchMcq = 0;
+      let batchNum = 0;
+      
+      while (batchMcq + batchNum < BATCH_SIZE && (remainingMcq > 0 || remainingNum > 0)) {
+          if (remainingMcq > 0 && batchMcq < Math.ceil(BATCH_SIZE * 0.8)) {
+              batchMcq++;
+              remainingMcq--;
+          } else if (remainingNum > 0) {
+              batchNum++;
+              remainingNum--;
+          } else if (remainingMcq > 0) {
+              batchMcq++;
+              remainingMcq--;
+          }
+      }
+      batches.push({ mcq: batchMcq, numerical: batchNum });
+  }
+
+  console.log(`[AI] Generating ${count} total questions for ${subject} split into ${batches.length} batches...`);
+
+  // Run the batches sequentially within each subject to stay within the free-tier rate limits,
+  // but keep the three subjects running in parallel. This yields massive speedups (under 1 minute total).
+  const results: Question[] = [];
+  for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      const batchQs = await generateJEEQuestionsBatch(subject, batch.mcq + batch.numerical, batch.mcq, batch.numerical, type, chapters, difficulty, topics, i, batches.length);
+      results.push(...batchQs);
+      if (i < batches.length - 1) {
+          await delay(500); // Small pause between batches
+      }
+  }
+
+  return results;
 };
 
 export const getQuickHint = async (statement: string, subject: string): Promise<string> => {
@@ -161,11 +187,12 @@ export const getQuickHint = async (statement: string, subject: string): Promise<
 
 export const generateFullJEEDailyPaper = async (config: any): Promise<{ physics: Question[], chemistry: Question[], mathematics: Question[] }> => {
   try {
-    const physics = await generateJEEQuestions(Subject.Physics, config.physics.mcq + config.physics.numerical, ExamType.Advanced, config.physics.chapters, 'Hard', config.physics.topics, config.physics);
-    await delay(1000);
-    const chemistry = await generateJEEQuestions(Subject.Chemistry, config.chemistry.mcq + config.chemistry.numerical, ExamType.Advanced, config.chemistry.chapters, 'Hard', config.chemistry.topics, config.chemistry);
-    await delay(1000);
-    const mathematics = await generateJEEQuestions(Subject.Mathematics, config.mathematics.mcq + config.mathematics.numerical, ExamType.Advanced, config.mathematics.chapters, 'Hard', config.mathematics.topics, config.mathematics);
+    // Generate all 3 subjects in parallel
+    const [physics, chemistry, mathematics] = await Promise.all([
+      generateJEEQuestions(Subject.Physics, config.physics.mcq + config.physics.numerical, ExamType.Advanced, config.physics.chapters, 'Hard', config.physics.topics, config.physics),
+      generateJEEQuestions(Subject.Chemistry, config.chemistry.mcq + config.chemistry.numerical, ExamType.Advanced, config.chemistry.chapters, 'Hard', config.chemistry.topics, config.chemistry),
+      generateJEEQuestions(Subject.Mathematics, config.mathematics.mcq + config.mathematics.numerical, ExamType.Advanced, config.mathematics.chapters, 'Hard', config.mathematics.topics, config.mathematics)
+    ]);
     return { physics, chemistry, mathematics };
   } catch (error) {
     console.error("Full paper generation failed:", error);

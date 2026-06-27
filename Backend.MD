@@ -26,6 +26,7 @@ create table if not exists public.profiles (
   id uuid references auth.users on delete cascade not null primary key,
   email text unique not null,
   full_name text,
+  password text, -- Added for custom credentials verification
   role text default 'student' check (role in ('student', 'admin')),
   status text default 'pending' check (status in ('pending', 'approved', 'rejected')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
@@ -103,6 +104,9 @@ alter table public.profiles enable row level security;
 drop policy if exists "Public profiles are viewable by everyone" on profiles;
 create policy "Public profiles are viewable by everyone" on profiles for select using (true);
 
+drop policy if exists "Enable insert for all signup users" on profiles;
+create policy "Enable insert for all signup users" on profiles for insert with check (true);
+
 drop policy if exists "Users can update own profile" on profiles;
 create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
 
@@ -117,6 +121,9 @@ create policy "Read questions" on questions for select using (true);
 drop policy if exists "Insert questions" on questions;
 create policy "Insert questions" on questions for insert with check (true);
 
+drop policy if exists "Delete questions" on questions;
+create policy "Delete questions" on questions for delete using (true);
+
 -- Daily Challenges RLS
 alter table public.daily_challenges enable row level security;
 drop policy if exists "Public Read Daily" on daily_challenges;
@@ -128,10 +135,16 @@ create policy "Public Insert Daily" on daily_challenges for insert with check (t
 drop policy if exists "Public Update Daily" on daily_challenges;
 create policy "Public Update Daily" on daily_challenges for update using (true);
 
+drop policy if exists "Public Delete Daily" on daily_challenges;
+create policy "Public Delete Daily" on daily_challenges for delete using (true);
+
 -- Daily Attempts RLS
 alter table public.daily_attempts enable row level security;
 drop policy if exists "Users can insert own attempts" on daily_attempts;
 create policy "Users can insert own attempts" on daily_attempts for insert with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own attempts" on daily_attempts;
+create policy "Users can update own attempts" on daily_attempts for update using (auth.uid() = user_id);
 
 drop policy if exists "Users can view own attempts" on daily_attempts;
 create policy "Users can view own attempts" on daily_attempts for select using (auth.uid() = user_id);
@@ -149,6 +162,32 @@ create policy "Users can view own exam attempts" on exam_attempts for select usi
 
 drop policy if exists "Admins view all exam attempts" on exam_attempts;
 create policy "Admins view all exam attempts" on exam_attempts for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
+-- 5. PROFILE SYNC TRIGGER (Best Practice)
+-- Automatically creates a public profile record when a user registers in Supabase Auth
+create or replace function public.handle_new_user()
+returns trigger
+security definer set search_path = public
+language plpgsql
+as $$
+begin
+  insert into public.profiles (id, email, full_name, role, status)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', 'Student'),
+    'student',
+    'pending'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
 ```
 
 ## Step 2: Connect the App
