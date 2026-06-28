@@ -4,16 +4,12 @@ from PIL import Image, ImageDraw
 def draw_brain_icon(size):
     # Create high-resolution canvas
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
     
-    # Draw rounded square with vertical purple-to-pink gradient
-    corner_radius = int(size * 0.22)
-    
-    # Create gradient image
+    # Create gradient background
     gradient = Image.new("RGBA", (size, size))
     g_draw = ImageDraw.Draw(gradient)
     
-    # Colors: top violet #8B5CF6 (139, 92, 246) to bottom pink #EC4899 (236, 72, 153)
+    # Gradient: top violet #8B5CF6 (139, 92, 246) to bottom pink #EC4899 (236, 72, 153)
     c1 = (139, 92, 246)
     c2 = (236, 72, 153)
     
@@ -24,6 +20,7 @@ def draw_brain_icon(size):
         g_draw.line([(0, y), (size, y)], fill=(r, g, b, 255))
         
     # Create mask for rounded rect
+    corner_radius = int(size * 0.22)
     mask = Image.new("L", (size, size), 0)
     m_draw = ImageDraw.Draw(mask)
     m_draw.rounded_rectangle([(0, 0), (size - 1, size - 1)], radius=corner_radius, fill=255)
@@ -34,8 +31,6 @@ def draw_brain_icon(size):
     
     # Draw white brain lines in center
     stroke_w = max(2, int(size * 0.05))
-    
-    # Left hemisphere arcs & curves
     cx, cy = size / 2, size / 2
     scale = size / 100.0
     
@@ -76,14 +71,17 @@ res_dir = r"d:\JEE\Android\app\src\main\res"
 
 for folder, s in sizes.items():
     target_path = os.path.join(res_dir, folder)
-    os.makedirs(target_path, exist_ok=True)
+    if os.path.exists(target_path):
+        # Remove duplicate webp files to prevent Android resource linking conflicts
+        for f in os.listdir(target_path):
+            if f.endswith('.webp'):
+                os.remove(os.path.join(target_path, f))
     
+    os.makedirs(target_path, exist_ok=True)
     icon_img = draw_brain_icon(s)
     
-    # Save as PNG & WEBP to ensure full compatibility across all Android versions
+    # Save clean PNG files
     icon_img.save(os.path.join(target_path, "ic_launcher.png"))
     icon_img.save(os.path.join(target_path, "ic_launcher_round.png"))
-    icon_img.save(os.path.join(target_path, "ic_launcher.webp"))
-    icon_img.save(os.path.join(target_path, "ic_launcher_round.webp"))
 
-print("All Android app icons successfully generated!")
+print("Clean PNG app icons successfully generated and duplicate webp files removed!")
