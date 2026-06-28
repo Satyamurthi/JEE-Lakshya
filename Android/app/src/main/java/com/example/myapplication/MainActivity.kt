@@ -33,7 +33,6 @@ class MainActivity : AppCompatActivity() {
         val webSettings: WebSettings = webView.settings
         webSettings.javaScriptEnabled = true
         webSettings.domStorageEnabled = true
-        webSettings.databaseEnabled = true
         webSettings.allowFileAccess = true
         webSettings.allowContentAccess = true
         webSettings.loadWithOverviewMode = true
