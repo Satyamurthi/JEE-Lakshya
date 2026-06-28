@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Award, Target, TrendingUp, BookOpen, ChevronRight, Brain, Flame, Activity, Zap, Layers, Crown } from 'lucide-react';
+import { Award, Target, TrendingUp, BookOpen, ChevronRight, Brain, Flame, Activity, Zap, Layers, Crown, Sparkles, X, Loader2, CheckCircle2 } from 'lucide-react';
+
+import { getUserExamAttempts, getUserAllDailyAttempts } from '../supabase';
 
 const StatCard = ({ Icon, label, value, subValue, gradient, delay }: any) => (
   <div 
@@ -45,105 +47,140 @@ const Dashboard = () => {
     
     // Extract unique dates (YYYY-MM-DD)
     const dates = Array.from(new Set(history.map((h: any) => {
-        return new Date(h.completedAt).toISOString().split('T')[0];
-    }))).sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime());
+        const d = h.completedAt || h.submitted_at || h.date || h.created_at;
+        if (!d) return null;
+        try { return new Date(d).toISOString().split('T')[0]; } catch(e) { return null; }
+    }).filter(Boolean))).sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime());
 
     if (dates.length === 0) return 0;
 
     const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
-    // If latest exam wasn't today or yesterday, streak is broken (0)
-    // However, if they have past history but missed yesterday, it's 0. 
-    // If they did one today, it starts at 1.
-    if (dates[0] !== today && dates[0] !== yesterday) return 0;
-
+    // If they completed a test today or yesterday, streak is active
     let streak = 1;
-    let currentDate = new Date(dates[0]);
+    if (dates[0] !== today && dates[0] !== yesterday) {
+      // If they have completed tests, treat active streak as at least 1 for completed sessions
+      return Math.min(dates.length, 1);
+    }
 
+    let currentDate = new Date(dates[0]);
     for (let i = 1; i < dates.length; i++) {
         const prevDate = new Date(dates[i]);
         const diffTime = Math.abs(currentDate.getTime() - prevDate.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 
         if (diffDays === 1) {
-        streak++;
-        currentDate = prevDate;
+          streak++;
+          currentDate = prevDate;
         } else {
-        break;
+          break;
         }
     }
     return streak;
   };
 
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [inputApiKey, setInputApiKey] = useState('');
+  const [isRemedialModalOpen, setIsRemedialModalOpen] = useState(false);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+
   useEffect(() => {
-    // 1. Load Profile
-    const profileRaw = localStorage.getItem('user_profile');
-    if (profileRaw) setProfile(JSON.parse(profileRaw));
+    const loadDashboardData = async () => {
+      setLoading(true);
+      const profileRaw = localStorage.getItem('user_profile');
+      const userProf = profileRaw ? JSON.parse(profileRaw) : {};
+      setProfile(userProf);
 
-    // 2. Load and Compute Stats from History
-    const historyRaw = localStorage.getItem('exam_history');
-    const history = historyRaw ? JSON.parse(historyRaw) : [];
+      const activeStream = localStorage.getItem('active_stream') || userProf.selected_stream || 'JEE Main & Advanced';
+      const isNeet = activeStream.toLowerCase().includes('neet');
+      const defaultDiagnosticTopics = isNeet 
+        ? ['Cell Structure & Function', 'Genetics & Inheritance', 'Human Physiology']
+        : ['Rotational Dynamics', 'Complex Numbers', 'Chemical Thermodynamics'];
 
-    // Calculate Streak
-    const currentStreak = calculateStreak(history);
+      const historyRaw = localStorage.getItem('exam_history');
+      let combinedHistory = historyRaw ? JSON.parse(historyRaw) : [];
 
-    if (history.length > 0) {
-      const totalScore = history.reduce((acc: number, curr: any) => acc + (curr.score || 0), 0);
-      const avgAcc = history.reduce((acc: number, curr: any) => acc + (curr.accuracy || 0), 0) / history.length;
-      
-      // Mock Percentile Algorithm (Logarithmic scale based on accuracy)
-      const estPercentile = Math.min(99.9, (Math.log10(avgAcc + 10) * 48)).toFixed(1);
-
-      setStats({
-        avgScore: Math.round(totalScore / history.length),
-        accuracy: Math.round(avgAcc),
-        percentile: parseFloat(estPercentile),
-        testsTaken: history.length,
-        streak: currentStreak
-      });
-
-      // 3. Compute Weak Areas dynamically from ALL questions in history
-      const conceptMap: Record<string, { total: number, correct: number }> = {};
-    
-      history.forEach((h: any) => {
-          if (h.questions) {
-              h.questions.forEach((q: any) => {
-                  // Use chapter or concept as key. Fallback to Subject if missing.
-                  const key = q.chapter || q.concept || q.subject || "General Concepts";
-                  if (!conceptMap[key]) conceptMap[key] = { total: 0, correct: 0 };
-                  conceptMap[key].total++;
-                  if (q.isCorrect) conceptMap[key].correct++;
-              });
-          }
-      });
-      
-      // Convert to array and sort by accuracy (ascending -> weakest first)
-      const performance = Object.entries(conceptMap)
-        .map(([name, stats]) => ({
-            name,
-            accuracy: (stats.correct / stats.total) * 100,
-            count: stats.total
-        }))
-        .filter(p => p.count >= 1) // Only consider topics with attempts
-        .sort((a, b) => a.accuracy - b.accuracy); 
-      
-      if (performance.length > 0) {
-          setWeakAreas(performance.slice(0, 3).map(p => p.name));
-      } else {
-          setWeakAreas(['Kinematics', 'Chemical Bonding', 'Calculus Basics']); // Fallbacks
+      if (userProf && userProf.id) {
+        try {
+          const remoteExams = await getUserExamAttempts(userProf.id);
+          const remoteDaily = await getUserAllDailyAttempts(userProf.id);
+          if (Array.isArray(remoteExams) && remoteExams.length > 0) combinedHistory = [...combinedHistory, ...remoteExams];
+          if (Array.isArray(remoteDaily) && remoteDaily.length > 0) combinedHistory = [...combinedHistory, ...remoteDaily];
+        } catch (e) {
+          console.warn("Could not load remote attempts for dashboard:", e);
+        }
       }
-      
-      // 4. Set Recent Activity
-      setRecentActivity(history.slice(0, 4)); // Top 4
-    } else {
-        // Defaults for new user
-        setStats({ avgScore: 0, accuracy: 0, percentile: 0, testsTaken: 0, streak: 0 });
-        setWeakAreas(['Kinematics', 'Chemical Bonding', 'Calculus Basics']);
-    }
 
-    setLoading(false);
+      const history = combinedHistory.filter((item: any, index: number, self: any[]) =>
+        index === self.findIndex((t: any) => (t.id && t.id === item.id) || (t.submitted_at && t.submitted_at === item.submitted_at))
+      );
+
+      const currentStreak = calculateStreak(history);
+
+      if (history.length > 0) {
+        const totalScore = history.reduce((acc: number, curr: any) => acc + (curr.score || 0), 0);
+        const avgAcc = history.reduce((acc: number, curr: any) => {
+          const total = curr.total_marks || curr.totalQuestions || 100;
+          const score = curr.score || 0;
+          return acc + (total > 0 ? (score / total) * 100 : 0);
+        }, 0) / history.length;
+        
+        const estPercentile = Math.min(99.9, (Math.log10(avgAcc + 10) * 48)).toFixed(1);
+
+        setStats({
+          avgScore: Math.round(totalScore / history.length),
+          accuracy: Math.round(avgAcc),
+          percentile: parseFloat(estPercentile),
+          testsTaken: history.length,
+          streak: currentStreak > 0 ? currentStreak : 1
+        });
+
+        const conceptMap: Record<string, { total: number, correct: number }> = {};
+        history.forEach((h: any) => {
+            let questionsList = h.questions;
+            if (typeof questionsList === 'string') {
+              try { questionsList = JSON.parse(questionsList); } catch (e) { questionsList = []; }
+            }
+            if (Array.isArray(questionsList)) {
+                questionsList.forEach((q: any) => {
+                    const key = q.chapter || q.concept || q.subject || "General Concepts";
+                    if (!conceptMap[key]) conceptMap[key] = { total: 0, correct: 0 };
+                    conceptMap[key].total++;
+                    if (q.isCorrect) conceptMap[key].correct++;
+                });
+            }
+        });
+        
+        const performance = Object.entries(conceptMap)
+          .map(([name, s]) => ({ name, accuracy: (s.correct / s.total) * 100, count: s.total }))
+          .filter(p => p.count >= 1)
+          .sort((a, b) => a.accuracy - b.accuracy); 
+        
+        if (history.length > 0 && performance.length > 0) {
+            setWeakAreas(performance.slice(0, 3).map(p => p.name));
+        } else {
+            setWeakAreas([]);
+        }
+        
+        setRecentActivity(history.slice(0, 4));
+      } else {
+          setStats({ avgScore: 0, accuracy: 0, percentile: 0, testsTaken: 0, streak: 0 });
+          setWeakAreas([]);
+      }
+      setLoading(false);
+    };
+    loadDashboardData();
   }, []);
+
+  const handleTriggerRemedialPlan = () => {
+    const savedKey = localStorage.getItem('user_gemini_api_key');
+    if (!savedKey) {
+      setIsApiKeyModalOpen(true);
+      return;
+    }
+    navigate('/exam-setup');
+  };
 
   const getGreeting = () => {
       const hour = new Date().getHours();
@@ -162,6 +199,12 @@ const Dashboard = () => {
                 <Crown className="w-3 h-3 text-yellow-400" />
                 Premium Aspirant
              </span>
+             {profile.selected_stream && (
+               <span className="px-4 py-1.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-indigo-200/50">
+                  <Brain className="w-3.5 h-3.5 text-indigo-600" />
+                  {profile.selected_stream}
+               </span>
+             )}
              <span className="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                 <Activity className="w-3 h-3" />
                 Systems Online
@@ -292,80 +335,208 @@ const Dashboard = () => {
              
              <div className="space-y-4 relative z-10">
                {weakAreas.length > 0 ? weakAreas.map((area, i) => (
-                 <div key={i} className="flex items-center justify-between p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 hover:bg-white hover:shadow-lg hover:shadow-fuchsia-100/50 hover:border-fuchsia-100 transition-all cursor-pointer group">
-                    <div className="flex items-center gap-4">
-                        <span className="text-xs font-black text-slate-300">0{i+1}</span>
-                        <p className="text-sm font-bold text-slate-700 group-hover:text-fuchsia-700 transition-colors line-clamp-1">{area}</p>
+                  <div key={i} className="flex items-center justify-between p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 hover:bg-white hover:shadow-lg hover:shadow-fuchsia-100/50 hover:border-fuchsia-100 transition-all cursor-pointer group">
+                     <div className="flex items-center gap-4">
+                         <span className="text-xs font-black text-slate-300">0{i+1}</span>
+                         <p className="text-sm font-bold text-slate-700 group-hover:text-fuchsia-700 transition-colors line-clamp-1">{area}</p>
+                     </div>
+                     <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-fuchsia-500" />
+                  </div>
+                )) : (
+                  <div className="p-6 bg-slate-50/70 rounded-[2rem] border border-dashed border-slate-200 text-center space-y-3">
+                    <div className="w-10 h-10 bg-fuchsia-100 text-fuchsia-600 rounded-xl flex items-center justify-center mx-auto shadow-sm">
+                      <Brain className="w-5 h-5" />
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-fuchsia-500" />
-                 </div>
-               )) : (
-                 <div className="text-center p-4 text-slate-400 text-sm font-medium">No performance data yet.</div>
+                    <p className="text-xs font-bold text-slate-600 leading-relaxed">
+                      AI Engine Ready: Complete an examination session to activate real-time performance profiling and lock specific chapters.
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <button onClick={handleTriggerRemedialPlan} className="w-full mt-8 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-200">
+                 <Sparkles className="w-4 h-4 text-fuchsia-400" />
+                 Generate Remedial Plan
+              </button>
+         </div>
+
+         {/* Live Feed */}
+         <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-premium">
+             <div className="flex items-center justify-between mb-8">
+                 <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
+                     <Activity className="w-6 h-6 text-blue-500" />
+                     Activity Log
+                 </h3>
+                 <button 
+                   onClick={() => navigate('/history')}
+                   className="px-5 py-2 bg-slate-50 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-all"
+                 >
+                   View All
+                 </button>
+             </div>
+
+             <div className="space-y-4">
+               {recentActivity.length === 0 ? (
+                   <div className="p-8 text-center bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200">
+                       <p className="text-slate-400 font-medium text-sm">No recent activity detected. Start a simulation to populate data.</p>
+                   </div>
+               ) : (
+                   recentActivity.map((item, idx) => (
+                     <div key={idx} onClick={() => { localStorage.setItem('last_exam_result', JSON.stringify(item)); navigate('/results'); }} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-white rounded-[2rem] border border-slate-100 hover:border-blue-200 transition-all cursor-pointer group shadow-sm hover:shadow-xl hover:shadow-blue-100/50">
+                       <div className="flex items-center gap-5 mb-4 sm:mb-0">
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold shadow-md ${
+                             item.score > (item.totalPossible * 0.7) ? 'bg-emerald-500 shadow-emerald-200' : 'bg-indigo-500 shadow-indigo-200'
+                          }`}>
+                             {item.totalPossible > 0 ? Math.round((item.score/item.totalPossible)*10) : '-'}
+                          </div>
+                          <div>
+                             <p className="font-bold text-slate-900 text-lg group-hover:text-blue-700 transition-colors">{item.type || 'Standard Drill'}</p>
+                             <div className="flex items-center gap-3 mt-1">
+                                 <span className="text-xs text-slate-400 font-bold uppercase tracking-wide">
+                                     {(() => {
+                                       const dRaw = item.completedAt || item.submitted_at || item.created_at || item.date;
+                                       if (!dRaw) return 'Today';
+                                       const dObj = new Date(dRaw);
+                                       return isNaN(dObj.getTime()) ? 'Today' : dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                     })()}
+                                 </span>
+                                 <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                 <span className="text-xs font-bold text-slate-500">
+                                   {item.accuracy !== undefined ? item.accuracy : (item.total_marks > 0 ? Math.round(((item.score || 0) / item.total_marks) * 100) : 0)}% Acc
+                                 </span>
+                             </div>
+                          </div>
+                       </div>
+                       
+                       <div className="flex items-center gap-6 sm:pl-6 sm:border-l border-slate-100">
+                         <div className="text-right">
+                             <p className="text-2xl font-black text-slate-900">{item.score}</p>
+                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Score</p>
+                         </div>
+                         <div className="h-10 w-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
+                             <ChevronRight className="w-5 h-5" />
+                         </div>
+                       </div>
+                     </div>
+                   ))
                )}
              </div>
-             
-             <button onClick={() => navigate('/practice')} className="w-full mt-8 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all">
-                Generate Remedial Plan
-             </button>
-        </div>
-
-        {/* Live Feed */}
-        <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-premium">
-            <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
-                    <Activity className="w-6 h-6 text-blue-500" />
-                    Activity Log
-                </h3>
-                <button 
-                  onClick={() => navigate('/history')}
-                  className="px-5 py-2 bg-slate-50 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-all"
-                >
-                  View All
-                </button>
-            </div>
-
-            <div className="space-y-4">
-              {recentActivity.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200">
-                      <p className="text-slate-400 font-medium text-sm">No recent activity detected. Start a simulation to populate data.</p>
-                  </div>
-              ) : (
-                  recentActivity.map((item, idx) => (
-                    <div key={idx} onClick={() => { localStorage.setItem('last_exam_result', JSON.stringify(item)); navigate('/results'); }} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-white rounded-[2rem] border border-slate-100 hover:border-blue-200 transition-all cursor-pointer group shadow-sm hover:shadow-xl hover:shadow-blue-100/50">
-                      <div className="flex items-center gap-5 mb-4 sm:mb-0">
-                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold shadow-md ${
-                            item.score > (item.totalPossible * 0.7) ? 'bg-emerald-500 shadow-emerald-200' : 'bg-indigo-500 shadow-indigo-200'
-                         }`}>
-                            {item.totalPossible > 0 ? Math.round((item.score/item.totalPossible)*10) : '-'}
-                         </div>
-                         <div>
-                            <p className="font-bold text-slate-900 text-lg group-hover:text-blue-700 transition-colors">{item.type || 'Standard Drill'}</p>
-                            <div className="flex items-center gap-3 mt-1">
-                                <span className="text-xs text-slate-400 font-bold uppercase tracking-wide">
-                                    {new Date(item.completedAt).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}
-                                </span>
-                                <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                <span className="text-xs font-bold text-slate-500">{item.accuracy}% Acc</span>
-                            </div>
-                         </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-6 sm:pl-6 sm:border-l border-slate-100">
-                        <div className="text-right">
-                            <p className="text-2xl font-black text-slate-900">{item.score}</p>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Score</p>
-                        </div>
-                        <div className="h-10 w-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
-                            <ChevronRight className="w-5 h-5" />
-                        </div>
-                      </div>
-                    </div>
-                  ))
-              )}
-            </div>
-        </div>
+         </div>
 
       </div>
+
+      {/* API Key Modal */}
+      {isApiKeyModalOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl border border-slate-200 relative overflow-hidden animate-in zoom-in duration-300">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 tracking-tight">Gemini API Key Required</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unlock AI Examination Terminal</p>
+                </div>
+              </div>
+              <button onClick={() => setIsApiKeyModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!inputApiKey.trim()) return alert("Please enter a valid API Key.");
+              localStorage.setItem('user_gemini_api_key', inputApiKey.trim());
+              setIsApiKeyModalOpen(false);
+              navigate('/exam-setup');
+            }} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Enter Google Gemini API Key</label>
+                <input
+                  type="password"
+                  required
+                  value={inputApiKey}
+                  onChange={(e) => setInputApiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-200"
+              >
+                Save Key & Start Test
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Remedial Plan Modal */}
+      {isRemedialModalOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-xl p-8 md:p-10 shadow-2xl border border-slate-200 relative overflow-hidden animate-in zoom-in duration-300 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-fuchsia-50 text-fuchsia-600 rounded-2xl">
+                  <Brain className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 tracking-tight">AI Cognitive Remedial Plan</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Personalized 3-Step Mastery Roadmap</p>
+                </div>
+              </div>
+              <button onClick={() => setIsRemedialModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            {isGeneratingPlan ? (
+              <div className="py-12 text-center space-y-4">
+                <Loader2 className="w-10 h-10 text-fuchsia-600 animate-spin mx-auto" />
+                <p className="text-sm font-black text-slate-800">Synthesizing Remedial Modules via Gemini AI...</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="p-4 bg-fuchsia-50/60 border border-fuchsia-100 rounded-2xl space-y-2">
+                  <div className="flex items-center gap-2 text-fuchsia-900 font-black text-xs uppercase tracking-wider">
+                    <Sparkles className="w-4 h-4 text-fuchsia-600" />
+                    <span>Target Concept Refinement</span>
+                  </div>
+                  <p className="text-xs text-fuchsia-800 font-medium leading-relaxed">
+                    Based on your analytics, our AI engine has isolated high-priority topics for focused drills: <strong>{weakAreas.join(', ')}</strong>.
+                  </p>
+                </div>
+
+                {weakAreas.map((topic, idx) => (
+                  <div key={idx} className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2.5 py-1 rounded-md">Step 0{idx + 1} Protocol</span>
+                      <span className="text-[10px] font-black text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Recommended</span>
+                    </div>
+                    <h4 className="text-sm font-black text-slate-900">{topic} Refinement Module</h4>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                      Complete 15 high-yield practice MCQs focusing on core formulas, reaction mechanisms, and boundary cases.
+                    </p>
+                  </div>
+                ))}
+
+                <button
+                  onClick={() => {
+                    setIsRemedialModalOpen(false);
+                    navigate('/practice');
+                  }}
+                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
+                >
+                  Start Remedial Practice Drills Now
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

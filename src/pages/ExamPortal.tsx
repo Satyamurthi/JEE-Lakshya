@@ -4,7 +4,7 @@ import {
   Clock, ChevronLeft, ChevronRight, CheckCircle2, Flag, 
   RotateCcw, Send, Menu, X, Brain
 } from 'lucide-react';
-import { submitExamAttempt } from '../supabase';
+import { submitExamAttempt, submitDailyAttempt } from '../supabase';
 import MathText from '../components/MathText';
 
 const ExamPortal = () => {
@@ -49,7 +49,37 @@ const ExamPortal = () => {
         submitted_at: new Date().toISOString()
       };
 
-      await submitExamAttempt(attemptData);
+      let submitResult;
+      if (config && config.type === 'Daily Challenge') {
+        const dailyAttemptData = {
+          user_id: profile.id,
+          challenge_id: config.challenge_id,
+          score,
+          total_marks: questions.length * 4,
+          paid: config.paid || false,
+          stats: {
+            accuracy: attemptData.accuracy
+          },
+          attempt_data: results,
+          submitted_at: new Date().toISOString()
+        };
+        submitResult = await submitDailyAttempt(dailyAttemptData);
+        
+        // If independent, simulate emailing results
+        const isIndependent = profile.role === 'student' && !profile.admin_id;
+        if (isIndependent && (!submitResult || !submitResult.error)) {
+          localStorage.setItem('show_email_notification', 'true');
+        }
+      } else {
+        submitResult = await submitExamAttempt(attemptData);
+      }
+
+      if (submitResult && submitResult.error) {
+        console.error("Submission failed to save in Database:", submitResult.error);
+        alert(`Submission failed: ${submitResult.error.message || JSON.stringify(submitResult.error)}`);
+        setIsSubmitting(false);
+        return;
+      }
       
       // Clear session
       localStorage.removeItem('active_session');
@@ -80,28 +110,17 @@ const ExamPortal = () => {
     const dailyChallenge = localStorage.getItem('active_exam_questions');
     const dailyConfig = localStorage.getItem('active_exam_config');
 
-    let examQuestions = [];
-    let examConfig = null;
+    let examQuestions: any[] = [];
+    let examConfig: any = null;
     let elapsedSeconds = 0;
 
     if (activeSession) {
       const session = JSON.parse(activeSession);
-      examQuestions = session.questions;
+      examQuestions = session.questions || [];
       examConfig = { type: session.type, duration: session.durationMinutes };
-      if (session.startTime) {
-        elapsedSeconds = Math.floor((Date.now() - session.startTime) / 1000);
-      }
     } else if (dailyChallenge && dailyConfig) {
-      examQuestions = JSON.parse(dailyChallenge);
+      examQuestions = JSON.parse(dailyChallenge) || [];
       examConfig = JSON.parse(dailyConfig);
-
-      const sessionKey = `start_time_${examConfig.type}_${examConfig.date || examConfig.chapter || 'practice'}`;
-      let savedStart = localStorage.getItem(sessionKey);
-      if (!savedStart) {
-        savedStart = Date.now().toString();
-        localStorage.setItem(sessionKey, savedStart);
-      }
-      elapsedSeconds = Math.floor((Date.now() - parseInt(savedStart)) / 1000);
     }
 
     if (!examQuestions || examQuestions.length === 0) {
@@ -109,11 +128,33 @@ const ExamPortal = () => {
       return;
     }
 
+    let durationMins = (examConfig && examConfig.duration) || 30;
+    if (examQuestions.length >= 60 || (examConfig && examConfig.type && (examConfig.type.includes('PYQ') || examConfig.type.includes('Full')))) {
+      durationMins = 180;
+    }
+    const totalDurationSeconds = durationMins * 60;
+
+    if (activeSession) {
+      const session = JSON.parse(activeSession);
+      if (!session.startTime || (Math.floor((Date.now() - session.startTime) / 1000) >= totalDurationSeconds)) {
+        session.startTime = Date.now();
+        localStorage.setItem('active_session', JSON.stringify(session));
+      }
+      elapsedSeconds = Math.floor((Date.now() - session.startTime) / 1000);
+    } else if (dailyConfig) {
+      const sessionKey = `start_time_${examConfig.type}_${examConfig.date || examConfig.chapter || 'practice'}`;
+      let savedStart = localStorage.getItem(sessionKey);
+      if (!savedStart || (Math.floor((Date.now() - parseInt(savedStart)) / 1000) >= totalDurationSeconds)) {
+        savedStart = Date.now().toString();
+        localStorage.setItem(sessionKey, savedStart);
+      }
+      elapsedSeconds = Math.floor((Date.now() - parseInt(savedStart)) / 1000);
+    }
+
     setQuestions(examQuestions);
     setConfig(examConfig);
     
-    const totalDurationSeconds = (examConfig.duration || Math.ceil(examQuestions.length * 2) || 180) * 60;
-    const remaining = Math.max(0, totalDurationSeconds - elapsedSeconds);
+    const remaining = Math.max(1, totalDurationSeconds - elapsedSeconds);
     setTimeLeft(remaining);
 
     // Initialize status
@@ -130,7 +171,11 @@ const ExamPortal = () => {
     if (questions.length === 0) return;
 
     const timer = setInterval(() => {
-      let totalDurationSeconds = (config?.duration || Math.ceil(questions.length * 2) || 180) * 60;
+      let durationMins = config?.duration || 180;
+      if (questions.length >= 60 || (config?.type && (config.type.includes('PYQ') || config.type.includes('Full')))) {
+        durationMins = 180;
+      }
+      let totalDurationSeconds = durationMins * 60;
       let startTime = null;
 
       const activeSession = localStorage.getItem('active_session');

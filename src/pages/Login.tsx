@@ -89,6 +89,12 @@ const Login = () => {
         return;
       }
 
+      // Auto-elevate satyu000@gmail.com to super_admin
+      if (user.email === 'satyu000@gmail.com') {
+        user.role = 'super_admin';
+        user.status = 'approved';
+      }
+
       // Check for approval status
       if (user.status !== 'approved') {
         setError("Your account is pending approval from the administrator. Please check back later.");
@@ -100,6 +106,12 @@ const Login = () => {
       // For a real production app, we would use supabase.auth.signInWithPassword here.
       localStorage.setItem('user_profile', JSON.stringify(user));
       
+      // Auto-switch database instance to the user's selected stream
+      if (user.selected_stream) {
+        const { switchSupabaseBackend } = await import('../supabase');
+        switchSupabaseBackend(user.selected_stream);
+      }
+      
       // If we got here but didn't have a Supabase session, we should warn the user if they are an admin
       if (user.role === 'admin' && supabase) {
           const { data: { session } } = await supabase.auth.getSession();
@@ -108,7 +120,13 @@ const Login = () => {
           }
       }
 
-      navigate('/');
+      if (user.role === 'super_admin') {
+        navigate('/super-admin');
+      } else if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       console.error("Login error:", err);
       setError("An unexpected error occurred during authorization.");

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Key, Eye, EyeOff, Save, Trash2, CheckCircle2, AlertCircle, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
-import { verifyGeminiAPIKey } from '../geminiService';
 
 const Settings = () => {
   const [apiKey, setApiKey] = useState('');
@@ -29,6 +28,7 @@ const Settings = () => {
     setVerifyError('');
 
     try {
+      const { verifyGeminiAPIKey } = await import('../geminiService');
       const isValid = await verifyGeminiAPIKey(apiKey.trim());
       if (isValid) {
         localStorage.setItem('user_gemini_api_key', apiKey.trim());
@@ -102,8 +102,15 @@ const Settings = () => {
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500">Google Gemini API Key</label>
               <div className="relative flex items-center">
+                <input type="text" name="chrome_prevent_autofill_email_settings" style={{ display: 'none' }} tabIndex={-1} readOnly />
+                <input type="password" name="chrome_prevent_autofill_pass_settings" style={{ display: 'none' }} tabIndex={-1} readOnly />
                 <input
                   type={showKey ? "text" : "password"}
+                  name="gemini_user_api_key_field"
+                  id="gemini_user_api_key_field"
+                  autoComplete="off"
+                  readOnly
+                  onFocus={(e) => e.target.removeAttribute('readonly')}
                   value={apiKey}
                   onChange={(e) => {
                     setApiKey(e.target.value);

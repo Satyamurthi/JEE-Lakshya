@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { ReactNode, FC } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { LogOut, Bell, Search, Menu, Brain, ChevronLeft, Sparkles, Download, WifiOff } from 'lucide-react';
+import { LogOut, Bell, Search, Menu, Brain, ChevronLeft, Sparkles, Download, WifiOff, ShieldAlert, Lock, Shield, Snowflake, Ban, Layers, Crown, Sliders, Zap } from 'lucide-react';
 import { MENU_ITEMS, APP_NAME } from './constants';
 import { supabase } from './supabase';
 
@@ -18,6 +18,8 @@ import Admin from './pages/Admin';
 import Practice from './pages/Practice';
 import Daily from './pages/Daily';
 import Settings from './pages/Settings';
+import SuperAdmin from './pages/SuperAdmin';
+import YearWisePYQ from './pages/YearWisePYQ';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -32,6 +34,39 @@ const ProtectedRoute: FC<{ children: ReactNode }> = ({ children }) => {
   const profileRaw = localStorage.getItem('user_profile');
   if (!profileRaw) return <Navigate to="/login" replace />;
   const profile = JSON.parse(profileRaw);
+  
+  if (profile.status === 'frozen') {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white">
+        <div className="bg-slate-800/80 p-10 rounded-[2.5rem] border border-slate-700/80 shadow-2xl max-w-lg space-y-6 relative overflow-hidden animate-in zoom-in duration-300">
+          <div className="w-20 h-20 bg-cyan-500/10 text-cyan-400 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-cyan-500/20">
+            <Snowflake className="w-10 h-10 animate-spin-slow" />
+          </div>
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400 bg-cyan-500/10 px-4 py-1.5 rounded-full border border-cyan-500/20">
+              Account Suspended / Frozen
+            </span>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tight pt-2">Access Frozen by Super Admin</h2>
+            <p className="text-xs font-bold text-slate-400 leading-relaxed">
+              {profile.role === 'admin' 
+                ? 'Your Coaching Administrator account has been frozen by the Super Admin. All administrative functions and student accesses under your coaching institute are suspended.' 
+                : 'Access for your coaching institute has been frozen by the Super Admin. Please contact your coaching institute administrator.'}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              localStorage.removeItem('user_profile');
+              window.location.href = '#/login';
+            }}
+            className="w-full py-4 bg-slate-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-600 transition-all shadow-lg"
+          >
+            Return to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (profile.status !== 'approved') return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
@@ -40,8 +75,108 @@ const AdminRoute: FC<{ children: ReactNode }> = ({ children }) => {
   const profileRaw = localStorage.getItem('user_profile');
   if (!profileRaw) return <Navigate to="/login" replace />;
   const profile = JSON.parse(profileRaw);
-  if (profile.role !== 'admin') return <Navigate to="/" replace />;
+  if (profile.role !== 'admin' && profile.role !== 'super_admin') return <Navigate to="/" replace />;
   return <>{children}</>;
+};
+
+const SuperAdminRoute: FC<{ children: ReactNode }> = ({ children }) => {
+  const profileRaw = localStorage.getItem('user_profile');
+  if (!profileRaw) return <Navigate to="/login" replace />;
+  const profile = JSON.parse(profileRaw);
+  if (profile.role !== 'super_admin') return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
+const StudentModuleRoute: FC<{ children: ReactNode; moduleKey?: string }> = ({ children, moduleKey }) => {
+  const [liveProfile, setLiveProfile] = useState<any>(() => {
+    const profileRaw = localStorage.getItem('user_profile');
+    return profileRaw ? JSON.parse(profileRaw) : null;
+  });
+  const [syncing, setSyncing] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const syncProfile = async () => {
+      const stored = localStorage.getItem('user_profile');
+      if (!stored) {
+        if (isMounted) setSyncing(false);
+        return;
+      }
+      const parsed = JSON.parse(stored);
+      if (parsed.selected_stream) {
+        const { switchSupabaseBackend } = await import('./supabase');
+        switchSupabaseBackend(parsed.selected_stream);
+      }
+      if (supabase && parsed.id) {
+        try {
+          const { data } = await supabase.from('profiles').select('*').eq('id', parsed.id).maybeSingle();
+          if (data && isMounted) {
+            const merged = { ...parsed, ...data };
+            localStorage.setItem('user_profile', JSON.stringify(merged));
+            setLiveProfile(merged);
+          }
+        } catch (e) {
+          console.warn("Profile sync warning:", e);
+        }
+      }
+      if (isMounted) setSyncing(false);
+    };
+    syncProfile();
+    return () => { isMounted = false; };
+  }, [moduleKey]);
+
+  if (!liveProfile) return <Navigate to="/login" replace />;
+
+  if (liveProfile.role === 'admin') {
+    const isMasterPermission = !!liveProfile.super_admin_permission;
+    const isSpecificPermission = moduleKey ? !!liveProfile[moduleKey] : false;
+    const isGranted = isMasterPermission || isSpecificPermission;
+
+    if (!isGranted && !syncing) {
+      return (
+        <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
+          <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-2xl max-w-lg space-y-6 relative overflow-hidden">
+            <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-amber-100/60">
+              <Lock className="w-10 h-10" />
+            </div>
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 bg-amber-50 px-4 py-1.5 rounded-full border border-amber-100">
+                Coaching Admin Restricted
+              </span>
+              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight pt-2">Module Access Locked</h2>
+              <p className="text-xs font-bold text-slate-500 leading-relaxed">
+                This testing module is currently locked for your admin account. Super Admin can configure individual permissions for Daily Challenges, Full Exams, and Chapter Practice.
+              </p>
+            </div>
+            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-left space-y-3">
+              <div className="flex items-center gap-2 text-slate-700 font-black text-xs uppercase tracking-wider">
+                <ShieldAlert className="w-4 h-4 text-amber-500" />
+                <span>How to unlock this specific module?</span>
+              </div>
+              <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                Ask your Super Admin to click "Grant All" or enable individual module permissions for your Coaching Admin account.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+  return <>{children}</>;
+};
+
+const getDisplayBrand = (profile: any) => {
+  if (!profile || !profile.role) return "Lakshya";
+  const stream = profile.selected_stream || localStorage.getItem('active_stream') || "";
+  if (stream.toLowerCase().includes("jee")) return "JEE Lakshya";
+  if (stream.toLowerCase().includes("neet")) return "NEET Lakshya";
+  if (stream.toLowerCase().includes("kcet")) return "KCET Lakshya";
+  if (stream.toLowerCase().includes("upsc")) return "UPSC Lakshya";
+  if (stream) {
+    const shortName = stream.split(' ')[0];
+    return `${shortName} Lakshya`;
+  }
+  return "Lakshya";
 };
 
 const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean, toggle: () => void, installPrompt: any, onInstall: () => void }) => {
@@ -72,7 +207,7 @@ const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean
             <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20">
               <Brain className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-black text-white tracking-tight">{APP_NAME}</span>
+            <span className="text-xl font-black text-white tracking-tight">{getDisplayBrand(profile)}</span>
           </div>
           <button onClick={toggle} className="lg:hidden p-2 text-slate-400 hover:text-white rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6" />
@@ -82,6 +217,7 @@ const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean
         <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto custom-scrollbar pt-4">
           {MENU_ITEMS.map((item) => {
             if (item.id === 'admin' && profile.role !== 'admin') return null;
+            if (item.id === 'super-admin' && profile.role !== 'super_admin') return null;
             const isActive = location.pathname === item.path;
             return (
               <button
@@ -130,6 +266,18 @@ const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{profile.role}</p>
               </div>
             </div>
+            {profile.role === 'super_admin' && (
+              <button 
+                onClick={() => {
+                  sessionStorage.removeItem('super_admin_stream_selected');
+                  window.location.reload();
+                }}
+                className="flex items-center justify-center w-full px-4 py-3 text-[10px] font-black text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl hover:bg-amber-500 hover:text-white transition-all shadow-sm group mb-2"
+              >
+                <Layers className="w-3.5 h-3.5 mr-2 group-hover:rotate-45 transition-transform" />
+                Switch Stream
+              </button>
+            )}
             <button 
               onClick={handleLogout}
               className="flex items-center justify-center w-full px-4 py-3 text-[10px] font-black text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm group"
@@ -146,9 +294,36 @@ const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean
 
 const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(3);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [editName, setEditName] = useState(profile.full_name || '');
+  const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatar_url || '');
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const updated = { ...profile, full_name: editName, avatar_url: editAvatarUrl };
+    localStorage.setItem('user_profile', JSON.stringify(updated));
+    if (supabase && profile.id) {
+      try {
+        await supabase.from('profiles').update({ full_name: editName, avatar_url: editAvatarUrl }).eq('id', profile.id);
+      } catch (err) {
+        console.warn("Profile update warning:", err);
+      }
+    }
+    setIsEditProfileModalOpen(false);
+    window.location.reload();
+  };
+
+  const notifications = [
+    { id: 1, title: "Daily Challenge Published", desc: "Today's high-impact 10-Q paper is live.", time: "10m ago", icon: "⚡" },
+    { id: 2, title: "Cognitive Sync Active", desc: "AI performance tracking updated across modules.", time: "1h ago", icon: "🤖" },
+    { id: 3, title: "Streak Milestone", desc: "You maintain a multi-day study streak!", time: "3h ago", icon: "🔥" }
+  ];
+
   return (
     <header className="sticky top-0 z-30 lg:ml-[280px] transition-all pt-4 px-6 sm:px-10 pb-2 no-print">
-      <div className="glass-panel rounded-[2rem] px-6 h-20 flex items-center justify-between shadow-sm shadow-slate-200/50">
+      <div className="glass-panel rounded-[2rem] px-6 h-20 flex items-center justify-between shadow-sm shadow-slate-200/50 relative">
         <div className="flex items-center gap-6 flex-1">
           <button onClick={toggleSidebar} className="lg:hidden p-3 bg-white text-slate-600 border border-slate-100 rounded-xl shadow-sm active:scale-95 transition-all">
             <Menu className="w-5 h-5" />
@@ -156,9 +331,16 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
           
           <div className="hidden lg:flex items-center w-[360px]">
             <div className="relative w-full group">
+              <input type="text" name="chrome_prevent_autofill_email" style={{ display: 'none' }} tabIndex={-1} readOnly />
+              <input type="password" name="chrome_prevent_autofill_pass" style={{ display: 'none' }} tabIndex={-1} readOnly />
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input
-                type="text"
+                type="search"
+                name="app_global_terminal_search"
+                id="app_global_terminal_search"
+                autoComplete="off"
+                readOnly
+                onFocus={(e) => e.target.removeAttribute('readonly')}
                 placeholder="Search topics, modules, insights..."
                 className="w-full pl-12 pr-6 py-3 bg-white/50 border border-slate-200 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 rounded-2xl text-xs font-bold outline-none transition-all placeholder:text-slate-400"
               />
@@ -171,18 +353,108 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
              <Sparkles className="w-3 h-3 text-indigo-600 fill-indigo-600 animate-pulse" />
              <span className="text-[9px] font-black text-indigo-700 uppercase tracking-widest">Cognitive Sync</span>
           </div>
-          <button className="p-3 text-slate-400 hover:bg-white hover:text-indigo-600 rounded-2xl relative transition-all border border-transparent hover:border-slate-100">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
+          
+          <div className="relative">
+            <button 
+              onClick={() => { setShowNotifications(!showNotifications); setUnreadCount(0); }}
+              className="p-3 text-slate-400 hover:bg-white hover:text-indigo-600 rounded-2xl relative transition-all border border-transparent hover:border-slate-100"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-ping"></span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                  <h4 className="text-xs font-black uppercase text-slate-900 tracking-wider">System Alerts</h4>
+                  <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md">Live</span>
+                </div>
+                <div className="space-y-4 max-h-72 overflow-y-auto custom-scrollbar">
+                  {notifications.map((n) => (
+                    <div key={n.id} className="flex gap-3 items-start p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-indigo-50/40 transition-colors">
+                      <span className="text-base">{n.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <p className="text-xs font-black text-slate-800 truncate">{n.title}</p>
+                          <span className="text-[8px] font-bold text-slate-400">{n.time}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-medium leading-relaxed">{n.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="w-[1px] h-8 bg-slate-200 hidden sm:block mx-2" />
           <div className="flex items-center gap-4 pl-1">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 flex items-center justify-center text-white font-black shadow-lg shadow-slate-900/20 ring-4 ring-white">
-              {(profile.full_name || 'U').substring(0, 1).toUpperCase()}
-            </div>
+            <button 
+              onClick={() => setIsEditProfileModalOpen(true)}
+              className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-slate-900 via-indigo-950 to-slate-800 flex items-center justify-center text-white font-black shadow-lg shadow-slate-900/20 ring-4 ring-white hover:scale-105 transition-all cursor-pointer overflow-hidden"
+              title="Click to Edit Profile & Avatar"
+            >
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt="Profile Avatar" className="w-full h-full object-cover" />
+              ) : (
+                (profile.full_name || 'U').substring(0, 1).toUpperCase()
+              )}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditProfileModalOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl border border-slate-200 relative overflow-hidden animate-in zoom-in duration-300">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">Edit Profile & Avatar</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Update account identity</p>
+              </div>
+              <button onClick={() => setIsEditProfileModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Profile Picture URL (Optional)</label>
+                <input
+                  type="url"
+                  placeholder="https://images.unsplash.com/..."
+                  value={editAvatarUrl}
+                  onChange={(e) => setEditAvatarUrl(e.target.value)}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-4 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                >
+                  Save Profile Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
@@ -230,6 +502,73 @@ const AppContent = () => {
     }
   };
 
+  const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  const isSuperAdmin = profile.role === 'super_admin';
+  const hasSelectedStream = !!sessionStorage.getItem('super_admin_stream_selected');
+  const showStreamSelect = isSuperAdmin && !hasSelectedStream && !isAuth;
+
+  if (showStreamSelect) {
+    return (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-slate-900/95 backdrop-blur-xl">
+        <div className="bg-white rounded-[2.5rem] w-full max-w-3xl p-10 md:p-14 space-y-10 shadow-2xl border border-white/10">
+          <div className="text-center space-y-4">
+            <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-indigo-100/60">
+              <Brain className="w-10 h-10 animate-pulse" />
+            </div>
+            <h2 className="text-4xl font-black text-slate-900 tracking-tight">Select Active Stream</h2>
+            <p className="text-slate-500 font-bold text-sm max-w-md mx-auto">
+              Welcome Super Admin. Please select the academic stream you want to enter. This dynamically connects to the respective Supabase database backend.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { name: 'JEE Main & Advanced', icon: Brain, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100 hover:border-blue-300', desc: 'Vite/Supabase JEE Instance' },
+              { name: 'NEET UG', icon: Crown, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100 hover:border-emerald-300', desc: 'Vite/Supabase NEET Instance' },
+              { name: 'KCET', icon: Sliders, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100 hover:border-indigo-300', desc: 'Vite/Supabase Karnataka CET Instance' },
+              { name: 'UPSC', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100 hover:border-amber-300', desc: 'Vite/Supabase Civil Services Instance' }
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.name}
+                  onClick={async () => {
+                    const { switchSupabaseBackend } = await import('./supabase');
+                    switchSupabaseBackend(item.name);
+                    sessionStorage.setItem('super_admin_stream_selected', 'true');
+                    window.location.reload();
+                  }}
+                  className={`p-6 rounded-3xl border text-left transition-all hover:scale-[1.02] flex items-start gap-4 ${item.bg}`}
+                >
+                  <div className={`p-3 rounded-2xl bg-white shadow-md ${item.color}`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-slate-900 text-base">{item.name}</h4>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">{item.desc}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          
+          <div className="pt-4 text-center">
+            <button
+              onClick={async () => {
+                if (supabase) await supabase.auth.signOut();
+                localStorage.removeItem('user_profile');
+                window.location.reload();
+              }}
+              className="px-6 py-3 text-red-500 bg-red-50 hover:bg-red-100 transition-all font-bold text-xs uppercase tracking-widest rounded-xl"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f1f5f9] text-[#0f172a] selection:bg-indigo-100 selection:text-indigo-900">
         {isOffline && (
@@ -276,14 +615,16 @@ const AppContent = () => {
                     <div className="w-full">
                       <Routes>
                         <Route path="/" element={<Dashboard />} />
-                        <Route path="/daily" element={<Daily />} />
-                        <Route path="/exam-setup" element={<ExamSetup />} />
-                        <Route path="/practice" element={<Practice />} />
+                        <Route path="/daily" element={<StudentModuleRoute moduleKey="can_access_daily"><Daily /></StudentModuleRoute>} />
+                        <Route path="/exam-setup" element={<StudentModuleRoute moduleKey="can_access_full_exam"><ExamSetup /></StudentModuleRoute>} />
+                        <Route path="/practice" element={<StudentModuleRoute moduleKey="can_access_practice"><Practice /></StudentModuleRoute>} />
+                        <Route path="/pyqs" element={<YearWisePYQ />} />
                         <Route path="/analytics" element={<Analytics />} />
                         <Route path="/history" element={<History />} />
                         <Route path="/results" element={<Results />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                        <Route path="/super-admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
                     </div>

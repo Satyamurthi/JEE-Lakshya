@@ -15,8 +15,8 @@ const getEnv = (key: string) => {
 };
 
 // --- CONFIGURATION ---
-const PROVIDED_URL = process.env.SUPABASE_URL || '';
-const PROVIDED_KEY = process.env.SUPABASE_ANON_KEY || '';
+const PROVIDED_URL = process.env.SUPABASE_URL || 'https://daitgcrjlimjajmqoemm.supabase.co';
+const PROVIDED_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhaXRnY3JqbGltamFqbXFvZW1tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1Nzc0MjIsImV4cCI6MjA5ODE1MzQyMn0.gGGHEQaVL0aXPkI-u5CMSPod5BazzBEAKr2ZfxnBh6Y';
 
 const getCustomConfig = () => {
   if (typeof window === 'undefined') return { url: '', key: '' };
@@ -40,19 +40,111 @@ if (supabaseAnonKey) {
     supabaseAnonKey = supabaseAnonKey.trim();
 }
 
-export const supabase = (supabaseUrl && supabaseAnonKey) 
+// Initial client instance
+let activeClient = (supabaseUrl && supabaseAnonKey) 
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
 
-export const isSupabaseConfigured = () => !!supabase;
+// Proxy wrapper that routes calls to the currently activeClient
+export const supabase = new Proxy({} as any, {
+  get(target, prop) {
+    if (!activeClient) return null;
+    const value = (activeClient as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(activeClient);
+    }
+    return value;
+  }
+});
+
+export const isSupabaseConfigured = () => !!activeClient;
+
+// Dynamic client switcher
+export const switchSupabaseBackend = (stream: string) => {
+  localStorage.setItem('active_stream', stream);
+  
+  let url = supabaseUrl;
+  let key = supabaseAnonKey;
+  
+  if (stream === 'NEET UG') {
+    url = getEnv('NEET_SUPABASE_URL') || getEnv('VITE_NEET_SUPABASE_URL') || supabaseUrl;
+    key = getEnv('NEET_SUPABASE_ANON_KEY') || getEnv('VITE_NEET_SUPABASE_ANON_KEY') || supabaseAnonKey;
+  } else if (stream === 'KCET') {
+    url = getEnv('KCET_SUPABASE_URL') || getEnv('VITE_KCET_SUPABASE_URL') || supabaseUrl;
+    key = getEnv('KCET_SUPABASE_ANON_KEY') || getEnv('VITE_KCET_SUPABASE_ANON_KEY') || supabaseAnonKey;
+  } else if (stream === 'UPSC') {
+    url = getEnv('UPSC_SUPABASE_URL') || getEnv('VITE_UPSC_SUPABASE_URL') || supabaseUrl;
+    key = getEnv('UPSC_SUPABASE_ANON_KEY') || getEnv('VITE_UPSC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+  }
+  
+  if (url && key) {
+    url = url.trim().replace(/\.\.co$/, '.supabase.co').replace(/\.supabase\.supabase\.co$/, '.supabase.co');
+    if (!url.startsWith('http')) {
+      url = `https://${url}`;
+    }
+    key = key.trim();
+    activeClient = createClient(url, key);
+  }
+  
+  window.dispatchEvent(new Event('supabase_client_changed'));
+};
+
+// Auto-switch to persisted stream backend on load if any
+const savedStream = localStorage.getItem('active_stream');
+if (savedStream && savedStream !== 'JEE Main & Advanced') {
+  switchSupabaseBackend(savedStream);
+}
 
 const generateId = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return Math.random().toString(36).substring(2, 15);
 };
 
+export const normalizeQuestionOptions = (options: any) => {
+  if (Array.isArray(options)) {
+    const identifiers = ["A", "B", "C", "D"];
+    const obj: any = {};
+    options.forEach((opt, idx) => {
+      if (idx < identifiers.length) {
+        obj[identifiers[idx]] = opt;
+      }
+    });
+    return obj;
+  }
+  return options || {};
+};
+
 export const saveQuestionsToDB = async (questions: any[]) => {
-  const formattedQuestions = questions.map(q => ({ ...q, id: q.id || generateId() }));
+  // Dedup questions within the incoming batch first by statement
+  const seenStatements = new Set<string>();
+  const uniqueInputQuestions: any[] = [];
+  for (const q of questions) {
+    if (q && q.statement) {
+      const trimmedStatement = q.statement.trim();
+      if (!seenStatements.has(trimmedStatement)) {
+        seenStatements.add(trimmedStatement);
+        uniqueInputQuestions.push(q);
+      }
+    }
+  }
+
+  if (uniqueInputQuestions.length === 0) return;
+
+  const formattedQuestions = uniqueInputQuestions.map(q => ({
+    id: q.id || generateId(),
+    subject: q.subject,
+    chapter: q.chapter || q.concept || 'General',
+    type: q.type || 'MCQ',
+    difficulty: q.difficulty || 'Medium',
+    statement: q.statement.trim(),
+    options: normalizeQuestionOptions(q.options),
+    correctAnswer: String(q.correctAnswer),
+    solution: q.solution || q.explanation || 'No explanation available.',
+    explanation: q.explanation || q.solution || 'No explanation available.',
+    concept: q.concept || q.chapter || 'General',
+    markingScheme: q.markingScheme || { positive: 4, negative: q.type === 'Numerical' ? 0 : 1 }
+  }));
+
   if (!supabase) {
     try {
       const res = await fetch('http://localhost/api/questions.php', {
@@ -68,10 +160,29 @@ export const saveQuestionsToDB = async (questions: any[]) => {
     }
     return;
   }
+
   try {
-    await supabase.from('questions').upsert(formattedQuestions, { onConflict: 'statement' });
+    // Query existing questions in Supabase by matching statement text
+    const statements = formattedQuestions.map(q => q.statement);
+    const { data: existing, error: fetchError } = await supabase
+      .from('questions')
+      .select('statement')
+      .in('statement', statements);
+
+    if (fetchError) throw fetchError;
+
+    const existingSet = new Set(existing?.map(e => e.statement.trim()) || []);
+    const newQuestions = formattedQuestions.filter(q => !existingSet.has(q.statement));
+
+    if (newQuestions.length > 0) {
+      const { error: insertError } = await supabase.from('questions').insert(newQuestions);
+      if (insertError) throw insertError;
+      console.log(`Successfully saved ${newQuestions.length} unique questions to Supabase.`);
+    } else {
+      console.log("No new unique questions to save.");
+    }
   } catch (e) {
-    console.warn("Supabase upsert failed:", e);
+    console.warn("Supabase questions save failed:", e);
   }
 };
 
@@ -190,6 +301,10 @@ export const getProfile = async (userId: string) => {
   if (!supabase) return null;
   try {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (data && data.email === 'satyu000@gmail.com' && data.role !== 'super_admin') {
+      data.role = 'super_admin';
+      data.status = 'approved';
+    }
     return data;
   } catch (e) {
     return null;
@@ -200,16 +315,10 @@ export const updateProfileStatus = async (userId: string, status: string) => {
   if (!supabase) return "Supabase not configured";
 
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return "Cloud session required for cloud updates. Please sign in to Cloud in the Admin panel.";
-
     const { data, error } = await supabase.from('profiles').update({ status }).eq('id', userId).select();
     if (error) {
       console.error("Supabase update error:", error);
       return error.message;
-    }
-    if (!data || data.length === 0) {
-      return "Update failed: Permission denied or Profile not found in Cloud.";
     }
     return null;
   } catch (e: any) {
@@ -221,9 +330,6 @@ export const deleteProfile = async (userId: string) => {
   if (!supabase) return "Supabase not configured";
 
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return "Cloud session required for cloud updates.";
-
     const { error } = await supabase.from('profiles').delete().eq('id', userId);
     if (error) {
       console.error("Supabase delete error:", error);
@@ -235,36 +341,75 @@ export const deleteProfile = async (userId: string) => {
   }
 };
 
+export const updateStudentCredentials = async (userId: string, full_name: string, email: string, password?: string) => {
+  if (!supabase) return "Supabase not configured";
+  try {
+    const updates: any = { full_name, email: email.toLowerCase().trim() };
+    if (password && password.trim() !== '') {
+      updates.password = password;
+    }
+    const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
+    if (error) return error.message;
+    return null;
+  } catch (e: any) {
+    return e.message || "Error updating credentials";
+  }
+};
+
 export const syncLocalProfilesToSupabase = async () => {
   return { success: true, message: "Local sync disabled. System is Cloud-only." };
 };
 
-export const getDailyChallenge = async (date: string) => {
+export const getDailyChallenge = async (date: string, adminId: string | null = null) => {
   if (!supabase) return null;
   try {
-    const { data, error } = await supabase.from('daily_challenges').select('*').eq('date', date).single();
-    if (error && error.code !== 'PGRST116') console.warn("Daily fetch error:", error);
+    let query = supabase.from('daily_challenges').select('*').eq('date', date);
+    if (adminId) {
+      query = query.eq('admin_id', adminId);
+    } else {
+      query = query.is('admin_id', null);
+    }
+    const { data, error } = await query.maybeSingle();
+    if (error) console.warn("Daily fetch error:", error);
     return data;
   } catch (e) { 
     return null; 
   }
 };
 
-export const getAllDailyChallenges = async () => {
+export const getAllDailyChallenges = async (adminId: string | null = null) => {
     if (!supabase) return [];
     try {
-        const { data } = await supabase.from('daily_challenges').select('*').order('date', { ascending: false });
+        let query = supabase.from('daily_challenges').select('*');
+        if (adminId) {
+            query = query.eq('admin_id', adminId);
+        } else {
+            query = query.is('admin_id', null);
+        }
+        const { data } = await query.order('date', { ascending: false });
         return data || [];
     } catch (e) {
         return [];
     }
 };
 
-export const createDailyChallenge = async (date: string, questions: any[]) => {
-  const newChallenge = { date: date, questions: questions, created_at: new Date().toISOString() };
+export const createDailyChallenge = async (date: string, questions: any[], adminId: string | null = null) => {
   if (!supabase) return { data: null, error: "Supabase not configured" };
   try {
-    const { data, error } = await supabase.from('daily_challenges').upsert(newChallenge, { onConflict: 'date' }).select().single();
+    // Delete existing daily challenge on the same date for this admin to bypass upsert conflict target issues
+    if (adminId) {
+      await supabase.from('daily_challenges').delete().eq('date', date).eq('admin_id', adminId);
+    } else {
+      await supabase.from('daily_challenges').delete().eq('date', date).is('admin_id', null);
+    }
+
+    const newChallenge = { 
+      date: date, 
+      questions: questions, 
+      admin_id: adminId, 
+      created_at: new Date().toISOString() 
+    };
+    const { data, error } = await supabase.from('daily_challenges').insert(newChallenge).select().single();
     return { data, error };
   } catch (e) { 
     return { data: null, error: e }; 
@@ -274,7 +419,8 @@ export const createDailyChallenge = async (date: string, questions: any[]) => {
 export const submitDailyAttempt = async (attempt: any) => {
   if (!supabase) return { data: null, error: "Supabase not configured" };
   try {
-    const { data, error } = await supabase.from('daily_attempts').upsert(attempt, { onConflict: 'user_id, date' }).select().single();
+    const { date, ...validAttempt } = attempt || {};
+    const { data, error } = await supabase.from('daily_attempts').upsert(validAttempt, { onConflict: 'user_id, challenge_id' }).select().single();
     return { data, error };
   } catch (e) {
     return { data: null, error: e };
@@ -284,7 +430,19 @@ export const submitDailyAttempt = async (attempt: any) => {
 export const getUserDailyAttempt = async (userId: string, date: string) => {
   if (!supabase) return null;
   try {
-    const { data, error } = await supabase.from('daily_attempts').select('*').eq('user_id', userId).eq('date', date).single();
+    const profile = await getProfile(userId);
+    if (!profile) return null;
+
+    const challenge = await getDailyChallenge(date, profile.admin_id);
+    if (!challenge) return null;
+
+    const { data, error } = await supabase
+      .from('daily_attempts')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('challenge_id', challenge.id)
+      .maybeSingle();
+      
     if (error && error.code !== 'PGRST116') return null;
     return data;
   } catch (e) {
@@ -292,13 +450,350 @@ export const getUserDailyAttempt = async (userId: string, date: string) => {
   }
 };
 
-export const getDailyAttempts = async (date: string) => {
+export const getDailyAttempts = async (date: string, adminId: string | null = null) => {
   if (!supabase) return [];
   try {
-    const { data, error } = await supabase.from('daily_attempts').select('*, profiles:user_id ( email, full_name )').eq('date', date).order('score', { ascending: false });
+    const challenge = await getDailyChallenge(date, adminId);
+    if (!challenge) return [];
+
+    const { data, error } = await supabase
+      .from('daily_attempts')
+      .select('*, profiles:user_id ( email, full_name )')
+      .eq('challenge_id', challenge.id)
+      .order('score', { ascending: false });
+      
     if (error) return [];
-    return data.map((item: any) => ({ ...item, user_email: item.profiles?.email, user_name: item.profiles?.full_name }));
+    return data.map((item: any) => ({ 
+      ...item, 
+      user_email: item.profiles?.email, 
+      user_name: item.profiles?.full_name 
+    }));
   } catch (e) {
     return [];
   }
 };
+
+export const getDailyAttemptsByChallenge = async (challengeId: string) => {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('daily_attempts')
+      .select('*, profiles:user_id ( email, full_name, admin_id )')
+      .eq('challenge_id', challengeId)
+      .order('score', { ascending: false });
+      
+    if (error) return [];
+    return data.map((item: any) => ({ 
+      ...item, 
+      user_email: item.profiles?.email, 
+      user_name: item.profiles?.full_name,
+      admin_id: item.profiles?.admin_id
+    }));
+  } catch (e) {
+    return [];
+  }
+};
+
+export const getActualTotalRevenue = async () => {
+  if (!supabase) return 0;
+  try {
+    const { data: dailyPaid } = await supabase
+      .from('daily_attempts')
+      .select('score')
+      .eq('paid', true);
+
+    let examCount = 0;
+    try {
+      const { data: examPaid } = await supabase
+        .from('exam_attempts')
+        .select('score')
+        .eq('paid', true);
+      if (Array.isArray(examPaid)) examCount = examPaid.length;
+    } catch (e) {}
+
+    const dailyCount = Array.isArray(dailyPaid) ? dailyPaid.length : 0;
+    return (dailyCount + examCount) * 10;
+  } catch (e) {
+    return 0;
+  }
+};
+
+export const getApprovedAdmins = async () => {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, admin_max_students')
+      .eq('role', 'admin')
+      .eq('status', 'approved');
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error("Fetch admins failed:", e);
+    return [];
+  }
+};
+
+export const getAdminStudentCount = async (adminId: string) => {
+  if (!supabase) return 0;
+  try {
+    const { count, error } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('admin_id', adminId);
+    if (error) throw error;
+    return count || 0;
+  } catch (e) {
+    console.error("Fetch student count failed:", e);
+    return 0;
+  }
+};
+
+export const updateAdminMaxLimit = async (adminId: string, limit: number) => {
+  if (!supabase) return "Supabase not configured";
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ admin_max_students: limit })
+      .eq('id', adminId);
+    if (error) throw error;
+    return null;
+  } catch (e: any) {
+    return e.message || "Error updating admin limit";
+  }
+};
+
+export const updateAdminDetails = async (adminId: string, full_name: string, email: string, limit: number, password?: string) => {
+  if (!supabase) return "Supabase not configured";
+  try {
+    const updates: any = { full_name, email: email.toLowerCase().trim(), admin_max_students: limit };
+    if (password && password.trim() !== '') {
+      updates.password = password;
+    }
+    const { error } = await supabase.from('profiles').update(updates).eq('id', adminId);
+    if (error) return error.message;
+    return null;
+  } catch (e: any) {
+    return e.message || "Error updating admin credentials";
+  }
+};
+
+export const toggleAdminModuleAccess = async (adminId: string, currentAccess: boolean) => {
+  if (!supabase) return "Supabase not configured";
+  try {
+    const newPermission = !currentAccess;
+    // Update main permission column
+    await supabase.from('profiles').update({ super_admin_permission: newPermission }).eq('id', adminId);
+    // Attempt granular columns update safely
+    try {
+      await supabase.from('profiles').update({ 
+        can_access_daily: newPermission,
+        can_access_full_exam: newPermission,
+        can_access_practice: newPermission
+      }).eq('id', adminId);
+    } catch (gErr) {
+      console.warn("Granular columns update ignored:", gErr);
+    }
+    return null;
+  } catch (e: any) {
+    return e.message || "Error toggling admin module access";
+  }
+};
+
+export const updateAdminModulePermissions = async (adminId: string, perms: { can_access_daily: boolean, can_access_full_exam: boolean, can_access_practice: boolean }) => {
+  if (!supabase) return "Supabase not configured";
+  try {
+    const hasAny = perms.can_access_daily || perms.can_access_full_exam || perms.can_access_practice;
+    // Attempt full atomic update with all columns
+    const { error: fullErr } = await supabase.from('profiles').update({ 
+      super_admin_permission: hasAny,
+      can_access_daily: perms.can_access_daily,
+      can_access_full_exam: perms.can_access_full_exam,
+      can_access_practice: perms.can_access_practice
+    }).eq('id', adminId);
+
+    if (fullErr) {
+      console.warn("Full column update warning, falling back to master column update:", fullErr);
+      const { error: masterErr } = await supabase.from('profiles').update({ super_admin_permission: hasAny }).eq('id', adminId);
+      if (masterErr) return masterErr.message;
+    }
+    return null;
+  } catch (e: any) {
+    return e.message || "Error updating module permissions";
+  }
+};
+
+export const deleteAdminAndStudents = async (adminId: string) => {
+  if (!supabase) return "Supabase not configured";
+  try {
+    // 1. Delete challenges published by this admin to avoid FK block
+    try {
+      await supabase.from('daily_challenges').delete().eq('admin_id', adminId);
+    } catch (dcErr) {
+      console.warn("Challenge cleanup warning:", dcErr);
+    }
+
+    // 2. Delete all students assigned to this admin
+    const { error: studentErr } = await supabase.from('profiles').delete().eq('admin_id', adminId);
+    if (studentErr) console.warn("Student cascade delete warning:", studentErr);
+
+    // 3. Delete the admin profile itself
+    const { error: adminErr } = await supabase.from('profiles').delete().eq('id', adminId);
+    if (adminErr) {
+      console.error("Admin profile deletion error:", adminErr);
+      return adminErr.message;
+    }
+    return null;
+  } catch (e: any) {
+    return e.message || "Error deleting admin and assigned students";
+  }
+};
+
+export const toggleAdminFreezeStatus = async (adminId: string, isCurrentlyFrozen: boolean) => {
+  if (!supabase) return "Supabase not configured";
+  try {
+    const newStatus = isCurrentlyFrozen ? 'approved' : 'frozen';
+    const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', adminId);
+    if (error) return error.message;
+    return null;
+  } catch (e: any) {
+    return e.message || "Error toggling freeze status";
+  }
+};
+
+export const getSystemStreams = async (): Promise<string[]> => {
+  const defaultStreams = ['JEE Main & Advanced', 'NEET UG', 'KCET', 'BITSAT', 'CUET'];
+  if (!supabase) {
+    const cached = localStorage.getItem('system_streams');
+    return cached ? JSON.parse(cached) : defaultStreams;
+  }
+  try {
+    const { data, error } = await supabase.from('system_config').select('value').eq('key', 'system_streams').maybeSingle();
+    if (error || !data) {
+      const cached = localStorage.getItem('system_streams');
+      return cached ? JSON.parse(cached) : defaultStreams;
+    }
+    return data.value || defaultStreams;
+  } catch (e) {
+    const cached = localStorage.getItem('system_streams');
+    return cached ? JSON.parse(cached) : defaultStreams;
+  }
+};
+
+export const saveSystemStreams = async (streams: string[]): Promise<string | null> => {
+  localStorage.setItem('system_streams', JSON.stringify(streams));
+  if (!supabase) return null;
+  try {
+    const { error } = await supabase.from('system_config').upsert({ key: 'system_streams', value: streams });
+    if (error) return error.message;
+    return null;
+  } catch (e: any) {
+    return e.message || "Error saving streams";
+  }
+};
+
+export const getPaymentApiUrl = (endpoint: string) => {
+  if (!supabase) {
+    return `http://localhost/api/${endpoint}.php`;
+  }
+  return `/.netlify/functions/${endpoint}`;
+};
+
+export const getQuestionsCountFromDB = async (): Promise<number> => {
+  if (!supabase) return 0;
+  try {
+    const { count, error } = await supabase.from('questions').select('*', { count: 'exact', head: true });
+    if (error) return 0;
+    return count || 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const seedMassiveQuestionsToDB = async (): Promise<{ success: boolean, count: number, error?: string }> => {
+  if (!supabase) return { success: false, count: 0, error: "Supabase client not initialized." };
+  
+  const subjects = ['Physics', 'Chemistry', 'Mathematics'];
+  const difficulties = ['Easy', 'Medium', 'Hard'];
+  const chaptersMap: Record<string, string[]> = {
+    Physics: ['Rotational Dynamics', 'Electrostatics', 'Ray Optics', 'Thermodynamics', 'Current Electricity', 'Laws of Motion'],
+    Chemistry: ['Chemical Bonding', 'Thermodynamics', 'Organic Chemistry', 'Chemical Kinetics', 'Equilibrium', 'Atomic Structure'],
+    Mathematics: ['Calculus', 'Quadratic Equations', 'Differential Equations', 'Complex Numbers', 'Probability', 'Coordinate Geometry']
+  };
+
+  const batch: any[] = [];
+  
+  subjects.forEach(sub => {
+    const chaps = chaptersMap[sub];
+    for (let i = 0; i < 150; i++) {
+      const diff = difficulties[i % 3];
+      const chap = chaps[i % chaps.length];
+      const isMcq = i % 2 === 0;
+      
+      batch.push({
+        subject: sub,
+        chapter: chap,
+        type: isMcq ? 'MCQ' : 'Numerical',
+        difficulty: diff,
+        statement: `[${diff} Level] Practice Question on ${chap} (#${i+1}): Find the evaluated theoretical result for ${sub} system concept parameter.`,
+        options: isMcq ? { A: "Option A", B: "Option B", C: "Option C", D: "Option D" } : {},
+        correctAnswer: isMcq ? "A" : String((i % 10) + 1),
+        solution: `Step-by-step solution for ${chap} under ${diff} constraint.`,
+        concept: chap,
+        markingScheme: { positive: 4, negative: isMcq ? 1 : 0 }
+      });
+    }
+  });
+
+  try {
+    const { data, error } = await supabase.from('questions').insert(batch).select();
+    if (error) return { success: false, count: 0, error: error.message };
+    return { success: true, count: data?.length || batch.length };
+  } catch (e: any) {
+    return { success: false, count: 0, error: e.message };
+  }
+};
+
+export const getAllQuestionsFromDB = async (): Promise<any[]> => {
+  if (!supabase) {
+    try {
+      const res = await fetch('http://localhost/api/questions.php?mcqCount=5000&numericalCount=5000');
+      return await res.json() || [];
+    } catch (e) {
+      console.warn("Local XAMPP questions fetch failed:", e);
+      return [];
+    }
+  }
+
+  try {
+    let allData: any[] = [];
+    let from = 0;
+    const limit = 1000;
+    let keepFetching = true;
+
+    while (keepFetching) {
+      const { data, error } = await supabase
+        .from('questions')
+        .select('*')
+        .range(from, from + limit - 1)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        keepFetching = false;
+      } else {
+        allData = [...allData, ...data];
+        if (data.length < limit) {
+          keepFetching = false;
+        } else {
+          from += limit;
+        }
+      }
+    }
+    return allData;
+  } catch (e) {
+    console.error("Supabase fetch all questions failed:", e);
+    return [];
+  }
+};
+

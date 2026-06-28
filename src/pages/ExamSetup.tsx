@@ -1,26 +1,89 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Zap, BookOpen, Clock, AlertTriangle, CheckCircle2, Loader2, PlayCircle, Atom, Sliders, Hash, RotateCcw, Database } from 'lucide-react';
+import { ShieldCheck, Zap, BookOpen, Clock, AlertTriangle, CheckCircle2, Loader2, PlayCircle, Atom, Sliders, Hash, RotateCcw, Database, DollarSign, X, Sparkles } from 'lucide-react';
 import { ExamType, Subject } from '../types';
-import { generateJEEQuestions } from '../geminiService';
+import { initiateRazorpayPayment } from '../utils/payment';
 
 const ExamSetup = () => {
   const navigate = useNavigate();
-  const [examType, setExamType] = useState<ExamType>(ExamType.Main);
+  const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
+  const isNeet = activeStream.toLowerCase().includes('neet');
+
+  const [examType, setExamType] = useState<ExamType>(() => isNeet ? ExamType.NEET : ExamType.Main);
   const [isPreparing, setIsPreparing] = useState(false);
   const [preparedQuestions, setPreparedQuestions] = useState<any[]>([]);
-  const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([Subject.Physics, Subject.Chemistry, Subject.Mathematics]);
-  const [questionCounts, setQuestionCounts] = useState({ mcq: 25, numerical: 5 });
+  const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>(() => {
+    return isNeet 
+      ? [Subject.Physics, Subject.Chemistry, Subject.Botany, Subject.Zoology] 
+      : [Subject.Physics, Subject.Chemistry, Subject.Mathematics];
+  });
+  
+  const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  const isIndependent = profile.role === 'student' && !profile.admin_id;
+  const needsPayment = isIndependent && profile.has_used_free_test;
+
+  const initialCounts = (isIndependent && !profile.has_used_free_test) 
+    ? (isNeet ? { mcq: 10, numerical: 0 } : { mcq: 8, numerical: 2 }) 
+    : (isNeet ? { mcq: 45, numerical: 0 } : { mcq: 25, numerical: 5 });
+  const [questionCounts, setQuestionCounts] = useState(initialCounts);
   const [preparationLogs, setPreparationLogs] = useState<string[]>([]);
   
-  const [progress, setProgress] = useState<Record<string, 'pending' | 'loading' | 'done' | 'error'>>({
-    Physics: 'pending',
-    Chemistry: 'pending',
-    Mathematics: 'pending'
+  const [isPaid, setIsPaid] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  const handleUnlockMock = async () => {
+    setIsProcessingPayment(true);
+    try {
+      const receipt = `mock_${profile.id}_${Date.now()}`;
+      const success = await initiateRazorpayPayment(
+        10,
+        profile.email || 'student@example.com',
+        profile.full_name || 'Aspirant',
+        receipt
+      );
+      if (success) {
+        setIsPaid(true);
+        alert("Payment verified! Your premium mock exam is now unlocked.");
+      } else {
+        alert("Payment verification failed or was cancelled.");
+      }
+    } catch (e: any) {
+      console.error("Razorpay setup failed:", e);
+      alert(`Razorpay error: ${e.message || e}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const [progress, setProgress] = useState<Record<string, 'pending' | 'loading' | 'done' | 'error'>>(() => {
+    return isNeet ? {
+      Physics: 'pending',
+      Chemistry: 'pending',
+      Botany: 'pending',
+      Zoology: 'pending'
+    } : {
+      Physics: 'pending',
+      Chemistry: 'pending',
+      Mathematics: 'pending'
+    };
   });
 
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [inputApiKey, setInputApiKey] = useState('');
+
   const preparePaper = async () => {
+    const savedKey = localStorage.getItem('user_gemini_api_key');
+    if (!savedKey) {
+      setIsApiKeyModalOpen(true);
+      return;
+    }
+
+    if (needsPayment && !isPaid) {
+      handleUnlockMock();
+      return;
+    }
+
     setIsPreparing(true);
     setPreparedQuestions([]);
     setPreparationLogs(["Initializing Generation Flow..."]);
@@ -41,7 +104,9 @@ const ExamSetup = () => {
         let source = "AI engine";
 
         try {
-          questions = await generateJEEQuestions(
+          const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+          const service = await getStreamGeminiService(activeStream);
+          questions = await service.generateJEEQuestions(
               sub, 
               totalPerSubject, 
               examType,
@@ -70,6 +135,18 @@ const ExamSetup = () => {
             console.error(`[ExamSetup] Database fallback failed for ${sub}:`, dbErr);
           }
         }
+
+        if (!questions || questions.length === 0) {
+          try {
+            const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+            const service = await getStreamGeminiService(activeStream);
+            source = "Synthesized Exam Bank";
+            questions = service.generateFallbackQuestions(sub, questionCounts.mcq, questionCounts.numerical);
+            await saveQuestionsToDB(questions);
+          } catch (fbErr) {
+            console.error(`[ExamSetup] Offline fallback synthesis failed for ${sub}:`, fbErr);
+          }
+        }
         
         if (questions && questions.length > 0) {
             setPreparationLogs(prev => [...prev, `✅ ${sub} prepared via ${source}`]);
@@ -95,7 +172,20 @@ const ExamSetup = () => {
     }
   };
 
-  const launchExam = () => {
+  const launchExam = async () => {
+    if (isIndependent && !profile.has_used_free_test) {
+      try {
+        const { supabase } = await import('../supabase');
+        if (supabase) {
+          await supabase.from('profiles').update({ has_used_free_test: true }).eq('id', profile.id);
+          const updatedProfile = { ...profile, has_used_free_test: true };
+          localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
+        }
+      } catch (err) {
+        console.error("Error setting free test status:", err);
+      }
+    }
+
     const qCount = preparedQuestions.length;
     const duration = Math.ceil(qCount * 2);
     const sessionData = {
@@ -109,14 +199,52 @@ const ExamSetup = () => {
   };
 
   const applyPreset = (mcq: number, num: number) => {
-      setQuestionCounts({ mcq, numerical: num });
+      setQuestionCounts({ mcq, numerical: isNeet ? 0 : num });
   };
 
   const totalQuestions = selectedSubjects.length * (questionCounts.mcq + questionCounts.numerical);
-  const estimatedTime = Math.ceil(totalQuestions * 2);
+  const estimatedTime = isNeet ? totalQuestions : Math.ceil(totalQuestions * 2);
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 pb-12">
+      {isIndependent && !profile.has_used_free_test && (
+        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-6 rounded-[2rem] shadow-xl shadow-indigo-100 flex items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl">
+              <Sparkles className="w-6 h-6 text-yellow-300" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black uppercase tracking-tight">Free Mock Test Active</h3>
+              <p className="text-xs font-medium text-indigo-100 leading-relaxed">
+                Your first mock test is free and locked to exactly **10 questions** (8 MCQs, 2 Numericals). Make it count!
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] bg-white text-indigo-600 font-black uppercase tracking-widest px-4 py-2 rounded-xl shrink-0">1 Free Attempt</span>
+        </div>
+      )}
+      {needsPayment && !isPaid && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 p-6 rounded-[2rem] shadow-sm flex items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-amber-100 text-amber-700 rounded-2xl">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-wider">Payment Required</h3>
+              <p className="text-xs text-amber-700 font-bold">
+                You have already used your free mock test. Subsequent tests require a ₹10 unlock fee.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleUnlockMock}
+            disabled={isProcessingPayment}
+            className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md shrink-0 disabled:opacity-50"
+          >
+            {isProcessingPayment ? "Opening..." : "Unlock Now (₹10)"}
+          </button>
+        </div>
+      )}
       <div className="text-center space-y-4">
         <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Paper Configuration</h1>
         <p className="text-slate-500 text-lg font-medium">Powered by Gemini AI.</p>
@@ -130,14 +258,27 @@ const ExamSetup = () => {
               Target Exam
             </h2>
             <div className="grid grid-cols-2 gap-4">
-              {[ExamType.Main, ExamType.Advanced].map((type) => (
+              {(isNeet ? [ExamType.NEET] : [ExamType.Main, ExamType.Advanced]).map((type) => (
                 <button
                   key={type}
-                  onClick={() => setExamType(type)}
-                  className={`p-6 rounded-3xl border-2 transition-all text-center ${examType === type ? 'border-blue-500 bg-blue-600 text-white shadow-xl shadow-blue-500/30' : 'border-slate-100 bg-white hover:border-blue-200 text-slate-600'}`}
+                  onClick={() => {
+                    if (type === ExamType.Advanced) {
+                      alert("🚀 JEE Advanced Engine: Updated Soon! (Still Coming)");
+                      return;
+                    }
+                    setExamType(type);
+                  }}
+                  className={`p-6 rounded-3xl border-2 transition-all text-center relative ${examType === type ? 'border-blue-500 bg-blue-600 text-white shadow-xl shadow-blue-500/30' : 'border-slate-100 bg-white hover:border-blue-200 text-slate-600'}`}
                 >
+                  {type === ExamType.Advanced && (
+                    <span className="absolute -top-3 -right-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md animate-pulse">
+                      Updated Soon
+                    </span>
+                  )}
                   <span className="block font-black text-lg">{type}</span>
-                  <span className={`text-xs font-bold uppercase tracking-widest ${examType === type ? 'text-blue-200' : 'text-slate-400'}`}>Official Pattern</span>
+                  <span className={`text-xs font-bold uppercase tracking-widest ${examType === type ? 'text-blue-200' : 'text-slate-400'}`}>
+                    {type === ExamType.Advanced ? 'Coming Soon' : 'Official Pattern'}
+                  </span>
                 </button>
               ))}
             </div>
@@ -149,7 +290,9 @@ const ExamSetup = () => {
               Subjects
             </h2>
             <div className="space-y-3">
-              {[Subject.Physics, Subject.Chemistry, Subject.Mathematics].map((sub) => {
+              {(isNeet 
+                ? [Subject.Physics, Subject.Chemistry, Subject.Botany, Subject.Zoology] 
+                : [Subject.Physics, Subject.Chemistry, Subject.Mathematics]).map((sub) => {
                 const isSelected = selectedSubjects.includes(sub);
                 return (
                     <div key={sub} onClick={() => { if (isSelected && selectedSubjects.length > 1) setSelectedSubjects(selectedSubjects.filter(s => s !== sub)); else if (!isSelected) setSelectedSubjects([...selectedSubjects, sub]); }}
@@ -170,20 +313,24 @@ const ExamSetup = () => {
                     <div className="p-2 bg-orange-100 text-orange-600 rounded-lg"><Sliders className="w-5 h-5" /></div>
                     Pattern (Per Subject)
                 </h2>
-                <div className="flex gap-2">
-                    <button onClick={() => applyPreset(10, 2)} className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-black uppercase rounded-lg">Mini</button>
-                    <button onClick={() => applyPreset(25, 5)} className="px-3 py-1 bg-slate-900 text-white text-[10px] font-black uppercase rounded-lg">Standard</button>
-                </div>
+                {!(isIndependent && !profile.has_used_free_test) && (
+                  <div className="flex gap-2">
+                      <button onClick={() => applyPreset(isNeet ? 15 : 10, isNeet ? 0 : 2)} className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-black uppercase rounded-lg">Mini</button>
+                      <button onClick={() => applyPreset(isNeet ? 45 : 25, isNeet ? 0 : 5)} className="px-3 py-1 bg-slate-900 text-white text-[10px] font-black uppercase rounded-lg">Standard</button>
+                  </div>
+                )}
             </div>
             <div className="flex gap-6">
                 <div className="flex-1">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">MCQs</label>
-                    <input type="number" min="5" max="30" value={questionCounts.mcq} onChange={(e) => setQuestionCounts({...questionCounts, mcq: parseInt(e.target.value) || 0})} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-black text-xl text-slate-800 text-center focus:border-blue-500 outline-none" />
+                    <input type="number" min="5" max={isNeet ? 90 : 30} disabled={isIndependent && !profile.has_used_free_test} value={questionCounts.mcq} onChange={(e) => setQuestionCounts({...questionCounts, mcq: parseInt(e.target.value) || 0})} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-black text-xl text-slate-800 text-center focus:border-blue-500 outline-none disabled:opacity-50" />
                 </div>
-                <div className="flex-1">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Numericals</label>
-                    <input type="number" min="0" max="10" value={questionCounts.numerical} onChange={(e) => setQuestionCounts({...questionCounts, numerical: parseInt(e.target.value) || 0})} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-black text-xl text-slate-800 text-center focus:border-blue-500 outline-none" />
-                </div>
+                {!isNeet && (
+                  <div className="flex-1">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Numericals</label>
+                      <input type="number" min="0" max="10" disabled={isIndependent && !profile.has_used_free_test} value={questionCounts.numerical} onChange={(e) => setQuestionCounts({...questionCounts, numerical: parseInt(e.target.value) || 0})} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-black text-xl text-slate-800 text-center focus:border-blue-500 outline-none disabled:opacity-50" />
+                  </div>
+                )}
             </div>
           </div>
         </div>
@@ -244,6 +391,55 @@ const ExamSetup = () => {
           </div>
         </div>
       </div>
+
+      {/* API Key Prompt Modal */}
+      {isApiKeyModalOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl border border-slate-200 relative overflow-hidden animate-in zoom-in duration-300">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 tracking-tight">Gemini API Key Required</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Configure key to start AI examination</p>
+                </div>
+              </div>
+              <button onClick={() => setIsApiKeyModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!inputApiKey.trim()) return alert("Please enter a valid API Key.");
+              localStorage.setItem('user_gemini_api_key', inputApiKey.trim());
+              setIsApiKeyModalOpen(false);
+              preparePaper();
+            }} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Enter Google Gemini API Key</label>
+                <input
+                  type="password"
+                  required
+                  value={inputApiKey}
+                  onChange={(e) => setInputApiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-200"
+              >
+                Save Key & Start Test
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

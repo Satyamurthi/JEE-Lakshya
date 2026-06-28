@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Loader2, Crown, Zap, Trash2, Copy, X, Eye, CheckCircle2, Sliders, Atom, Beaker, FunctionSquare, FileUp, FileText, AlertTriangle, Terminal, File, Settings2, Sparkles, Database, ShieldAlert, XCircle, Settings } from 'lucide-react';
-import { supabase, getAllProfiles, updateProfileStatus, deleteProfile, createDailyChallenge, getDailyAttempts, getAllDailyChallenges, fetchQuestionsFromDB } from '../supabase';
-import { generateFullJEEDailyPaper, parseDocumentToQuestions } from '../geminiService';
+import { RefreshCw, Loader2, Crown, Zap, Trash2, Copy, X, Eye, CheckCircle2, Sliders, Atom, Beaker, FunctionSquare, FileUp, FileText, AlertTriangle, Terminal, File, Settings2, Sparkles, Database, ShieldAlert, XCircle, Settings, UserPlus, Edit3, Key } from 'lucide-react';
+import { supabase, getAllProfiles, updateProfileStatus, deleteProfile, createDailyChallenge, getDailyAttempts, getAllDailyChallenges, fetchQuestionsFromDB, updateStudentCredentials } from '../supabase';
 import { NCERT_CHAPTERS } from '../constants';
 import MathText from '../components/MathText';
 
@@ -200,6 +199,21 @@ const Admin = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeConfigSubject, setActiveConfigSubject] = useState<string | null>(null);
 
+  // Add Student to Batch State
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [studentName, setStudentName] = useState('');
+  const [studentEmail, setStudentEmail] = useState('');
+  const [studentPassword, setStudentPassword] = useState('');
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
+
+  // Edit Student State
+  const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
+  const [editStudentId, setEditStudentId] = useState('');
+  const [editStudentName, setEditStudentName] = useState('');
+  const [editStudentEmail, setEditStudentEmail] = useState('');
+  const [editStudentPassword, setEditStudentPassword] = useState('');
+  const [isUpdatingStudent, setIsUpdatingStudent] = useState(false);
+
   const [generationConfig, setGenerationConfig] = useState<GenerationConfig>({
     physics: { mcq: 8, numerical: 2, chapters: [], topics: [] },
     chemistry: { mcq: 8, numerical: 2, chapters: [], topics: [] },
@@ -301,93 +315,123 @@ const Admin = () => {
 -- ==========================================
 -- Run this in your Supabase SQL Editor to fix login/write issues.
 
--- 1. CORE TABLES
+-- 1. CORE CONFIGURATION EXTENSIONS
 create extension if not exists pgcrypto;
 
--- Ensure profiles table exists with correct structure
+-- Drop constraints to update roles list
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles drop constraint if exists profiles_status_check;
+
+-- Ensure profiles table exists with extended role/status support
 create table if not exists public.profiles (
-  id uuid primary key references auth.users on delete cascade,
+  id uuid primary key default gen_random_uuid(),
   email text unique not null,
   full_name text,
   password text,
-  role text default 'student' check (role in ('student', 'admin')),
+  role text default 'student' check (role in ('student', 'admin', 'super_admin')),
   status text default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  admin_id uuid references public.profiles(id) on delete set null,
+  admin_max_students integer default 30,
+  has_used_free_test boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Ensure columns exist if table was created in a previous version
-alter table public.profiles add column if not exists password text;
-alter table public.profiles add column if not exists status text default 'pending' check (status in ('pending', 'approved', 'rejected'));
-alter table public.profiles add column if not exists role text default 'student' check (role in ('student', 'admin'));
+-- Drop restrictive auth.users foreign key constraint if present
+alter table public.profiles drop constraint if exists profiles_id_fkey;
 
--- 2. ADMIN CHECK FUNCTION
--- Security definer allows bypassing RLS for the check itself
+-- Alter columns for safety
+alter table public.profiles add column if not exists password text;
+alter table public.profiles add column if not exists status text default 'pending';
+alter table public.profiles add column if not exists role text default 'student';
+alter table public.profiles add column if not exists admin_id uuid references public.profiles(id) on delete set null;
+alter table public.profiles add column if not exists admin_max_students integer default 30;
+alter table public.profiles add column if not exists has_used_free_test boolean default false;
+
+-- Reapply constraints
+alter table public.profiles add constraint profiles_role_check check (role in ('student', 'admin', 'super_admin'));
+alter table public.profiles add constraint profiles_status_check check (status in ('pending', 'approved', 'rejected'));
+
+-- 2. ADMIN/SUPER_ADMIN DETERMINATION FUNCTION
 create or replace function public.is_admin(user_id uuid)
 returns boolean as $$
 begin
   return exists (
     select 1 from public.profiles
     where id = user_id
-    and role = 'admin'
+    and role in ('admin', 'super_admin')
   );
 end;
 $$ language plpgsql security definer;
 
--- 3. RLS POLICIES
+-- 3. RLS POLICIES FOR PROFILES
 alter table public.profiles enable row level security;
 
--- Profiles: Users can read their own profile, admins can read all
 drop policy if exists "Profiles are viewable by owner and admins" on public.profiles;
 create policy "Profiles are viewable by owner and admins"
 on public.profiles for select
 using (auth.uid() = id or public.is_admin(auth.uid()));
 
--- Profiles: Users can update their own profile (except role/status), admins can update all
 drop policy if exists "Profiles are updatable by owner and admins" on public.profiles;
 create policy "Profiles are updatable by owner and admins"
 on public.profiles for update
 using (auth.uid() = id or public.is_admin(auth.uid()))
 with check (
-  (auth.uid() = id and (role = role and status = status)) or -- Non-admins can't change role/status
+  (auth.uid() = id and (role = role and status = status)) or 
   public.is_admin(auth.uid())
 );
 
--- Profiles: Admins can delete profiles
 drop policy if exists "Profiles are deletable by admins" on public.profiles;
 create policy "Profiles are deletable by admins"
 on public.profiles for delete
 using (public.is_admin(auth.uid()));
 
--- Profiles: Allow initial insert during signup
 drop policy if exists "Profiles are insertable by anyone" on public.profiles;
 create policy "Profiles are insertable by anyone"
 on public.profiles for insert
 with check (true);
 
--- 4. ADMIN PROVISIONING
+-- 4. PROVISION SUPER ADMIN & SYSTEM ADMIN
 DO $$
 DECLARE
-  new_user_id UUID := gen_random_uuid();
+  new_admin_id UUID := gen_random_uuid();
+  new_super_id UUID := gen_random_uuid();
 BEGIN
-  -- Provision Admin Account
-  -- REPLACE 'admin@example.com' and 'yourpassword' with your desired credentials
+  -- System Admin Account Provision
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@example.com') THEN
     INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-    VALUES ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', 'admin@example.com', crypt('yourpassword', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name": "System Admin"}', now(), now());
+    VALUES ('00000000-0000-0000-0000-000000000000', new_admin_id, 'authenticated', 'authenticated', 'admin@example.com', crypt('yourpassword', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name": "System Admin"}', now(), now());
   END IF;
   
-  -- Ensure admin exists in profiles with approved status and password stored
   INSERT INTO public.profiles (id, email, full_name, role, status, password)
   SELECT id, email, 'System Admin', 'admin', 'approved', 'yourpassword' FROM auth.users WHERE email = 'admin@example.com'
   ON CONFLICT (email) DO UPDATE SET role = 'admin', status = 'approved', password = 'yourpassword';
+
+  -- Provision Super Admin Account: satyu000@gmail.com
+  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'satyu000@gmail.com') THEN
+    INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+    VALUES ('00000000-0000-0000-0000-000000000000', new_super_id, 'authenticated', 'authenticated', 'satyu000@gmail.com', crypt('satyupassword', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name": "Super Admin"}', now(), now());
+  END IF;
+
+  INSERT INTO public.profiles (id, email, full_name, role, status, password)
+  SELECT id, email, 'Super Admin', 'super_admin', 'approved', 'satyupassword' FROM auth.users WHERE email = 'satyu000@gmail.com'
+  ON CONFLICT (email) DO UPDATE SET role = 'super_admin', status = 'approved', password = 'satyupassword';
 END $$;
 
--- 5. APP TABLES RLS
+-- 5. APP TABLES RLS & MULTI-TENANCY ALTERATIONS
 alter table public.questions enable row level security;
 drop policy if exists "Read questions" on questions;
 create policy "Read questions" on questions for select using (true);
 drop policy if exists "Manage questions" on questions;
 create policy "Manage questions" on questions for all using (public.is_admin(auth.uid()));
+
+-- Daily challenges multi-tenancy updates
+alter table public.daily_challenges drop constraint if exists daily_challenges_pkey cascade;
+alter table public.daily_challenges add column if not exists id uuid default gen_random_uuid() primary key;
+alter table public.daily_challenges add column if not exists admin_id uuid references public.profiles(id) on delete cascade;
+
+-- Unique constraint for date and admin
+drop index if exists daily_challenges_date_admin_idx;
+create unique index daily_challenges_date_admin_idx on public.daily_challenges(date, coalesce(admin_id, '00000000-0000-0000-0000-000000000000'));
 
 alter table public.daily_challenges enable row level security;
 drop policy if exists "Read challenges" on daily_challenges;
@@ -402,7 +446,12 @@ create policy "Public Insert Daily" on daily_challenges for insert with check (t
 drop policy if exists "Public Update Daily" on daily_challenges;
 create policy "Public Update Daily" on daily_challenges for update using (true);
 
-create table if not exists public.daily_attempts (user_id uuid references public.profiles(id) on delete cascade not null, date date references public.daily_challenges(date) on delete cascade not null, score integer, total_marks integer, stats jsonb, attempt_data jsonb, submitted_at timestamp with time zone default timezone('utc'::text, now()) not null, primary key (user_id, date));
+-- Daily attempts multi-tenancy updates
+alter table public.daily_attempts drop constraint if exists daily_attempts_pkey cascade;
+alter table public.daily_attempts add column if not exists challenge_id uuid references public.daily_challenges(id) on delete cascade;
+alter table public.daily_attempts add column if not exists paid boolean default false;
+alter table public.daily_attempts add primary key (user_id, challenge_id);
+
 alter table public.daily_attempts enable row level security;
 drop policy if exists "Users can insert own attempts" on daily_attempts;
 create policy "Users can insert own attempts" on daily_attempts for insert with check (auth.uid() = user_id);
@@ -422,11 +471,16 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
         }
         setToast({ message: errorMsg, type: 'error' });
     }
-    setUsers(data || []);
-  }, []);
+    const all = data || [];
+    if (currentUser?.role === 'admin') {
+      setUsers(all.filter((u: any) => u.role === 'student' && u.admin_id === currentUser.id));
+    } else {
+      setUsers(all);
+    }
+  }, [currentUser]);
 
   const loadAnalysis = useCallback(async () => {
-      const attempts = await getDailyAttempts(analysisDate);
+      const attempts = await getDailyAttempts(analysisDate, currentUser?.id);
       const processed = attempts.map((attempt, index) => {
           const data = attempt.attempt_data || [];
           const stats = { Physics: { Score: 0 }, Chemistry: { Score: 0 }, Mathematics: { Score: 0 } };
@@ -439,12 +493,12 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
           return { rank: index + 1, name: attempt.user_name || 'Scholar', stats, total: attempt.score };
       });
       setAnalysisData(processed);
-  }, [analysisDate]);
+  }, [analysisDate, currentUser]);
 
   const loadDailyPapers = useCallback(async () => {
-    const papers = await getAllDailyChallenges();
+    const papers = await getAllDailyChallenges(currentUser?.id);
     setDailyPapers(papers);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (activeTab === 'USER MANAGEMENT') loadUsers();
@@ -464,29 +518,114 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
   };
 
   const handleDeleteProfile = async (id: string) => {
-      if (window.confirm("Are you sure you want to delete this profile?")) {
+      if (window.confirm("Are you sure you want to delete this student profile?")) {
+          // Instantly filter out user from local UI state for immediate responsive feedback
+          setUsers(prev => prev.filter(u => u.id !== id));
           const err = await deleteProfile(id);
           if (err) {
               console.error("Delete profile error:", err);
               setToast({ message: err, type: 'error' });
+              loadUsers(); // Re-sync if failed
           } else {
-              setToast({ message: "Profile deleted successfully", type: 'success' });
-              loadUsers();
+              setToast({ message: "Student profile permanently deleted!", type: 'success' });
           }
       }
   };
 
+  const handleOpenEditStudent = (student: any) => {
+    setEditStudentId(student.id);
+    setEditStudentName(student.full_name || '');
+    setEditStudentEmail(student.email || '');
+    setEditStudentPassword(student.password || '');
+    setIsEditStudentModalOpen(true);
+  };
+
+  const handleEditStudentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingStudent(true);
+    try {
+      const err = await updateStudentCredentials(editStudentId, editStudentName, editStudentEmail, editStudentPassword);
+      if (err) throw new Error(err);
+
+      setToast({ message: "Student credentials updated successfully!", type: 'success' });
+      setIsEditStudentModalOpen(false);
+      loadUsers();
+    } catch (err: any) {
+      setToast({ message: err.message || "Failed to update credentials", type: 'error' });
+    } finally {
+      setIsUpdatingStudent(false);
+    }
+  };
+
+  const handleAddStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabase) {
+      setToast({ message: "Supabase not configured", type: 'error' });
+      return;
+    }
+    const maxLimit = currentUser?.admin_max_students || 30;
+    if (users.length >= maxLimit) {
+      setToast({ message: `Student capacity limit reached (${maxLimit} students). Contact Super Admin to increase limit.`, type: 'error' });
+      return;
+    }
+    setIsAddingStudent(true);
+    try {
+      const newStudentId = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+
+      const newStudent = {
+        id: newStudentId,
+        email: studentEmail.toLowerCase().trim(),
+        full_name: studentName.trim(),
+        password: studentPassword,
+        role: 'student',
+        status: 'approved',
+        admin_id: currentUser?.id,
+        has_used_free_test: false,
+        created_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase.from('profiles').insert(newStudent);
+      if (error) throw error;
+
+      setToast({ message: `Student ${studentName} successfully added to your batch!`, type: 'success' });
+      setStudentName('');
+      setStudentEmail('');
+      setStudentPassword('');
+      setIsAddStudentModalOpen(false);
+      loadUsers();
+    } catch (err: any) {
+      let msg = err.message || "Failed to add student";
+      if (msg.includes("profiles_email_key") || msg.toLowerCase().includes("duplicate key")) {
+        msg = "Student already exists with this email address!";
+      }
+      setToast({ message: msg, type: 'error' });
+    } finally {
+      setIsAddingStudent(false);
+    }
+  };
+
   const handleAIGenerateDaily = async () => {
       setIsGeneratingAI(true);
+      const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
+      const isNeet = activeStream.toLowerCase().includes('neet');
       try {
-          const result = await generateFullJEEDailyPaper(generationConfig);
-          setParsedQuestions([...result.physics, ...result.chemistry, ...result.mathematics]);
+          const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+          const service = await getStreamGeminiService(activeStream);
+          const result = await service.generateFullJEEDailyPaper(generationConfig);
+          const allQs = isNeet 
+            ? [...result.physics, ...result.chemistry, ...(result.biology || [])]
+            : [...result.physics, ...result.chemistry, ...(result.mathematics || [])];
+          setParsedQuestions(allQs);
           setToast({ message: "Generation Complete!", type: 'success' });
       } catch (e: any) {
           console.warn("AI generation failed, falling back to database...", e);
           setToast({ message: "AI Generation failed. Fetching from database...", type: 'error' });
           try {
-              const [physicsQs, chemistryQs, mathQs] = await Promise.all([
+              const thirdSubject = isNeet ? 'Biology' : 'Mathematics';
+              const [physicsQs, chemistryQs, thirdQs] = await Promise.all([
                   fetchQuestionsFromDB(
                       'Physics',
                       generationConfig.physics.chapters[0] || undefined,
@@ -502,7 +641,7 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                       generationConfig.chemistry.numerical
                   ),
                   fetchQuestionsFromDB(
-                      'Mathematics',
+                      thirdSubject,
                       generationConfig.mathematics.chapters[0] || undefined,
                       generationConfig.mathematics.topics,
                       generationConfig.mathematics.mcq,
@@ -510,7 +649,7 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                   )
               ]);
               
-              const allDBQs = [...physicsQs, ...chemistryQs, ...mathQs];
+              const allDBQs = [...physicsQs, ...chemistryQs, ...thirdQs];
               if (allDBQs.length > 0) {
                   setParsedQuestions(allDBQs);
                   setToast({ message: "Loaded questions from database successfully", type: 'success' });
@@ -518,8 +657,15 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                   throw new Error("No questions found in database.");
               }
           } catch (dbErr: any) {
-              console.error("Database fallback failed:", dbErr);
-              setToast({ message: "Generation & database fetch both failed.", type: 'error' });
+              console.warn("Database fallback empty, generating built-in paper...", dbErr);
+              const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+              const service = await getStreamGeminiService(activeStream);
+              const fallbackPhysics = service.generateFallbackQuestions(('Physics' as any), generationConfig.physics.mcq, generationConfig.physics.numerical);
+              const fallbackChemistry = service.generateFallbackQuestions(('Chemistry' as any), generationConfig.chemistry.mcq, generationConfig.chemistry.numerical);
+              const thirdSubject = isNeet ? 'Biology' : 'Mathematics';
+              const fallbackThird = service.generateFallbackQuestions((thirdSubject as any), generationConfig.mathematics.mcq, generationConfig.mathematics.numerical);
+              setParsedQuestions([...fallbackPhysics, ...fallbackChemistry, ...fallbackThird]);
+              setToast({ message: `Loaded built-in ${isNeet ? 'NEET' : 'JEE'} Question Bank successfully!`, type: 'success' });
           }
       } finally {
           setIsGeneratingAI(false);
@@ -529,8 +675,11 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
   const handleParseDocument = async () => {
     if (!qFile) return;
     setIsParsing(true);
+    const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
     try {
-      const qs = await parseDocumentToQuestions(qFile, sFile || undefined);
+      const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+      const service = await getStreamGeminiService(activeStream);
+      const qs = await service.parseDocumentToQuestions(qFile, sFile || undefined);
       setParsedQuestions(qs);
       setToast({ message: "Parsing Complete!", type: 'success' });
     } catch (e: any) { setToast({ message: e.message, type: 'error' }); }
@@ -540,7 +689,7 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
   const handlePublishDaily = async () => {
     setIsPublishing(true);
     try {
-      await createDailyChallenge(uploadDate, parsedQuestions);
+      await createDailyChallenge(uploadDate, parsedQuestions, currentUser?.id);
       setParsedQuestions([]);
       loadDailyPapers();
       setToast({ message: "Paper Published!", type: 'success' });
@@ -625,157 +774,6 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
         </div>
       )}
 
-      {/* Database Utility Modal */}
-      {isUtilityOpen && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
-              <div className="bg-white rounded-[2.5rem] w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200">
-                  <div className="p-8 border-b flex items-center justify-between bg-slate-50">
-                      <div className="flex items-center gap-4">
-                          <div className="p-3 bg-slate-900 text-white rounded-2xl">
-                              <Terminal className="w-6 h-6" />
-                          </div>
-                          <div>
-                              <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Database Utility</h3>
-                              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">System Repair & Initialization</p>
-                          </div>
-                      </div>
-                      <button onClick={() => setIsUtilityOpen(false)} className="p-3 hover:bg-slate-200 rounded-full transition-colors">
-                          <X className="text-slate-400 w-6 h-6" />
-                      </button>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <div className="space-y-6">
-                              <div>
-                                  <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-4 flex items-center gap-2">
-                                      <Database className="w-4 h-4 text-indigo-500" />
-                                      Cloud Configuration
-                                  </h4>
-                                  <div className="space-y-4">
-                                      <div>
-                                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Supabase URL</label>
-                                          <input 
-                                            type="text" 
-                                            value={customUrl} 
-                                            onChange={(e) => setCustomUrl(e.target.value)}
-                                            placeholder="https://your-project.supabase.co"
-                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-500 focus:bg-white transition-all"
-                                          />
-                                      </div>
-                                      <div>
-                                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Anon Key</label>
-                                          <input 
-                                            type="password" 
-                                            value={customKey} 
-                                            onChange={(e) => setCustomKey(e.target.value)}
-                                            placeholder="your-anon-key"
-                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-500 focus:bg-white transition-all"
-                                          />
-                                      </div>
-                                      <div className="flex gap-3">
-                                          <button 
-                                            onClick={handleSaveConfig}
-                                            className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-                                          >
-                                              Save & Connect
-                                          </button>
-                                          <button 
-                                            onClick={clearConfig}
-                                            className="px-4 py-4 bg-slate-100 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all"
-                                          >
-                                              Reset
-                                          </button>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <div className="space-y-6">
-                              <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-4 flex items-center gap-2">
-                                  <ShieldAlert className="w-4 h-4 text-amber-500" />
-                                  System Status
-                              </h4>
-                              <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
-                                  <div className="flex items-center justify-between">
-                                      <span className="text-xs font-bold text-slate-600">Supabase Connection</span>
-                                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${supabase ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                                          {supabase ? 'Active' : 'Offline'}
-                                      </span>
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                      <span className="text-xs font-bold text-slate-600">Write Access</span>
-                                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${supabase ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
-                                          {supabase ? 'Enabled' : 'Restricted'}
-                                      </span>
-                                  </div>
-                                  <div className="pt-4 border-t border-slate-200 space-y-3">
-                                      <button 
-                                        onClick={testConnection}
-                                        disabled={testResult.status === 'testing'}
-                                        className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-                                      >
-                                          {testResult.status === 'testing' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-                                          {testResult.status === 'testing' ? 'Testing...' : 'Test Connection'}
-                                      </button>
-                                      <button 
-                                        onClick={runRepair}
-                                        disabled={repairStatus === 'running'}
-                                        className="w-full py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
-                                      >
-                                          {repairStatus === 'running' ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                                          {repairStatus === 'running' ? 'Repairing...' : 'Run Internal Repair'}
-                                      </button>
-                                  </div>
-                                  {testResult.status !== 'idle' && (
-                                      <div className={`p-4 rounded-2xl border text-[10px] font-bold leading-relaxed ${
-                                          testResult.status === 'success' ? 'bg-green-50 border-green-100 text-green-700' : 
-                                          testResult.status === 'error' ? 'bg-red-50 border-red-100 text-red-700' : 
-                                          'bg-slate-50 border-slate-100 text-slate-500'
-                                      }`}>
-                                          {testResult.message}
-                                      </div>
-                                  )}
-                              </div>
-                          </div>
-                      </div>
-
-                      <div className="bg-amber-50 border border-amber-100 p-6 rounded-3xl flex gap-4">
-                          <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0" />
-                          <div>
-                              <p className="text-sm font-black text-amber-900 mb-1 uppercase tracking-tight">Database Repair Script</p>
-                              <p className="text-xs font-bold text-amber-800 leading-relaxed">
-                                  If login or write operations are failing despite a valid connection, copy the SQL below and run it in your Supabase SQL Editor to fix schema issues.
-                              </p>
-                          </div>
-                      </div>
-
-                      <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">REPAIR SQL SCRIPT</label>
-                              <button 
-                                onClick={() => {
-                                    navigator.clipboard.writeText(REPAIR_SQL);
-                                    setToast({ message: "SQL Copied to Clipboard!", type: 'success' });
-                                }}
-                                className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-700 transition-colors"
-                              >
-                                  <Copy className="w-3 h-3" /> Copy Script
-                              </button>
-                          </div>
-                          <div className="bg-slate-900 rounded-2xl p-6 font-mono text-[10px] text-indigo-300 overflow-x-auto whitespace-pre border border-white/5 shadow-inner max-h-[250px] custom-scrollbar">
-                              {REPAIR_SQL}
-                          </div>
-                      </div>
-                  </div>
-
-                  <div className="p-8 border-t bg-slate-50 flex justify-end">
-                      <button onClick={() => setIsUtilityOpen(false)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 transition-all">Close Utility</button>
-                  </div>
-              </div>
-          </div>
-      )}
-
       {/* Subject Config Modal */}
       {modalOpen && activeConfigSubject && (
           <SubjectConfigModal 
@@ -820,18 +818,12 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
               <p className="text-[10px] font-bold text-orange-800">Offline Mode</p>
             </div>
           )}
-          <button 
-            onClick={() => setIsUtilityOpen(true)}
-            className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all shrink-0 shadow-lg shadow-slate-900/10"
-          >
-            <Terminal className="w-3 h-3" /> DATABASE UTILITY
-          </button>
         </div>
       </div>
 
       {/* Tabs Menu */}
       <div className="flex border-b border-slate-100 gap-8 overflow-x-auto no-scrollbar pt-2">
-        {['DAILY PAPER UPLOAD', 'DAILY CHALLENGES', 'RESULT ANALYSIS', 'USER MANAGEMENT', 'SYSTEM SETTINGS'].map(tab => (
+        {['DAILY PAPER UPLOAD', 'DAILY CHALLENGES', 'RESULT ANALYSIS', 'USER MANAGEMENT'].map(tab => (
           <button 
             key={tab} 
             onClick={() => setActiveTab(tab)} 
@@ -1067,70 +1059,200 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
       )}
 
       {activeTab === 'USER MANAGEMENT' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
+            {/* Add Student Modal */}
+            {isAddStudentModalOpen && (
+              <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl border border-slate-100 flex flex-col relative overflow-hidden animate-in fade-in zoom-in duration-300">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                        <UserPlus className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Add Batch Student</h3>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enrolling to your coaching batch</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setIsAddStudentModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                      <X className="w-5 h-5 text-slate-400" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleAddStudent} className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Student Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={studentName}
+                        onChange={(e) => setStudentName(e.target.value)}
+                        placeholder="e.g., Rohan Kumar"
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Student Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={studentEmail}
+                        onChange={(e) => setStudentEmail(e.target.value)}
+                        placeholder="student@example.com"
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Security Key (Password)</label>
+                      <input
+                        type="password"
+                        required
+                        value={studentPassword}
+                        onChange={(e) => setStudentPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isAddingStudent}
+                      className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
+                    >
+                      {isAddingStudent ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                      Add Student to Batch
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between items-center px-4">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Active Directory</h3>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Assigned Batch Directory</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Students: {users.length} / {currentUser?.admin_max_students || 30} Max Capacity
+                  </p>
+                </div>
                 <div className="flex gap-3">
                     <button 
-                        onClick={loadUsers}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-slate-100 transition-colors"
+                        onClick={() => setIsAddStudentModalOpen(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
                     >
-                        <RefreshCw className="w-3 h-3" /> Refresh
+                        <UserPlus className="w-3.5 h-3.5" /> Add Student
+                    </button>
+                    <button 
+                        onClick={loadUsers}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-slate-100 transition-colors"
+                    >
+                        <RefreshCw className="w-3.5 h-3.5" /> Refresh
                     </button>
                 </div>
             </div>
             <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm pt-4">
-                 <table className="w-full text-left">
-                    <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
-                        <tr><th className="px-8 py-5">Identity Protocol</th><th className="px-8 py-5">Domain Role</th><th className="px-8 py-5">Verification Status</th><th className="px-8 py-5 text-right">Administrative Actions</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                        {users.map((u) => (
-                            <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                                <td className="px-8 py-6">
-                                    <div className="flex flex-col"><span className="font-black text-slate-900">{u.full_name}</span><span className="text-[10px] font-bold text-slate-400 tracking-tight">{u.email}</span></div>
-                                </td>
-                                <td className="px-8 py-6"><span className="text-[10px] font-black uppercase text-slate-500 px-3 py-1 bg-slate-100 rounded-lg">{u.role}</span></td>
-                                <td className="px-8 py-6"><span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${u.status === 'approved' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>{u.status}</span></td>
-                                <td className="px-8 py-6 text-right">
-                                    <div className="flex justify-end gap-3">
-                                        {u.status === 'pending' && (
-                                            <button onClick={() => handleUpdateStatus(u.id, 'approved')} className="p-2.5 text-green-600 bg-green-50 rounded-xl hover:scale-110 transition-transform" title="Approve"><CheckCircle2 className="w-4 h-4" /></button>
-                                        )}
-                                        {u.status === 'pending' && (
-                                            <button onClick={() => handleUpdateStatus(u.id, 'rejected')} className="p-2.5 text-amber-600 bg-amber-50 rounded-xl hover:scale-110 transition-transform" title="Reject"><XCircle className="w-4 h-4" /></button>
-                                        )}
-                                        {u.status === 'approved' && (
-                                            <button onClick={() => handleUpdateStatus(u.id, 'pending')} className="p-2.5 text-slate-400 bg-slate-50 rounded-xl hover:scale-110 transition-transform" title="Revoke Approval"><RefreshCw className="w-4 h-4" /></button>
-                                        )}
-                                        <button onClick={() => handleDeleteProfile(u.id)} className="p-2.5 text-red-400 bg-red-50 rounded-xl hover:scale-110 transition-transform" title="Delete Profile"><Trash2 className="w-4 h-4" /></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                 </table>
+                 {users.length === 0 ? (
+                    <div className="text-center py-16 space-y-3">
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No students assigned to your coaching batch yet.</p>
+                      <button onClick={() => setIsAddStudentModalOpen(true)} className="px-5 py-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-indigo-100 inline-flex items-center gap-2">
+                        <UserPlus className="w-3.5 h-3.5" /> Enrol First Student
+                      </button>
+                    </div>
+                 ) : (
+                   <table className="w-full text-left">
+                      <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
+                          <tr><th className="px-8 py-5">Student Identity</th><th className="px-8 py-5">Domain Role</th><th className="px-8 py-5">Verification Status</th><th className="px-8 py-5 text-right">Administrative Actions</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                          {users.map((u) => (
+                              <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                                  <td className="px-8 py-6">
+                                      <div className="flex flex-col"><span className="font-black text-slate-900">{u.full_name}</span><span className="text-[10px] font-bold text-slate-400 tracking-tight">{u.email}</span></div>
+                                  </td>
+                                  <td className="px-8 py-6"><span className="text-[10px] font-black uppercase text-slate-500 px-3 py-1 bg-slate-100 rounded-lg">{u.role}</span></td>
+                                  <td className="px-8 py-6"><span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${u.status === 'approved' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>{u.status}</span></td>
+                                  <td className="px-8 py-6 text-right">
+                                      <div className="flex justify-end gap-3">
+                                          <button onClick={() => handleOpenEditStudent(u)} className="p-2.5 text-indigo-600 bg-indigo-50 rounded-xl hover:scale-110 transition-transform" title="Edit Credentials"><Key className="w-4 h-4" /></button>
+                                          {u.status === 'pending' && (
+                                              <button onClick={() => handleUpdateStatus(u.id, 'approved')} className="p-2.5 text-green-600 bg-green-50 rounded-xl hover:scale-110 transition-transform" title="Approve"><CheckCircle2 className="w-4 h-4" /></button>
+                                          )}
+                                          {u.status === 'pending' && (
+                                              <button onClick={() => handleUpdateStatus(u.id, 'rejected')} className="p-2.5 text-amber-600 bg-amber-50 rounded-xl hover:scale-110 transition-transform" title="Reject"><XCircle className="w-4 h-4" /></button>
+                                          )}
+                                          {u.status === 'approved' && (
+                                              <button onClick={() => handleUpdateStatus(u.id, 'pending')} className="p-2.5 text-slate-400 bg-slate-50 rounded-xl hover:scale-110 transition-transform" title="Revoke Approval"><RefreshCw className="w-4 h-4" /></button>
+                                          )}
+                                          <button onClick={() => handleDeleteProfile(u.id)} className="p-2.5 text-red-500 bg-red-50 rounded-xl hover:scale-110 transition-transform" title="Delete Student Profile"><Trash2 className="w-4 h-4" /></button>
+                                      </div>
+                                  </td>
+                              </tr>
+                          ))}
+                      </tbody>
+                   </table>
+                 )}
             </div>
-        </div>
-      )}
 
-      {activeTab === 'SYSTEM SETTINGS' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-          <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center gap-3">
-              <Database className="w-6 h-6 text-indigo-500" />
-              <h3 className="text-xl font-black text-slate-900">Database Management</h3>
-            </div>
-            <p className="text-sm font-bold text-slate-500 leading-relaxed">
-              Access the system repair utility to update the database schema, manage RLS policies, or configure custom Supabase credentials.
-            </p>
-            <button 
-              onClick={() => setIsUtilityOpen(true)}
-              className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/10 flex items-center justify-center gap-3 hover:bg-slate-800 transition-all"
-            >
-              <Terminal className="w-4 h-4" /> Open Database Utility
-            </button>
-          </div>
+            {/* Edit Student Credentials Modal */}
+            {isEditStudentModalOpen && (
+              <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl border border-slate-100 flex flex-col relative overflow-hidden animate-in fade-in zoom-in duration-300">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                        <Key className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Edit Student Credentials</h3>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Update student login & details</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setIsEditStudentModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                      <X className="w-5 h-5 text-slate-400" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleEditStudentSubmit} className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Student Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={editStudentName}
+                        onChange={(e) => setEditStudentName(e.target.value)}
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Student Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={editStudentEmail}
+                        onChange={(e) => setEditStudentEmail(e.target.value)}
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">New Password (Optional)</label>
+                      <input
+                        type="text"
+                        value={editStudentPassword}
+                        onChange={(e) => setEditStudentPassword(e.target.value)}
+                        placeholder="Leave unchanged or enter new key"
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isUpdatingStudent}
+                      className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
+                    >
+                      {isUpdatingStudent ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                      Save Credentials
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
         </div>
       )}
 

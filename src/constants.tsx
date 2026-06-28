@@ -1,13 +1,16 @@
 
 
-import { Brain, Target, History, Settings, ChevronRight, LayoutGrid, BookOpen, Clock, Activity, Award, User, LogOut, Flame, CalendarClock, Sliders } from 'lucide-react';
+import { Brain, Target, History, Settings, ChevronRight, LayoutGrid, BookOpen, Clock, Activity, Award, User, LogOut, Flame, CalendarClock, Sliders, Crown } from 'lucide-react';
 
-export const APP_NAME = "JEE Nexus AI";
+export const APP_NAME = "Lakshya";
 
 export const SUBJECTS_CONFIG = {
   Physics: { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
   Chemistry: { color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
-  Mathematics: { color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' }
+  Mathematics: { color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
+  Biology: { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+  Botany: { color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-200' },
+  Zoology: { color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' }
 };
 
 export const NCERT_CHAPTERS = {
@@ -44,6 +47,40 @@ export const NCERT_CHAPTERS = {
     { name: "Chemical Kinetics", topics: ["Rate Law", "Arrhenius Equation", "First-Order Reactions"] },
     { name: "Coordination Compounds", topics: ["Werner's Theory", "Crystal Field Theory", "Isomerism in Coordination Compounds"] }
   ],
+  Biology: [
+    { name: "Diversity in the Living World", topics: ["The Living World", "Biological Classification", "Plant Kingdom", "Animal Kingdom"] },
+    { name: "Structural Organisation in Plants and Animals", topics: ["Morphology of Flowering Plants", "Anatomy of Flowering Plants", "Structural Organisation in Animals"] },
+    { name: "Cell: Structure and Functions", topics: ["Cell: The Unit of Life", "Biomolecules", "Cell Cycle and Cell Division"] },
+    { name: "Plant Physiology", topics: ["Photosynthesis in Higher Plants", "Respiration in Plants", "Plant Growth and Development"] },
+    { name: "Human Physiology", topics: ["Breathing and Exchange of Gases", "Body Fluids and Circulation", "Excretory Products", "Locomotion and Movement", "Neural Control", "Chemical Coordination"] },
+    { name: "Reproduction", topics: ["Sexual Reproduction in Flowering Plants", "Human Reproduction", "Reproductive Health"] },
+    { name: "Genetics and Evolution", topics: ["Principles of Inheritance and Variation", "Molecular Basis of Inheritance", "Evolution"] },
+    { name: "Biology in Human Welfare", topics: ["Human Health and Disease", "Microbes in Human Welfare"] },
+    { name: "Biotechnology", topics: ["Biotechnology: Principles and Processes", "Biotechnology and its Applications"] },
+    { name: "Ecology and Environment", topics: ["Organisms and Populations", "Ecosystem", "Biodiversity and Conservation"] }
+  ],
+  Botany: [
+    { name: "Plant Kingdom", topics: ["Algae", "Bryophytes", "Pteridophytes", "Gymnosperms", "Angiosperms"] },
+    { name: "Plant Physiology", topics: ["Mineral Nutrition", "Transport in Plants"] },
+    { name: "Photosynthesis in Higher Plants", topics: ["Light Reactions", "Calvin Cycle", "C4 Pathway", "Photorespiration"] },
+    { name: "Respiration in Plants", topics: ["Glycolysis", "Krebs Cycle", "Electron Transport Scheme"] },
+    { name: "Plant Growth and Development", topics: ["Auxins", "Gibberellins", "Cytokinins", "Ethylene", "Abscisic Acid"] },
+    { name: "Sexual Reproduction in Flowering Plants", topics: ["Microsporogenesis", "Megasporogenesis", "Double Fertilization", "Apomixis"] },
+    { name: "Principles of Inheritance", topics: ["Mendelian Inheritance", "Post-Mendelian Genetics", "Linkage and Recombination"] },
+    { name: "Molecular Basis of Inheritance", topics: ["DNA Replication", "Transcription", "Translation", "Genetic Code", "Operon Concept"] },
+    { name: "Ecology and Ecosystems", topics: ["Ecosystem Structure", "Energy Flow", "Ecological Pyramids", "Nutrient Cycles"] }
+  ],
+  Zoology: [
+    { name: "Animal Kingdom", topics: ["Non-Chordates", "Chordates", "Coelenterates", "Arthropods"] },
+    { name: "Structural Organisation in Animals", topics: ["Animal Tissues", "Cockroach Anatomy", "Frog Anatomy"] },
+    { name: "Cell Biology", topics: ["Cell Organelles", "Mitosis", "Meiosis", "Biomolecules"] },
+    { name: "Human Physiology: Digestion & Breathing", topics: ["Digestion", "Absorption", "Breathing Mechanism", "Gas Transport"] },
+    { name: "Human Physiology: Circulation & Excretion", topics: ["Cardiac Cycle", "ECG", "Nephron Structure", "Urine Formation"] },
+    { name: "Human Physiology: Neural & Endocrine", topics: ["Nerve Impulse Transmission", "Reflex Action", "Hormones Action", "Pituitary Gland"] },
+    { name: "Human Reproduction & Health", topics: ["Spermatogenesis", "Oogenesis", "Menstrual Cycle", "IVF & Assisted Reproduction"] },
+    { name: "Evolution", topics: ["Origin of Life", "Darwinism", "Modern Synthetic Theory", "Human Evolution"] },
+    { name: "Biotechnology & Applications", topics: ["Recombinant DNA Technology", "PCR", "Gene Therapy", "Transgenic Animals"] }
+  ],
   Mathematics: [
     { name: "Sets and Functions", topics: ["Sets", "Relations", "Functions", "Types of Functions"] },
     { name: "Trigonometry", topics: ["Trigonometric Ratios", "Trigonometric Equations", "Inverse Trigonometry"] },
@@ -56,7 +93,7 @@ export const NCERT_CHAPTERS = {
     { name: "Integration", topics: ["Indefinite Integration", "Definite Integration", "Area Under Curves"] },
     { name: "Differential Equations", topics: ["Order and Degree", "Methods of Solving", "Linear Differential Equations"] },
     { name: "Vectors and 3D Geometry", topics: ["Vectors", "Lines in 3D", "Planes in 3D"] },
-    { name: "Probability", topics: ["Conditional Probability", "Bayes' Theorem", "Binomial Distribution"] },
+    { name: "Probability", topics: ["Conditional Probability", "Bayes' Theorem", "Binomial Distribution"] }
   ]
 };
 
@@ -65,8 +102,10 @@ export const MENU_ITEMS = [
   { id: 'daily', label: 'Daily Challenge', icon: <CalendarClock className="w-5 h-5" />, path: '/daily' },
   { id: 'exam-setup', label: 'Full Exam', icon: <Target className="w-5 h-5" />, path: '/exam-setup' },
   { id: 'practice', label: 'Chapter Practice', icon: <BookOpen className="w-5 h-5" />, path: '/practice' },
+  { id: 'pyqs', label: 'Year-Wise PYQs (2013-2026)', icon: <Award className="w-5 h-5" />, path: '/pyqs' },
   { id: 'history', label: 'History', icon: <History className="w-5 h-5" />, path: '/history' },
   { id: 'analysis', label: 'AI Analytics', icon: <Activity className="w-5 h-5" />, path: '/analytics' },
   { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" />, path: '/settings' },
   { id: 'admin', label: 'Admin Panel', icon: <Sliders className="w-5 h-5" />, path: '/admin' },
+  { id: 'super-admin', label: 'Super Admin', icon: <Crown className="w-5 h-5" />, path: '/super-admin' },
 ];

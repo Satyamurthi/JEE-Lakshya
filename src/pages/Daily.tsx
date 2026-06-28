@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Zap, CheckCircle2, Lock, Play, Trophy, Clock, ChevronRight, Brain, Target, Sparkles } from 'lucide-react';
+import { Calendar, Zap, CheckCircle2, Lock, Play, Trophy, Clock, ChevronRight, Brain, Target, Sparkles, DollarSign, X, Loader2 } from 'lucide-react';
 import { getDailyChallenge, getUserDailyAttempt } from '../supabase';
+import { initiateRazorpayPayment } from '../utils/payment';
 
 const Daily = () => {
   const navigate = useNavigate();
@@ -10,6 +11,16 @@ const Daily = () => {
   const [attempt, setAttempt] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  
+  const isIndependent = profile.role === 'student' && !profile.admin_id;
+  const needsPayment = isIndependent && profile.has_used_free_test;
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card'>('upi');
+  const [upiId, setUpiId] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -18,7 +29,7 @@ const Daily = () => {
       setLoading(true);
       try {
         const [challengeData, attemptData] = await Promise.all([
-          getDailyChallenge(today),
+          getDailyChallenge(today, profile.admin_id),
           getUserDailyAttempt(profile.id, today)
         ]);
         setChallenge(challengeData);
@@ -30,16 +41,69 @@ const Daily = () => {
       }
     };
     loadDaily();
-  }, [today, profile.id]);
+  }, [today, profile.id, profile.admin_id]);
 
-  const handleStart = () => {
+  const handlePayAndStart = async () => {
+    setIsProcessingPayment(true);
+    try {
+      const receipt = `daily_${profile.id}_${Date.now()}`;
+      const success = await initiateRazorpayPayment(
+        10,
+        profile.email || 'student@example.com',
+        profile.full_name || 'Aspirant',
+        receipt
+      );
+      if (success) {
+        setIsPaid(true);
+        setIsPaymentModalOpen(false);
+        localStorage.setItem('active_exam_questions', JSON.stringify(challenge.questions));
+        localStorage.setItem('active_exam_config', JSON.stringify({
+            type: 'Daily Challenge',
+            challenge_id: challenge.id,
+            date: today,
+            duration: 30,
+            paid: true
+        }));
+        navigate('/exam-portal');
+      } else {
+        alert("Payment verification failed or was cancelled.");
+      }
+    } catch (err: any) {
+      console.error("Razorpay error:", err);
+      alert(`Razorpay error: ${err.message || err}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handleStart = async () => {
     if (!challenge) return;
+    if (needsPayment && !isPaid) {
+      handlePayAndStart();
+      return;
+    }
+
+    if (isIndependent && !profile.has_used_free_test) {
+      try {
+        const { supabase } = await import('../supabase');
+        if (supabase) {
+          await supabase.from('profiles').update({ has_used_free_test: true }).eq('id', profile.id);
+        }
+        const updatedProfile = { ...profile, has_used_free_test: true };
+        localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
+      } catch (err) {
+        console.error("Error setting free test status:", err);
+      }
+    }
+
     // Store challenge questions in local storage for the exam portal
     localStorage.setItem('active_exam_questions', JSON.stringify(challenge.questions));
     localStorage.setItem('active_exam_config', JSON.stringify({
         type: 'Daily Challenge',
+        challenge_id: challenge.id,
         date: today,
-        duration: 30 // 30 minutes for daily challenge
+        duration: 30, // 30 minutes for daily challenge
+        paid: isIndependent
     }));
     navigate('/exam-portal');
   };
@@ -241,6 +305,57 @@ const Daily = () => {
           </div>
         </div>
       </div>
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl border border-slate-100 flex flex-col relative overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <DollarSign className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Access Gate</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Daily challenge Unlock</p>
+                </div>
+              </div>
+              <button onClick={() => setIsPaymentModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            {paymentSuccess ? (
+              <div className="text-center py-8 space-y-6 animate-in fade-in duration-500">
+                <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-100 animate-bounce">
+                  <CheckCircle2 className="w-10 h-10" />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-2xl font-black text-slate-900">Payment Successful</h4>
+                  <p className="text-xs font-bold text-slate-500 font-sans">Your daily challenge environment has been unlocked.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Amount Due</span>
+                  <span className="text-2xl font-black text-slate-900">₹10.00</span>
+                </div>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                  As an independent student, unlock today's daily challenge set powered by Razorpay Standard Checkout.
+                </p>
+                <button
+                  type="button"
+                  onClick={handlePayAndStart}
+                  disabled={isProcessingPayment}
+                  className="w-full py-4 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md"
+                >
+                  {isProcessingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+                  {isProcessingPayment ? "Opening Checkout..." : "Pay with Razorpay (₹10)"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

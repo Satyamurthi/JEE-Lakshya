@@ -1,21 +1,26 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, ChevronRight, Atom, Beaker, FunctionSquare, Play, Sparkles, Search, Filter } from 'lucide-react';
+import { BookOpen, ChevronRight, Atom, Beaker, FunctionSquare, Play, Sparkles, Search, Filter, Database } from 'lucide-react';
 import { NCERT_CHAPTERS, SUBJECTS_CONFIG } from '../constants';
 import { fetchQuestionsFromDB } from '../supabase';
 
 const Practice = () => {
   const navigate = useNavigate();
+  const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
+  const isNeet = activeStream.toLowerCase().includes('neet');
+
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [mcqCount, setMcqCount] = useState(10);
-  const [numericalCount, setNumericalCount] = useState(5);
+  const [numericalCount, setNumericalCount] = useState(() => isNeet ? 0 : 5);
   const [isPreparing, setIsPreparing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const subjects = Object.keys(NCERT_CHAPTERS);
+  const subjects = isNeet 
+    ? ['Physics', 'Chemistry', 'Botany', 'Zoology'] 
+    : ['Physics', 'Chemistry', 'Mathematics'];
 
   const handleStartPractice = async () => {
     if (!selectedSubject || !selectedChapter) return;
@@ -26,18 +31,20 @@ const Practice = () => {
     
     try {
       console.log("[Practice] Attempting AI generation first...");
-      const { generateJEEQuestions } = await import('../geminiService');
+      const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+      const service = await getStreamGeminiService(activeStream);
       const { saveQuestionsToDB } = await import('../supabase');
       const { Subject, ExamType } = await import('../types');
       
       const subjectEnum = selectedSubject === 'Physics' ? Subject.Physics : 
                          selectedSubject === 'Chemistry' ? Subject.Chemistry : 
+                         selectedSubject === 'Biology' ? Subject.Biology : 
                          Subject.Mathematics;
 
-      questions = await generateJEEQuestions(
+      questions = await service.generateJEEQuestions(
         subjectEnum,
         mcqCount + numericalCount,
-        ExamType.Advanced,
+        isNeet ? ExamType.NEET : ExamType.Advanced,
         [selectedChapter],
         'Medium',
         selectedTopics,
@@ -65,8 +72,30 @@ const Practice = () => {
     }
     
     if (!questions || questions.length === 0) {
+      try {
+        const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+        const service = await getStreamGeminiService(activeStream);
+        const { saveQuestionsToDB } = await import('../supabase');
+        const { Subject } = await import('../types');
+        const subjectEnum = selectedSubject === 'Physics' ? Subject.Physics : 
+                           selectedSubject === 'Chemistry' ? Subject.Chemistry : 
+                           selectedSubject === 'Biology' ? Subject.Biology : 
+                           Subject.Mathematics;
+        source = "Synthesized Chapter Practice Bank";
+        questions = service.generateFallbackQuestions(subjectEnum, mcqCount, numericalCount).map(q => ({
+          ...q,
+          chapter: selectedChapter,
+          concept: selectedChapter
+        }));
+        await saveQuestionsToDB(questions);
+      } catch (fbErr) {
+        console.error("[Practice] Offline fallback synthesis failed:", fbErr);
+      }
+    }
+
+    if (!questions || questions.length === 0) {
       setIsPreparing(false);
-      alert("AI Generation failed and no fallback questions were found in the database. Please verify your API Key in Settings or check database status.");
+      alert("Unable to prepare test questions at this moment. Please try again.");
       return;
     }
 
@@ -136,6 +165,9 @@ const Practice = () => {
                         {sub === 'Physics' && <Atom className={`w-5 h-5 ${config.color}`} />}
                         {sub === 'Chemistry' && <Beaker className={`w-5 h-5 ${config.color}`} />}
                         {sub === 'Mathematics' && <FunctionSquare className={`w-5 h-5 ${config.color}`} />}
+                        {sub === 'Biology' && <BookOpen className={`w-5 h-5 ${config.color}`} />}
+                        {sub === 'Botany' && <BookOpen className={`w-5 h-5 ${config.color}`} />}
+                        {sub === 'Zoology' && <BookOpen className={`w-5 h-5 ${config.color}`} />}
                       </div>
                       <span className={`font-black text-sm tracking-tight ${isActive ? config.color : 'text-slate-600'}`}>
                         {sub}
@@ -167,21 +199,23 @@ const Practice = () => {
                    />
                 </div>
 
-                <div className="space-y-4">
-                   <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-600">Numericals</span>
-                      <span className="text-sm font-black text-indigo-600">{numericalCount}</span>
-                   </div>
-                   <input 
-                      type="range" 
-                      min="0" 
-                      max="20" 
-                      step="5"
-                      value={numericalCount}
-                      onChange={(e) => setNumericalCount(parseInt(e.target.value))}
-                      className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                   />
-                </div>
+                {!isNeet && (
+                  <div className="space-y-4">
+                     <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-600">Numericals</span>
+                        <span className="text-sm font-black text-indigo-600">{numericalCount}</span>
+                     </div>
+                     <input 
+                        type="range" 
+                        min="0" 
+                        max="20" 
+                        step="5"
+                        value={numericalCount}
+                        onChange={(e) => setNumericalCount(parseInt(e.target.value))}
+                        className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                     />
+                  </div>
+                )}
 
                 <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
                    <div className="flex justify-between items-center">
