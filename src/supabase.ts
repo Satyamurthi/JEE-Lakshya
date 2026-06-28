@@ -742,13 +742,46 @@ export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Prom
       let stmt = '';
       let opts = {};
       if (isNeet) {
-        stmt = `[NEET Medical ${diff}] ${chap} (Q-Ref: ${uniqueRef}): Identify the correct physiological mechanism or theoretical principle governing ${sub} regarding ${chap}.`;
-        opts = {
-          A: `Primary physiological reaction under standard NCERT ${chap} principles.`,
-          B: `Alternative regulatory mechanism observed in ${sub} structural systems.`,
-          C: `Inhibited metabolic or cellular pathway during ${chap} phase.`,
-          D: `Secondary kinetic equilibrium state in biological conditions.`
-        };
+        if (sub === 'Botany' || sub === 'Zoology') {
+          const qTypeMod = i % 3;
+          if (qTypeMod === 0) {
+            // Match the Following
+            stmt = `[NEET ${sub} - Match Column I & II] ${chap} (Ref: ${uniqueRef}):\nMatch Column-I with Column-II and choose the correct option.\n\nColumn-I:\n(A) Structural Complex X\n(B) Regulatory Pathway Y\n(C) Enzyme/Hormone Z\n(D) Cellular Organelle W\n\nColumn-II:\n(i) Regulates osmotic balance and ionic transport\n(ii) Catalyzes ATP synthesis & phosphorylation\n(iii) Primary site of glycosylation and packaging\n(iv) Initiates transcript elongation cycle`;
+            opts = {
+              A: "A-(ii), B-(iv), C-(i), D-(iii)",
+              B: "A-(i), B-(iii), C-(iv), D-(ii)",
+              C: "A-(iii), B-(i), C-(ii), D-(iv)",
+              D: "A-(iv), B-(ii), C-(iii), D-(i)"
+            };
+          } else if (qTypeMod === 1) {
+            // Diagrammatical & Labeled Identification
+            stmt = `[NEET ${sub} - Diagrammatical Identification] ${chap} (Ref: ${uniqueRef}): Refer to the anatomical/schematic diagram of ${chap}. Identify the parts labeled as (A), (B), (C), and (D) and select the correct functional representation.`;
+            opts = {
+              A: "(A)-Thylakoid Membrane, (B)-Stroma Matrix, (C)-Granum Stack, (D)-Outer Envelope",
+              B: "(A)-Cristae Fold, (B)-Matrix Domain, (C)-Inner Membrane, (D)-Intermembrane Space",
+              C: "(A)-Nucleolus Site, (B)-Chromatin Thread, (C)-Nuclear Pore, (D)-Ribosome Subunit",
+              D: "(A)-Plasma Membrane, (B)-Cytosol Matrix, (C)-Golgi Cisternae, (D)-Lysosome Vesicle"
+            };
+          } else {
+            // Statement Evaluation (Assertion/Reason or Stmt I/II)
+            stmt = `[NEET ${sub} - NCERT Statement Evaluation] ${chap} (Ref: ${uniqueRef}): Read the following statements regarding ${chap}:\nStatement-I: Physiological mechanisms governing ${chap} operate under strict homeostatic control.\nStatement-II: Enzymatic catalysis rates double for every 10°C rise in temperature until denaturing occurs.\nSelect the correct answer from the options given below:`;
+            opts = {
+              A: "Both Statement-I and Statement-II are correct",
+              B: "Both Statement-I and Statement-II are incorrect",
+              C: "Statement-I is correct but Statement-II is incorrect",
+              D: "Statement-I is incorrect but Statement-II is correct"
+            };
+          }
+        } else {
+          // Physics & Chemistry NEET MCQs
+          stmt = `[NEET Medical ${diff}] ${chap} (Q-Ref: ${uniqueRef}): Identify the correct physiological mechanism, numerical constant, or theoretical principle governing ${sub} regarding ${chap}.`;
+          opts = {
+            A: `Primary physiological or physical reaction under standard NCERT ${chap} principles.`,
+            B: `Alternative regulatory mechanism observed in ${sub} structural systems.`,
+            C: `Inhibited metabolic or kinetic pathway during ${chap} phase.`,
+            D: `Secondary kinetic equilibrium state in physical conditions.`
+          };
+        }
       } else {
         stmt = `[JEE Engineering ${diff}] ${chap} (Q-Ref: ${uniqueRef}): Evaluate the numerical/analytical parameters for ${sub} system model under ${chap}.`;
         opts = isMcq ? {
