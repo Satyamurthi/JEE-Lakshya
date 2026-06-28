@@ -710,35 +710,42 @@ export const getQuestionsCountFromDB = async (): Promise<number> => {
   }
 };
 
-export const seedMassiveQuestionsToDB = async (): Promise<{ success: boolean, count: number, error?: string }> => {
+export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Promise<{ success: boolean, count: number, error?: string }> => {
   if (!supabase) return { success: false, count: 0, error: "Supabase client not initialized." };
   
-  const subjects = ['Physics', 'Chemistry', 'Mathematics'];
+  const isNeet = streamName.toLowerCase().includes('neet');
+  const subjects = isNeet ? ['Physics', 'Chemistry', 'Botany', 'Zoology'] : ['Physics', 'Chemistry', 'Mathematics'];
   const difficulties = ['Easy', 'Medium', 'Hard'];
-  const chaptersMap: Record<string, string[]> = {
+  const chaptersMap: Record<string, string[]> = isNeet ? {
+    Physics: ['Kinematics', 'Electrostatics', 'Ray Optics', 'Thermodynamics', 'Current Electricity', 'Laws of Motion'],
+    Chemistry: ['Redox Reactions', 'Chemical Bonding', 'Thermodynamics', 'Organic Chemistry Basics', 'Equilibrium', 'Structure of Atom'],
+    Botany: ['Plant Physiology', 'Cell: Structure and Functions', 'Genetics and Evolution', 'Ecology and Environment', 'Plant Kingdom'],
+    Zoology: ['Human Physiology', 'Animal Kingdom', 'Biotechnology & Applications', 'Cell Biology', 'Evolution', 'Human Reproduction & Health']
+  } : {
     Physics: ['Rotational Dynamics', 'Electrostatics', 'Ray Optics', 'Thermodynamics', 'Current Electricity', 'Laws of Motion'],
     Chemistry: ['Chemical Bonding', 'Thermodynamics', 'Organic Chemistry', 'Chemical Kinetics', 'Equilibrium', 'Atomic Structure'],
     Mathematics: ['Calculus', 'Quadratic Equations', 'Differential Equations', 'Complex Numbers', 'Probability', 'Coordinate Geometry']
   };
 
   const batch: any[] = [];
+  const countPerSub = isNeet ? 100 : 150;
   
   subjects.forEach(sub => {
-    const chaps = chaptersMap[sub];
-    for (let i = 0; i < 150; i++) {
+    const chaps = chaptersMap[sub] || ['General Concepts'];
+    for (let i = 0; i < countPerSub; i++) {
       const diff = difficulties[i % 3];
       const chap = chaps[i % chaps.length];
-      const isMcq = i % 2 === 0;
+      const isMcq = isNeet ? true : (i % 2 === 0);
       
       batch.push({
         subject: sub,
         chapter: chap,
         type: isMcq ? 'MCQ' : 'Numerical',
         difficulty: diff,
-        statement: `[${diff} Level] Practice Question on ${chap} (#${i+1}): Find the evaluated theoretical result for ${sub} system concept parameter.`,
-        options: isMcq ? { A: "Option A", B: "Option B", C: "Option C", D: "Option D" } : {},
+        statement: `[${diff} Level ${isNeet ? 'NEET Medical' : 'JEE'}] Practice Question on ${chap} (#${i+1}): Evaluate the conceptual theoretical principles for ${sub} core concept.`,
+        options: isMcq ? { A: "Concept Option A", B: "Concept Option B", C: "Concept Option C", D: "Concept Option D" } : {},
         correctAnswer: isMcq ? "A" : String((i % 10) + 1),
-        solution: `Step-by-step solution for ${chap} under ${diff} constraint.`,
+        solution: `Step-by-step ${isNeet ? 'NEET' : 'JEE'} solution explanation for ${chap} under ${diff} constraint.`,
         concept: chap,
         markingScheme: { positive: 4, negative: isMcq ? 1 : 0 }
       });

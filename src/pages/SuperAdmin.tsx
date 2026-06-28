@@ -137,9 +137,9 @@ const SuperAdmin = () => {
   const handleSeedDatabaseQuestions = async () => {
     setIsSeedingDb(true);
     try {
-      const result = await seedMassiveQuestionsToDB();
+      const result = await seedMassiveQuestionsToDB(activeStream);
       if (result.success) {
-        setToast({ message: `🎉 Successfully seeded ${result.count} high-difficulty questions into Supabase!`, type: 'success' });
+        setToast({ message: `🎉 Successfully seeded ${result.count} high-difficulty ${activeStream.toLowerCase().includes('neet') ? 'NEET' : 'JEE'} questions into Supabase!`, type: 'success' });
         const updatedCount = await getQuestionsCountFromDB();
         setDbQuestionCount(updatedCount);
       } else {
@@ -1354,7 +1354,9 @@ const SuperAdmin = () => {
                   One-Click Batch Auto-Seeder
                 </h4>
                 <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                  Automatically seed 450+ structured practice questions across Physics, Chemistry, and Mathematics (Easy, Medium, and Hard difficulty levels) directly into your Supabase database.
+                  {activeStream.toLowerCase().includes('neet')
+                    ? 'Automatically seed structured NEET practice questions across Physics, Chemistry, Botany, and Zoology (Easy, Medium, and Hard difficulty levels) directly into your Supabase database.'
+                    : 'Automatically seed 450+ structured practice questions across Physics, Chemistry, and Mathematics (Easy, Medium, and Hard difficulty levels) directly into your Supabase database.'}
                 </p>
               </div>
               <button
@@ -1363,7 +1365,9 @@ const SuperAdmin = () => {
                 className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-auto"
               >
                 {isSeedingDb ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                {isSeedingDb ? 'Seeding Question Batches...' : '⚡ Seed High-Level Question Batch Now'}
+                {isSeedingDb 
+                  ? 'Seeding Question Batches...' 
+                  : `⚡ Seed High-Level ${activeStream.toLowerCase().includes('neet') ? 'NEET' : 'JEE'} Question Batch Now`}
               </button>
             </div>
 
@@ -1371,15 +1375,27 @@ const SuperAdmin = () => {
               <div className="space-y-4">
                 <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
                   <Layers className="w-4 h-4 text-indigo-500" />
-                  Massive 1,500+ SQL Script
+                  {activeStream.toLowerCase().includes('neet') ? 'Massive 60,000+ NEET Database' : 'Massive 1,500+ JEE SQL Script'}
                 </h4>
                 <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                  A massive standalone SQL seeding script containing 1,500+ JEE questions has been compiled and saved locally at <code className="bg-white px-2 py-1 rounded text-indigo-600 font-mono font-bold">scratch/seed_thousands_questions.sql</code>.
+                  {activeStream.toLowerCase().includes('neet') ? (
+                    <>
+                      A massive standalone database containing 60,000+ NEET medical questions (15,000 per subject across Physics, Chemistry, Botany, Zoology) has been compiled and saved locally at <code className="bg-white px-2 py-1 rounded text-indigo-600 font-mono font-bold">neetdb/schema.sql</code>.
+                    </>
+                  ) : (
+                    <>
+                      A massive standalone SQL seeding script containing 1,500+ JEE questions has been compiled and saved locally at <code className="bg-white px-2 py-1 rounded text-indigo-600 font-mono font-bold">scratch/seed_thousands_questions.sql</code>.
+                    </>
+                  )}
                 </p>
               </div>
               <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 text-emerald-800 text-xs font-bold mt-auto">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>Run the generated script in your Supabase SQL Editor anytime for bulk imports.</span>
+                <span>
+                  {activeStream.toLowerCase().includes('neet')
+                    ? 'Run or manage active NEET question sets in your Supabase SQL Editor anytime for bulk imports.'
+                    : 'Run the generated script in your Supabase SQL Editor anytime for bulk imports.'}
+                </span>
               </div>
             </div>
 
