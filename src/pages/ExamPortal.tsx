@@ -128,6 +128,27 @@ const ExamPortal = () => {
       return;
     }
 
+    // Sanitize and clean all questions dynamically
+    const { cleanQuestionText } = require('../utils/sanitizer');
+    const { recordSeenQuestions } = require('../utils/questionTracker');
+
+    examQuestions = examQuestions.map(q => {
+      const cleanedOpts: any = {};
+      if (q.options && typeof q.options === 'object') {
+        Object.entries(q.options).forEach(([k, v]) => {
+          cleanedOpts[k] = typeof v === 'string' ? cleanQuestionText(v) : v;
+        });
+      }
+      return {
+        ...q,
+        statement: cleanQuestionText(q.statement || q.question || ''),
+        options: cleanedOpts,
+        solution: cleanQuestionText(q.solution || q.explanation || '')
+      };
+    });
+
+    recordSeenQuestions(examQuestions);
+
     let durationMins = (examConfig && examConfig.duration) || 30;
     if (examQuestions.length >= 60 || (examConfig && examConfig.type && (examConfig.type.includes('PYQ') || examConfig.type.includes('Full')))) {
       durationMins = 180;

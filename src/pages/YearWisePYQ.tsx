@@ -270,6 +270,9 @@ const YearWisePYQ = () => {
       const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
       const service = await getStreamGeminiService(activeStream);
 
+      const { cleanQuestionText } = await import('../utils/sanitizer');
+      const { filterUniqueQuestions } = await import('../utils/questionTracker');
+
       let questions: any[] = [];
       if (isNeet) {
         const [pQs, cQs, bQs] = await Promise.all([
@@ -306,8 +309,27 @@ const YearWisePYQ = () => {
         questions = [...finalP, ...finalC, ...finalM];
       }
 
+      // Sanitize statements and options to remove internal tags and fix LaTeX
+      questions = questions.map(q => {
+        const cleanedOpts: any = {};
+        if (q.options && typeof q.options === 'object') {
+          Object.entries(q.options).forEach(([k, v]) => {
+            cleanedOpts[k] = typeof v === 'string' ? cleanQuestionText(v) : v;
+          });
+        }
+        return {
+          ...q,
+          statement: cleanQuestionText(q.statement || q.question || ''),
+          options: cleanedOpts,
+          solution: cleanQuestionText(q.solution || q.explanation || '')
+        };
+      });
+
+      // Filter out any duplicate questions within this paper
+      questions = filterUniqueQuestions(questions, false);
+
       const sessionData = {
-        type: isNeet ? `NEET UG PYQ ${paper.year}` : `JEE Main PYQ ${paper.year}`,
+        type: isNeet ? `NEET UG ${paper.year} (${paper.shift})` : `JEE Main ${paper.year} (${paper.shift})`,
         questions: questions,
         startTime: Date.now(),
         durationMinutes: paper.durationMinutes || 180
