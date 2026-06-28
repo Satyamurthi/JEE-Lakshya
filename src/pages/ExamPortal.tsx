@@ -270,8 +270,20 @@ const ExamPortal = () => {
 
   if (questions.length === 0) return null;
 
-  const subjects = ['Physics', 'Chemistry', 'Mathematics'];
-  const currentSubject = currentQuestion.subject;
+  // Dynamically extract and order subjects from exam questions
+  const detectedSubjects = Array.from(new Set(questions.map(q => q.subject).filter(Boolean)));
+  const defaultOrder = config?.type?.includes('NEET') 
+    ? ['Physics', 'Chemistry', 'Biology', 'Botany', 'Zoology'] 
+    : ['Physics', 'Chemistry', 'Mathematics'];
+  
+  const subjects = defaultOrder.filter(s => detectedSubjects.includes(s))
+    .concat(detectedSubjects.filter(s => !defaultOrder.includes(s)));
+    
+  if (subjects.length === 0) {
+    subjects.push(...defaultOrder);
+  }
+
+  const currentSubject = currentQuestion.subject || subjects[0];
 
   return (
     <div className="fixed inset-0 bg-slate-50 flex flex-col z-[100] overflow-hidden">
@@ -314,13 +326,13 @@ const ExamPortal = () => {
               key={sub}
               onClick={() => {
                 const firstIdx = questions.findIndex(q => q.subject === sub);
-                setCurrentIndex(firstIdx);
+                if (firstIdx !== -1) setCurrentIndex(firstIdx);
               }}
               className={`px-6 h-full text-[10px] font-black uppercase tracking-widest transition-all border-b-2 ${
                 isActive ? 'text-indigo-600 border-indigo-600 bg-indigo-50/50' : 'text-slate-400 border-transparent hover:text-slate-600'
               }`}
             >
-              {sub}
+              {sub} ({subQuestions.length})
             </button>
           );
         })}

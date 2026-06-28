@@ -270,24 +270,40 @@ const YearWisePYQ = () => {
       const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
       const service = await getStreamGeminiService(activeStream);
 
-      // Attempt to fetch DB questions first
-      let questions = [];
+      let questions: any[] = [];
       if (isNeet) {
-        questions = await fetchQuestionsFromDB(undefined, undefined, undefined, 100, 0);
-        if (!questions || questions.length < 30) {
-          const pQs = service.generateFallbackQuestions('Physics', 50, 0);
-          const cQs = service.generateFallbackQuestions('Chemistry', 50, 0);
-          const bQs = service.generateFallbackQuestions('Biology', 100, 0);
-          questions = [...pQs, ...cQs, ...bQs];
-        }
+        const [pQs, cQs, bQs] = await Promise.all([
+          fetchQuestionsFromDB('Physics', undefined, undefined, 45, 0),
+          fetchQuestionsFromDB('Chemistry', undefined, undefined, 45, 0),
+          fetchQuestionsFromDB('Biology', undefined, undefined, 90, 0)
+        ]);
+
+        let finalP = pQs.length >= 15 ? pQs : service.generateFallbackQuestions('Physics', 45, 0);
+        let finalC = cQs.length >= 15 ? cQs : service.generateFallbackQuestions('Chemistry', 45, 0);
+        let finalB = bQs.length >= 30 ? bQs : service.generateFallbackQuestions('Biology', 90, 0);
+
+        finalP = finalP.map(q => ({ ...q, subject: 'Physics' }));
+        finalC = finalC.map(q => ({ ...q, subject: 'Chemistry' }));
+        finalB = finalB.map(q => ({ ...q, subject: 'Biology' }));
+
+        questions = [...finalP, ...finalC, ...finalB];
       } else {
-        questions = await fetchQuestionsFromDB(undefined, undefined, undefined, 72, 18);
-        if (!questions || questions.length < 30) {
-          const pQs = service.generateFallbackQuestions('Physics', 24, 6);
-          const cQs = service.generateFallbackQuestions('Chemistry', 24, 6);
-          const mQs = service.generateFallbackQuestions('Mathematics', 24, 6);
-          questions = [...pQs, ...cQs, ...mQs];
-        }
+        // JEE Main official pattern: 30 Questions per subject (24 MCQ + 6 Numerical for Physics, Chemistry, Mathematics)
+        const [pQs, cQs, mQs] = await Promise.all([
+          fetchQuestionsFromDB('Physics', undefined, undefined, 24, 6),
+          fetchQuestionsFromDB('Chemistry', undefined, undefined, 24, 6),
+          fetchQuestionsFromDB('Mathematics', undefined, undefined, 24, 6)
+        ]);
+
+        let finalP = pQs.length >= 10 ? pQs : service.generateFallbackQuestions('Physics', 24, 6);
+        let finalC = cQs.length >= 10 ? cQs : service.generateFallbackQuestions('Chemistry', 24, 6);
+        let finalM = mQs.length >= 10 ? mQs : service.generateFallbackQuestions('Mathematics', 24, 6);
+
+        finalP = finalP.map(q => ({ ...q, subject: 'Physics' }));
+        finalC = finalC.map(q => ({ ...q, subject: 'Chemistry' }));
+        finalM = finalM.map(q => ({ ...q, subject: 'Mathematics' }));
+
+        questions = [...finalP, ...finalC, ...finalM];
       }
 
       const sessionData = {
