@@ -29,6 +29,13 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
         progressBar = findViewById(R.id.progressBar)
 
+        // Retrieve integrated database credentials from env_config.xml
+        val supabaseUrl = getString(R.string.supabase_url)
+        val supabaseKey = getString(R.string.supabase_anon_key)
+        val neetUrl = getString(R.string.neet_supabase_url)
+        val neetKey = getString(R.string.neet_supabase_anon_key)
+        val razorpayKey = getString(R.string.razorpay_key_id)
+
         // Configure high-performance WebView settings
         val webSettings: WebSettings = webView.settings
         webSettings.javaScriptEnabled = true
@@ -42,7 +49,7 @@ class MainActivity : AppCompatActivity() {
         webSettings.setSupportZoom(false)
         webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
-        // Setup custom WebView client for seamless navigation & loading indicators
+        // Setup custom WebView client for database syncing & loading indicators
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
@@ -52,6 +59,20 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 progressBar.visibility = View.GONE
+
+                // Inject integrated environment credentials into WebView localStorage
+                val injectJs = """
+                    javascript:(function() {
+                        try {
+                            localStorage.setItem('VITE_SUPABASE_URL', '$supabaseUrl');
+                            localStorage.setItem('VITE_SUPABASE_ANON_KEY', '$supabaseKey');
+                            localStorage.setItem('VITE_NEET_SUPABASE_URL', '$neetUrl');
+                            localStorage.setItem('VITE_NEET_SUPABASE_ANON_KEY', '$neetKey');
+                            localStorage.setItem('VITE_RAZORPAY_KEY_ID', '$razorpayKey');
+                        } catch(e) { console.log('Config inject error', e); }
+                    })()
+                """.trimIndent()
+                view?.evaluateJavascript(injectJs, null)
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -65,11 +86,10 @@ class MainActivity : AppCompatActivity() {
 
             override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                 super.onReceivedError(view, request, error)
-                // Fallback handling if offline
             }
         }
 
-        // Load application
+        // Load application with fallback
         if (savedInstanceState == null) {
             webView.loadUrl(appUrl)
         } else {
