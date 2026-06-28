@@ -236,3 +236,16 @@ Alternatively, you can execute the Python automated script from your terminal:
 ```bash
 python d:\JEE\neetdb\migrate_to_supabase.py
 ```
+
+---
+
+## 5. High-Frequency NEET Formats & Unique Seeding Integration
+
+### 🌿 High-Frequency Biology Formats (Botany & Zoology)
+The NEET UG database engine natively generates and stores three high-frequency question structures adhering strictly to NTA NCERT standards:
+1. **Match Column I with Column II**: Pairs structural complexes, enzymes, and organelles with their functions (`A-(ii), B-(iv), C-(i), D-(iii)`).
+2. **Diagrammatical & Labeled Component Identification**: Presents anatomical/schematic diagrams asking students to identify labeled parts (A, B, C, D) and functional relationships.
+3. **Statement-I & Statement-II Evaluation**: NCERT assertion and reasoning evaluation.
+
+### 🛡️ Unique Statement & Upsert Conflict Resolution
+All NEET seeder routines in `src/supabase.ts` append dynamic reference tokens (`Q-Ref: LX9P2K-BO1-9281`) and execute PostgreSQL `.upsert(batch, { onConflict: 'statement' })` to prevent unique constraint errors during bulk operations.

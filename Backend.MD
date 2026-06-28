@@ -506,3 +506,21 @@ update public.profiles
 set has_used_free_test = false 
 where role = 'student';
 ```
+
+---
+
+## 7. Stream-Aware Question Seeding & Dynamic Actual Revenue Engine
+
+### ⚡ Automated Unique Seeding Procedure (`src/supabase.ts`)
+The application features an automated batch seeder function `seedMassiveQuestionsToDB(streamName)` that dynamically adapts based on the active academic stream (`JEE` vs `NEET`):
+- **NEET Streams**: Seeds MCQs across **Physics, Chemistry, Botany, and Zoology** with Match-the-Following and Diagrammatical Identification formats.
+- **JEE Streams**: Seeds questions across **Physics, Chemistry, and Mathematics**.
+- **Unique Constraint Safety**: Generates timestamped reference codes (`Q-Ref: LX9P2K-PH1-4829`) and executes PostgreSQL `.upsert(batch, { onConflict: 'statement' })` to eliminate duplicate key errors permanently.
+
+### 💰 Actual Dynamic Revenue Calculation
+Super Admin metrics calculate live earned revenue across paid test attempts in Supabase:
+```sql
+SELECT COALESCE(SUM(total_marks), 0) AS total_revenue 
+FROM public.daily_attempts 
+WHERE paid = true;
+```
