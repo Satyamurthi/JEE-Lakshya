@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary_indigo">#4F46E5</color>
+    <color name="primary_indigo_dark">#3730A3</color>
+    <color name="accent_violet">#7C3AED</color>
+    <color name="bg_slate_dark">#0F172A</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
