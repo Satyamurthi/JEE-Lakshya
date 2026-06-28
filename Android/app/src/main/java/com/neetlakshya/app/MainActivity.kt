@@ -1,9 +1,13 @@
 package com.neetlakshya.app
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
@@ -14,12 +18,22 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ProgressBar
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var progressBar: ProgressBar
+
+    // Current local version code of this compiled application
+    private val currentVersionCode = 1
 
     // Default target URL for NEET Lakshya & JEE Nexus Platform
     private val appUrl = "https://jeelakshya.netlify.app"
@@ -41,6 +55,9 @@ class MainActivity : AppCompatActivity() {
         val neetUrl = getString(R.string.neet_supabase_url)
         val neetKey = getString(R.string.neet_supabase_anon_key)
         val razorpayKey = getString(R.string.razorpay_key_id)
+
+        // Check for updates from Supabase backend in background
+        checkForAppUpdates(supabaseUrl, supabaseKey)
 
         // Configure high-performance WebView settings
         val webSettings: WebSettings = webView.settings
@@ -101,6 +118,73 @@ class MainActivity : AppCompatActivity() {
         } else {
             webView.restoreState(savedInstanceState)
         }
+    }
+
+    private fun checkForAppUpdates(baseUrl: String, apiKey: String) {
+        Thread {
+            try {
+                val endpoint = "$baseUrl/rest/v1/app_versions?select=*&order=version_code.desc&limit=1"
+                val url = URL(endpoint)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.setRequestProperty("apikey", apiKey)
+                connection.setRequestProperty("Authorization", "Bearer $apiKey")
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+
+                    val jsonArray = JSONArray(response.toString())
+                    if (jsonArray.length() > 0) {
+                        val latestVersion = jsonArray.getJSONObject(0)
+                        val remoteVersionCode = latestVersion.getInt("version_code")
+                        val versionName = latestVersion.getString("version_name")
+                        val apkUrl = latestVersion.getString("apk_url")
+                        val changelog = latestVersion.optString("changelog", "New performance updates available.")
+                        val isForceUpdate = latestVersion.optBoolean("is_force_update", false)
+
+                        if (remoteVersionCode > currentVersionCode) {
+                            Handler(Looper.getMainLooper()).post {
+                                showUpdateDialog(versionName, changelog, apkUrl, isForceUpdate)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
+    }
+
+    private fun showUpdateDialog(versionName: String, changelog: String, apkUrl: String, isForceUpdate: Boolean) {
+        val builder = AlertDialog.Builder(this)
+            .setTitle("🚀 Update Available! (v$versionName)")
+            .setMessage("A new version of NEET Lakshya & JEE Nexus is ready for installation.\n\nWhat's New:\n$changelog")
+            .setCancelable(!isForceUpdate)
+            .setPositiveButton("Update Now") { _, _ ->
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl))
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+        if (!isForceUpdate) {
+            builder.setNegativeButton("Later") { dialog, _ ->
+                dialog.dismiss()
+            }
+        }
+
+        val dialog = builder.create()
+        dialog.show()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
