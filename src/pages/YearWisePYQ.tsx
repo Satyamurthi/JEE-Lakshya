@@ -266,50 +266,14 @@ const YearWisePYQ = () => {
 
   const startExamFlow = async (paper: PYQPaper) => {
     try {
-      const { fetchQuestionsFromDB } = await import('../supabase');
-      const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
-      const service = await getStreamGeminiService(activeStream);
-
       const { cleanQuestionText } = await import('../utils/sanitizer');
       const { filterUniqueQuestions } = await import('../utils/questionTracker');
+      const { getOfficialJeePaperQuestions } = await import('../data/officialJeePyqBank');
 
-      let questions: any[] = [];
-      if (isNeet) {
-        const [pQs, cQs, bQs] = await Promise.all([
-          fetchQuestionsFromDB('Physics', undefined, undefined, 45, 0),
-          fetchQuestionsFromDB('Chemistry', undefined, undefined, 45, 0),
-          fetchQuestionsFromDB('Biology', undefined, undefined, 90, 0)
-        ]);
+      // Load stagnant, authentic official paper questions for this shift
+      let questions = getOfficialJeePaperQuestions(paper.id, isNeet);
 
-        let finalP = pQs.length >= 15 ? pQs : service.generateFallbackQuestions('Physics', 45, 0);
-        let finalC = cQs.length >= 15 ? cQs : service.generateFallbackQuestions('Chemistry', 45, 0);
-        let finalB = bQs.length >= 30 ? bQs : service.generateFallbackQuestions('Biology', 90, 0);
-
-        finalP = finalP.map(q => ({ ...q, subject: 'Physics' }));
-        finalC = finalC.map(q => ({ ...q, subject: 'Chemistry' }));
-        finalB = finalB.map(q => ({ ...q, subject: 'Biology' }));
-
-        questions = [...finalP, ...finalC, ...finalB];
-      } else {
-        // JEE Main official pattern: 30 Questions per subject (24 MCQ + 6 Numerical for Physics, Chemistry, Mathematics)
-        const [pQs, cQs, mQs] = await Promise.all([
-          fetchQuestionsFromDB('Physics', undefined, undefined, 24, 6),
-          fetchQuestionsFromDB('Chemistry', undefined, undefined, 24, 6),
-          fetchQuestionsFromDB('Mathematics', undefined, undefined, 24, 6)
-        ]);
-
-        let finalP = pQs.length >= 10 ? pQs : service.generateFallbackQuestions('Physics', 24, 6);
-        let finalC = cQs.length >= 10 ? cQs : service.generateFallbackQuestions('Chemistry', 24, 6);
-        let finalM = mQs.length >= 10 ? mQs : service.generateFallbackQuestions('Mathematics', 24, 6);
-
-        finalP = finalP.map(q => ({ ...q, subject: 'Physics' }));
-        finalC = finalC.map(q => ({ ...q, subject: 'Chemistry' }));
-        finalM = finalM.map(q => ({ ...q, subject: 'Mathematics' }));
-
-        questions = [...finalP, ...finalC, ...finalM];
-      }
-
-      // Sanitize statements and options to remove internal tags and fix LaTeX
+      // Sanitize statements and options to remove any internal tags and fix LaTeX
       questions = questions.map(q => {
         const cleanedOpts: any = {};
         if (q.options && typeof q.options === 'object') {
