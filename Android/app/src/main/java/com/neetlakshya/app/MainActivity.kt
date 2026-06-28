@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.neetlakshya.app
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
