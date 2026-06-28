@@ -717,18 +717,19 @@ export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Prom
   const subjects = isNeet ? ['Physics', 'Chemistry', 'Botany', 'Zoology'] : ['Physics', 'Chemistry', 'Mathematics'];
   const difficulties = ['Easy', 'Medium', 'Hard'];
   const chaptersMap: Record<string, string[]> = isNeet ? {
-    Physics: ['Kinematics', 'Electrostatics', 'Ray Optics', 'Thermodynamics', 'Current Electricity', 'Laws of Motion'],
-    Chemistry: ['Redox Reactions', 'Chemical Bonding', 'Thermodynamics', 'Organic Chemistry Basics', 'Equilibrium', 'Structure of Atom'],
-    Botany: ['Plant Physiology', 'Cell: Structure and Functions', 'Genetics and Evolution', 'Ecology and Environment', 'Plant Kingdom'],
-    Zoology: ['Human Physiology', 'Animal Kingdom', 'Biotechnology & Applications', 'Cell Biology', 'Evolution', 'Human Reproduction & Health']
+    Physics: ['Kinematics', 'Electrostatics', 'Ray Optics', 'Thermodynamics', 'Current Electricity', 'Laws of Motion', 'Gravitation', 'Wave Optics'],
+    Chemistry: ['Redox Reactions', 'Chemical Bonding', 'Thermodynamics', 'Organic Chemistry Basics', 'Equilibrium', 'Structure of Atom', 'Coordination Compounds', 'Solutions'],
+    Botany: ['Plant Physiology', 'Cell: Structure and Functions', 'Genetics and Evolution', 'Ecology and Environment', 'Plant Kingdom', 'Biomolecules'],
+    Zoology: ['Human Physiology', 'Animal Kingdom', 'Biotechnology & Applications', 'Cell Biology', 'Evolution', 'Human Reproduction & Health', 'Animal Tissues']
   } : {
-    Physics: ['Rotational Dynamics', 'Electrostatics', 'Ray Optics', 'Thermodynamics', 'Current Electricity', 'Laws of Motion'],
-    Chemistry: ['Chemical Bonding', 'Thermodynamics', 'Organic Chemistry', 'Chemical Kinetics', 'Equilibrium', 'Atomic Structure'],
-    Mathematics: ['Calculus', 'Quadratic Equations', 'Differential Equations', 'Complex Numbers', 'Probability', 'Coordinate Geometry']
+    Physics: ['Rotational Dynamics', 'Electrostatics', 'Ray Optics', 'Thermodynamics', 'Current Electricity', 'Laws of Motion', 'Gravitation'],
+    Chemistry: ['Chemical Bonding', 'Thermodynamics', 'Organic Chemistry', 'Chemical Kinetics', 'Equilibrium', 'Atomic Structure', 'Solutions'],
+    Mathematics: ['Calculus', 'Quadratic Equations', 'Differential Equations', 'Complex Numbers', 'Probability', 'Coordinate Geometry', 'Vectors 3D']
   };
 
   const batch: any[] = [];
   const countPerSub = isNeet ? 100 : 150;
+  const timestampToken = Date.now().toString(36).toUpperCase();
   
   subjects.forEach(sub => {
     const chaps = chaptersMap[sub] || ['General Concepts'];
@@ -736,16 +737,37 @@ export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Prom
       const diff = difficulties[i % 3];
       const chap = chaps[i % chaps.length];
       const isMcq = isNeet ? true : (i % 2 === 0);
+      const uniqueRef = `${timestampToken}-${sub.substring(0,2).toUpperCase()}${i+1}-${Math.floor(1000 + Math.random()*9000)}`;
       
+      let stmt = '';
+      let opts = {};
+      if (isNeet) {
+        stmt = `[NEET Medical ${diff}] ${chap} (Q-Ref: ${uniqueRef}): Identify the correct physiological mechanism or theoretical principle governing ${sub} regarding ${chap}.`;
+        opts = {
+          A: `Primary physiological reaction under standard NCERT ${chap} principles.`,
+          B: `Alternative regulatory mechanism observed in ${sub} structural systems.`,
+          C: `Inhibited metabolic or cellular pathway during ${chap} phase.`,
+          D: `Secondary kinetic equilibrium state in biological conditions.`
+        };
+      } else {
+        stmt = `[JEE Engineering ${diff}] ${chap} (Q-Ref: ${uniqueRef}): Evaluate the numerical/analytical parameters for ${sub} system model under ${chap}.`;
+        opts = isMcq ? {
+          A: `Calculated value parameter alpha under ${chap} dynamics.`,
+          B: `Evaluated matrix boundary result for ${sub}.`,
+          C: `Theoretical upper limit constraint in system state.`,
+          D: `Zero field equilibrium vector constant.`
+        } : {};
+      }
+
       batch.push({
         subject: sub,
         chapter: chap,
         type: isMcq ? 'MCQ' : 'Numerical',
         difficulty: diff,
-        statement: `[${diff} Level ${isNeet ? 'NEET Medical' : 'JEE'}] Practice Question on ${chap} (#${i+1}): Evaluate the conceptual theoretical principles for ${sub} core concept.`,
-        options: isMcq ? { A: "Concept Option A", B: "Concept Option B", C: "Concept Option C", D: "Concept Option D" } : {},
-        correctAnswer: isMcq ? "A" : String((i % 10) + 1),
-        solution: `Step-by-step ${isNeet ? 'NEET' : 'JEE'} solution explanation for ${chap} under ${diff} constraint.`,
+        statement: stmt,
+        options: opts,
+        correctAnswer: isMcq ? (["A", "B", "C", "D"][i % 4]) : String((i % 10) + 1),
+        solution: `Detailed step-by-step ${isNeet ? 'NEET Medical NCERT' : 'JEE Advanced'} solution explanation for ${chap} (${uniqueRef}).`,
         concept: chap,
         markingScheme: { positive: 4, negative: isMcq ? 1 : 0 }
       });
@@ -753,8 +775,13 @@ export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Prom
   });
 
   try {
-    const { data, error } = await supabase.from('questions').insert(batch).select();
-    if (error) return { success: false, count: 0, error: error.message };
+    const { data, error } = await supabase.from('questions').upsert(batch, { onConflict: 'statement' }).select();
+    if (error) {
+      // If upsert fails due to schema conflict target, fallback to insert with random UUIDs
+      const { data: insData, error: insErr } = await supabase.from('questions').insert(batch).select();
+      if (insErr) return { success: false, count: 0, error: insErr.message };
+      return { success: true, count: insData?.length || batch.length };
+    }
     return { success: true, count: data?.length || batch.length };
   } catch (e: any) {
     return { success: false, count: 0, error: e.message };
