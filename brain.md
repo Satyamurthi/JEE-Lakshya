@@ -110,6 +110,11 @@ d:\JEE\
     ├── 📄 check_supabase_count.py       # Python verification script checking live question counts in Supabase
     ├── 📄 rebuild_and_migrate_all.py    # Master one-click Python script rebuilding local DB and migrating to Supabase
     └── 📁 sql_chunks/                   # Directory containing 5,000-row chunked SQL files for smooth execution
+│
+└── 📁 Android/                          # Native Android Studio Mobile Application Source
+    ├── 📁 app/src/main/java/com/example/myapplication/
+    │   └── 📄 MainActivity.kt           # Native Kotlin WebView activity with back-button & loading handler
+    └── 📁 app/src/main/res/             # Android resources (activity_main.xml layout, colors.xml, themes.xml)
 ```
 
 ---
@@ -139,6 +144,10 @@ d:\JEE\
 - Synchronized all codebase updates across two remote GitHub repositories:
   - `https://github.com/Satyamurthi/JEE-Nexus.git` (`main` branch)
   - `https://github.com/Satyamurthi/JEE-Lakshya.git` (`main` branch)
+
+### Phase 5: Native Android Mobile Application Setup
+- **Android Native WebView Application (`Android/`)**: Generated native Android Kotlin source code (`MainActivity.kt`), XML layouts (`activity_main.xml`), permissions (`AndroidManifest.xml`), and color themes (`colors.xml`, `themes.xml`) matching the dark slate/indigo web application branding.
+- Android application configured with hardware acceleration, dom storage, and back-button navigation for CBT tests.
 
 ---
 
