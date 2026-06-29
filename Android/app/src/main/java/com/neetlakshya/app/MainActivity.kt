@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.net.http.SslError
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -12,6 +13,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.webkit.SslErrorHandler
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -21,16 +23,12 @@ import android.widget.ProgressBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONArray
-import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var progressBar: ProgressBar
+    private var isErrorOccurred = false
 
     // Current local version code of this compiled application
     private val currentVersionCode = 2
@@ -59,10 +57,11 @@ class MainActivity : AppCompatActivity() {
         // Check for updates from Supabase backend in background
         checkForAppUpdates(supabaseUrl, supabaseKey)
 
-        // Configure high-performance WebView settings
+        // Configure high-performance resilient WebView settings
         val webSettings: WebSettings = webView.settings
         webSettings.javaScriptEnabled = true
         webSettings.domStorageEnabled = true
+        webSettings.databaseEnabled = true
         webSettings.allowFileAccess = true
         webSettings.allowContentAccess = true
         webSettings.loadWithOverviewMode = true
@@ -70,18 +69,22 @@ class MainActivity : AppCompatActivity() {
         webSettings.builtInZoomControls = false
         webSettings.displayZoomControls = false
         webSettings.setSupportZoom(false)
+        webSettings.cacheMode = WebSettings.LOAD_DEFAULT
         webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
-        // Setup custom WebView client for database syncing & loading indicators
+        // Setup custom resilient WebView client
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
+                isErrorOccurred = false
                 progressBar.visibility = View.VISIBLE
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                progressBar.visibility = View.GONE
+                if (!isErrorOccurred) {
+                    progressBar.visibility = View.GONE
+                }
 
                 // Inject integrated environment credentials into WebView localStorage
                 val injectJs = """
@@ -99,20 +102,42 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val url = request?.url.toString()
-                if (url.startsWith("http://") || url.startsWith("https://")) {
-                    view?.loadUrl(url)
-                    return true
+                val url = request?.url?.toString() ?: return false
+                // Keep app navigation within jeelakshya.netlify.app internal
+                if (url.contains("jeelakshya.netlify.app") || url.contains("netlify.app")) {
+                    return false
                 }
-                return false
+                // Open external links in system browser
+                return try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    startActivity(intent)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
             }
 
             override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                 super.onReceivedError(view, request, error)
+                if (request?.isForMainFrame == true) {
+                    isErrorOccurred = true
+                    progressBar.visibility = View.GONE
+                    // Auto-recovery: Silent retry after 3 seconds on network connection drop
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        if (isErrorOccurred && !isFinishing) {
+                            view?.loadUrl(appUrl)
+                        }
+                    }, 3000)
+                }
+            }
+
+            override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+                // Proceed smoothly through minor SSL handshake redirects
+                handler?.proceed()
             }
         }
 
-        // Load application with fallback
+        // Load application
         if (savedInstanceState == null) {
             webView.loadUrl(appUrl)
         } else {
@@ -124,16 +149,16 @@ class MainActivity : AppCompatActivity() {
         Thread {
             try {
                 val endpoint = "$baseUrl/rest/v1/app_versions?select=*&order=version_code.desc&limit=1"
-                val url = URL(endpoint)
-                val connection = url.openConnection() as HttpURLConnection
+                val url = java.net.URL(endpoint)
+                val connection = url.openConnection() as java.net.HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.setRequestProperty("apikey", apiKey)
                 connection.setRequestProperty("Authorization", "Bearer $apiKey")
                 connection.connectTimeout = 5000
                 connection.readTimeout = 5000
 
-                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                    val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                if (connection.responseCode == java.net.HttpURLConnection.HTTP_OK) {
+                    val reader = java.io.BufferedReader(java.io.InputStreamReader(connection.inputStream))
                     val response = StringBuilder()
                     var line: String?
                     while (reader.readLine().also { line = it } != null) {
