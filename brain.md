@@ -31,10 +31,17 @@
 
 ## 🤖 MANDATORY AGENT EXECUTION & CHECKPOINT RULES
 
-1. **PERSISTENT LOGGING**: Every single significant change, file edit, database alteration, or structural task MUST be documented in `brain.md`.
-2. **MIDWAY STOPPING GUARD**: If execution stops in the middle (due to rate limits, turn limits, or user pausing), update the `## ⏸️ LIVE WORK RESUME CHECKPOINT` with the exact line of code or task step where work halted.
-3. **ZERO-FRICTION RESUMPTION**: When the user says *"continue"*, *"continue at next meet"*, or *"resume"*, immediately read `## ⏸️ LIVE WORK RESUME CHECKPOINT` and execute the pending items immediately.
-4. **MULTI-REPO SYNCHRONIZATION**: Always maintain alignment across target repositories (`JEE-Nexus` and `JEE-Lakshya`).
+1. **AUTOMATIC TRIPLE-SYNC PROTOCOL (GitHub + Supabase + BRAIN.md)**: Whenever the user requests any change, modification, fix, or feature:
+   - **GitHub**: The agent MUST stage (`git add`), commit, and push changes to BOTH remote repositories (`origin` -> `JEE-Lakshya` and `JEE-Nexus`).
+   - **Supabase**: Any database structure, query, or data model changes MUST be updated directly in live Supabase production (`https://daitgcrjlimjajmqoemm.supabase.co`).
+   - **BRAIN.md**: The agent MUST immediately log the completed task and update `brain.md` memory checkpoint.
+2. **"READ THE BRAIN" INSTANT ARCHITECTURE KNOWLEDGE**: Whenever a new AI model, session, or prompt is initialized and the user says *"read the brain"* or *"read brain.md"*, the AI assistant MUST read this document completely to gain immediate, exhaustive context on:
+   - **What is inside the project**: Full repository file map, components, data models, and services.
+   - **How it works**: Real-time CBT testing engine, daily challenge leaderboard, Gemini AI dynamic question generation, stream dispatcher, IST daily streak calculator, and difficulty division system.
+   - **Architecture**: Multi-tenant architecture isolating Independent External Students vs Coaching Institute Admins vs Super Admin, powered by React + Vite + TypeScript frontend and Supabase PostgreSQL Backend-as-a-Service.
+3. **PERSISTENT LOGGING & CHECKPOINTS**: Every single significant change, file edit, database alteration, or structural task MUST be documented in `brain.md`.
+4. **MIDWAY STOPPING GUARD**: If execution stops in the middle (due to rate limits, turn limits, or user pausing), update the `## ⏸️ LIVE WORK RESUME CHECKPOINT` with the exact line of code or task step where work halted.
+5. **ZERO-FRICTION RESUMPTION**: When the user says *"continue"*, *"continue at next meet"*, or *"resume"*, immediately read `## ⏸️ LIVE WORK RESUME CHECKPOINT` and execute pending items seamlessly.
 
 ---
 
