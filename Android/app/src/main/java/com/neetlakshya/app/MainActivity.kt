@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
 
     // Current local version code of this compiled application
-    private val currentVersionCode = 1
+    private val currentVersionCode = 2
 
     // Default target URL for NEET Lakshya & JEE Nexus Platform
     private val appUrl = "https://jeelakshya.netlify.app"
