@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { submitExamAttempt, submitDailyAttempt } from '../supabase';
 import MathText from '../components/MathText';
+import { cleanQuestionText } from '../utils/sanitizer';
+import { recordSeenQuestions } from '../utils/questionTracker';
 
 const ExamPortal = () => {
   const navigate = useNavigate();
@@ -134,8 +136,6 @@ const ExamPortal = () => {
     }
 
     // Sanitize and clean all questions dynamically
-    const { cleanQuestionText } = require('../utils/sanitizer');
-    const { recordSeenQuestions } = require('../utils/questionTracker');
 
     examQuestions = examQuestions.map(q => {
       const cleanedOpts: any = {};
