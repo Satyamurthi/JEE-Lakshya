@@ -119,6 +119,16 @@ const Login = () => {
         user.status = 'approved';
       }
 
+      // Auto-approve independent students (no coaching admin attached)
+      if (user.role === 'student' && !user.admin_id) {
+        user.status = 'approved';
+        if (supabase) {
+          try {
+            await supabase.from('profiles').update({ status: 'approved' }).eq('id', user.id);
+          } catch (e) {}
+        }
+      }
+
       // Check for approval status
       if (user.status !== 'approved') {
         setError("Your account is pending approval from the administrator. Please check back later.");

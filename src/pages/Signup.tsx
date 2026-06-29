@@ -138,12 +138,17 @@ const Signup = () => {
       };
 
       if (supabase) {
-        const { error: dbError } = await supabase.from('profiles').insert(newUser);
+        // Use upsert to cleanly merge profile fields whether inserted by Auth trigger or direct enrollment
+        const { error: dbError } = await supabase.from('profiles').upsert(newUser, { onConflict: 'id' });
         if (dbError) {
-          console.error("Supabase profile creation failed:", dbError);
-          setError(`Profile setup error: ${dbError.message}`);
-          setIsLoading(false);
-          return;
+          console.warn("Supabase profile upsert warning, attempting update fallback:", dbError.message);
+          const { error: updateErr } = await supabase.from('profiles').update(newUser).eq('id', finalUserId);
+          if (updateErr) {
+            console.error("Supabase profile creation/update failed:", updateErr);
+            setError(`Profile setup error: ${updateErr.message}`);
+            setIsLoading(false);
+            return;
+          }
         }
       }
 
