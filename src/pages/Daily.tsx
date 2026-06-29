@@ -2,13 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Zap, CheckCircle2, Lock, Play, Trophy, Clock, ChevronRight, Brain, Target, Sparkles, DollarSign, X, Loader2 } from 'lucide-react';
-import { getDailyChallenge, getUserDailyAttempt } from '../supabase';
+import { getDailyChallenge, getUserDailyAttempt, getDailyAttemptsByChallenge, getUserAllDailyAttempts } from '../supabase';
 import { initiateRazorpayPayment } from '../utils/payment';
+import { calculateDailyStreak } from '../utils/metricsHelper';
 
 const Daily = () => {
   const navigate = useNavigate();
   const [challenge, setChallenge] = useState<any>(null);
   const [attempt, setAttempt] = useState<any>(null);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [streak, setStreak] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   
@@ -28,12 +31,38 @@ const Daily = () => {
     const loadDaily = async () => {
       setLoading(true);
       try {
+        const targetAdminId = isIndependent ? null : profile.admin_id;
         const [challengeData, attemptData] = await Promise.all([
-          getDailyChallenge(today, profile.admin_id),
+          getDailyChallenge(today, targetAdminId),
           getUserDailyAttempt(profile.id, today)
         ]);
         setChallenge(challengeData);
         setAttempt(attemptData);
+
+        if (challengeData) {
+          const attempts = await getDailyAttemptsByChallenge(challengeData.id);
+          let leaderboardList = attempts || [];
+          // For Super Admin challenge (admin_id === null), filter strictly for independent students
+          if (!challengeData.admin_id) {
+            leaderboardList = leaderboardList.filter((item: any) => !item.admin_id);
+          }
+          setLeaderboard(leaderboardList);
+        }
+
+        // Load streak for user
+        const historyRaw = localStorage.getItem('exam_history');
+        let combinedHistory = historyRaw ? JSON.parse(historyRaw) : [];
+        if (profile.id) {
+          try {
+            const remoteDaily = await getUserAllDailyAttempts(profile.id);
+            if (Array.isArray(remoteDaily) && remoteDaily.length > 0) {
+              combinedHistory = [...combinedHistory, ...remoteDaily];
+            }
+          } catch (e) {}
+        }
+        const userStreak = calculateDailyStreak(combinedHistory);
+        setStreak(userStreak);
+
       } catch (err) {
         console.error("Error loading daily challenge:", err);
       } finally {
@@ -260,32 +289,37 @@ const Daily = () => {
         {/* Sidebar Stats */}
         <div className="space-y-6">
           <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-lg shadow-slate-200/50 space-y-6">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Global Leaderboard</h3>
-            <div className="space-y-4">
-              {[
-                { name: "Aryan S.", score: 40, time: "12m" },
-                { name: "Priya K.", score: 38, time: "15m" },
-                { name: "Rahul M.", score: 36, time: "14m" }
-              ].map((user, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
-                      i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {i + 1}
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-slate-900">{user.name}</p>
-                      <p className="text-[10px] font-bold text-slate-400">{user.time}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm font-black text-indigo-600">{user.score}</p>
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Global Leaderboard</h3>
+              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full uppercase tracking-wider">Independent</span>
             </div>
-            <button className="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors">
-              View Full Leaderboard
-            </button>
+            <div className="space-y-4">
+              {leaderboard.length > 0 ? (
+                leaderboard.slice(0, 5).map((item, i) => {
+                  const displayName = item.user_name || (item.user_email ? item.user_email.split('@')[0] : `Aspirant #${item.user_id?.substring(0,4) || i+1}`);
+                  return (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
+                          i === 0 ? 'bg-amber-100 text-amber-600 shadow-sm' : i === 1 ? 'bg-slate-200 text-slate-700' : i === 2 ? 'bg-amber-700/10 text-amber-800' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {i + 1}
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-900 line-clamp-1">{displayName}</p>
+                          <p className="text-[10px] font-bold text-slate-400">Score: {item.score}/{item.total_marks || 100}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">+{item.score} pts</span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <p className="text-xs font-bold text-slate-400">No independent challenge submissions yet for today.</p>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-200 space-y-6 relative overflow-hidden">
@@ -293,13 +327,15 @@ const Daily = () => {
               <Trophy className="w-24 h-24" />
             </div>
             <div className="relative z-10 space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-widest opacity-80">Your Streak</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest opacity-80">Daily Challenge Streak</h3>
               <div className="flex items-end gap-2">
-                <span className="text-5xl font-black">12</span>
+                <span className="text-5xl font-black">{streak}</span>
                 <span className="text-lg font-bold mb-1 opacity-80">Days</span>
               </div>
               <p className="text-xs font-bold leading-relaxed opacity-70">
-                You're in the top 5% of consistent learners this month. Keep it up!
+                {streak > 0 
+                  ? `Your streak is active! Complete today's challenge before 23:59 IST to keep it going.` 
+                  : `Take today's Daily Challenge to start your official IST consecutive day streak!`}
               </p>
             </div>
           </div>
