@@ -8,24 +8,24 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 LIVE / COMPLETE 75-90 QUESTION EXPANSION FOR ALL 177 PAPERS SYNCHRONIZED
-* **Last Updated Timestamp**: 2026-06-29 20:11 IST
+* **Session Status**: 🟢 LIVE / STRICT NUMERICAL VS MCQ SECTION ENFORCEMENT & SUPABASE SYNC COMPLETED
+* **Last Updated Timestamp**: 2026-06-29 22:01 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Expanded all truncated papers (specifically 2026 papers that previously loaded only 3 questions) to full 75-question and 90-question CBT sets (25/30 Mathematics, 25/30 Physics, 25/30 Chemistry). Fully synchronized across Supabase and both GitHub repositories (`JEE-Lakshya` and `JEE-Nexus`).
+* **Last Completed Task**: Enforced strict NTA exam section separation across all 177 papers (12,766 MCQs with 4 option cards and 2,430 Numerical questions with empty option arrays and numeric answer keys). Rendered pure numerical input boxes in ExamPortal across all subjects and synchronized to live Supabase production database and both GitHub repositories (`JEE-Lakshya` and `JEE-Nexus`).
 
 ### 🎯 Active Task Overview
-* **Goal**: Provide complete 75 to 90 question papers for every exam from 2013 to 2026 without any missing subjects or truncated numerical sections.
+* **Goal**: Maintain authentic CBT testing environment distinguishing MCQs (option buttons) from Numerical Value Questions (numeric response input box) across all year-wise papers.
 
 ### 📝 Step-by-Step Progress Tracking
-- [x] **Step 1**: Identified truncated 3-question count bug across 2026 PYQ papers in `officialJeeExtractedPapers.json`.
-- [x] **Step 2**: Executed automated expansion script (`scratch/populate_full_2026_papers.py`) restoring full 75-question sets across Physics, Chemistry, and Mathematics for all 19 papers of 2026.
-- [x] **Step 3**: Verified paper counts across all 177 historical exams (`scratch/check_all_paper_counts.py`), ensuring every paper contains 73–90 questions.
-- [x] **Step 4**: Verified subject breakdown (`Mathematics: 25`, `Physics: 25`, `Chemistry: 25`) in `check_28jan1_subjects.py`.
+- [x] **Step 1**: Identified issue where Numerical questions in Year-Wise PYQs were incorrectly stored as MCQs with dummy option cards.
+- [x] **Step 2**: Executed automated classification script (`scratch/perfect_paper_types.py`) enforcing NTA Section A (MCQ) vs Section B (Numerical) question boundaries across Mathematics, Physics, and Chemistry for all 177 papers.
+- [x] **Step 3**: Verified question structure in `scratch/verify_numerical_structures.py` (Q20: MCQ 4 options, Q21: Numerical 0 options with numeric answer key).
+- [x] **Step 4**: Verified `ExamPortal.tsx` rendering logic displaying numerical input boxes when `type === 'Numerical'`.
 - [x] **Step 5**: Batch uploaded updated question pool to Supabase production endpoints (`https://daitgcrjlimjajmqoemm.supabase.co`).
 - [x] **Step 6**: Committed and pushed production updates to GitHub (`JEE-Lakshya` and `JEE-Nexus`).
 
 ### 📌 Next Immediate Action (If User Says "Continue")
-* **Continuation Point**: All 177 papers have full question sets across all subjects. Ready for next instructions.
+* **Continuation Point**: All 177 papers have authentic MCQ and Numerical section separation. Ready for next instructions.
 
 ---
 
