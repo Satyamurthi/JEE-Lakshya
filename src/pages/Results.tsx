@@ -376,20 +376,20 @@ const Results = () => {
                           </div>
                           <div className="flex-1 p-5 rounded-2xl border-2 border-emerald-100 bg-emerald-50/30">
                             <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Correct Answer</p>
-                            <p className="text-xl font-black text-emerald-900">{q.correctAnswer}</p>
+                            <MathText className="text-xl font-black text-emerald-900">{String(q.correctAnswer)}</MathText>
                           </div>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {q.explanation && (
+                  {(q.explanation || q.solution) && (
                     <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-6 space-y-3">
                        <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
-                         <Brain className="w-3.5 h-3.5" /> AI Explanation
+                         <Brain className="w-3.5 h-3.5" /> Solution & Explanation
                        </h4>
                        <MathText className="text-xs font-bold text-indigo-900/80 leading-relaxed">
-                         {q.explanation}
+                         {q.explanation || q.solution}
                        </MathText>
                     </div>
                   )}
