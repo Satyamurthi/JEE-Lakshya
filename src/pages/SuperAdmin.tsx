@@ -78,7 +78,8 @@ const SuperAdmin = () => {
   const [dbQuestionCount, setDbQuestionCount] = useState<number>(0);
   const [isSeedingDb, setIsSeedingDb] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
-  const [exportType, setExportType] = useState<'JSON' | 'SQL' | null>(null);
+  const [exportType, setExportType] = useState<'JS' | 'JSON' | 'SQL' | 'DOC' | null>(null);
+  const [exportSubject, setExportSubject] = useState<'All' | 'Physics' | 'Chemistry' | 'Mathematics'>('All');
 
   // Future PYQ Ingestion State
   const [isPyqModalOpen, setIsPyqModalOpen] = useState(false);
@@ -455,30 +456,61 @@ const SuperAdmin = () => {
     }
   };
 
-  const handleDownloadJSON = async () => {
+  const handleDownloadJS = async () => {
     setIsExporting(true);
-    setExportType('JSON');
+    setExportType('JS');
     try {
-      const questions = await getAllQuestionsFromDB();
+      const questions = await getAllQuestionsFromDB(exportSubject);
       if (!questions || questions.length === 0) {
         setToast({ message: "No questions found in database to export.", type: 'error' });
         return;
       }
 
-      // Convert questions to JSON string
+      const jsCode = `import { Question } from '../types';\n\nexport const OFFICIAL_JEE_PYQ_BANK: Question[] = ${JSON.stringify(questions, null, 2)};\n`;
+      const blob = new Blob([jsCode], { type: 'text/javascript' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `officialJeePyqBank_${exportSubject}_${Date.now()}.js`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setToast({ message: `Successfully exported ${questions.length} ${exportSubject} questions as JS!`, type: 'success' });
+    } catch (err: any) {
+      console.error(err);
+      setToast({ message: err.message || "Failed to download JS", type: 'error' });
+    } finally {
+      setIsExporting(false);
+      setExportType(null);
+    }
+  };
+
+  const handleDownloadJSON = async () => {
+    setIsExporting(true);
+    setExportType('JSON');
+    try {
+      const questions = await getAllQuestionsFromDB(exportSubject);
+      if (!questions || questions.length === 0) {
+        setToast({ message: "No questions found in database to export.", type: 'error' });
+        return;
+      }
+
       const dataStr = JSON.stringify(questions, null, 2);
       const blob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `questions_export_${Date.now()}.json`;
+      link.download = `questions_export_${exportSubject}_${Date.now()}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setToast({ message: `Successfully downloaded ${questions.length} questions as JSON!`, type: 'success' });
+      setToast({ message: `Successfully downloaded ${questions.length} ${exportSubject} questions as JSON!`, type: 'success' });
     } catch (err: any) {
       console.error(err);
       setToast({ message: err.message || "Failed to download JSON", type: 'error' });
@@ -492,14 +524,13 @@ const SuperAdmin = () => {
     setIsExporting(true);
     setExportType('SQL');
     try {
-      const questions = await getAllQuestionsFromDB();
+      const questions = await getAllQuestionsFromDB(exportSubject);
       if (!questions || questions.length === 0) {
         setToast({ message: "No questions found in database to export.", type: 'error' });
         return;
       }
 
-      // Generate SQL dump script
-      let sql = `-- JEE Nexus AI Questions Dump\n`;
+      let sql = `-- JEE Nexus AI Questions Dump (${exportSubject})\n`;
       sql += `-- Generated on ${new Date().toISOString()}\n`;
       sql += `-- Total Questions: ${questions.length}\n\n`;
       sql += `INSERT INTO public.questions (subject, chapter, type, difficulty, statement, options, "correctAnswer", solution, explanation, concept, "markingScheme") VALUES\n`;
@@ -527,16 +558,102 @@ const SuperAdmin = () => {
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `questions_export_${Date.now()}.sql`;
+      link.download = `questions_export_${exportSubject}_${Date.now()}.sql`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setToast({ message: `Successfully downloaded ${questions.length} questions as SQL!`, type: 'success' });
+      setToast({ message: `Successfully downloaded ${questions.length} ${exportSubject} questions as SQL!`, type: 'success' });
     } catch (err: any) {
       console.error(err);
       setToast({ message: err.message || "Failed to download SQL", type: 'error' });
+    } finally {
+      setIsExporting(false);
+      setExportType(null);
+    }
+  };
+
+  const handleDownloadDOC = async () => {
+    setIsExporting(true);
+    setExportType('DOC');
+    try {
+      const questions = await getAllQuestionsFromDB(exportSubject);
+      if (!questions || questions.length === 0) {
+        setToast({ message: "No questions found in database to export.", type: 'error' });
+        return;
+      }
+
+      // Group questions chapter-wise
+      const chapterMap: Record<string, any[]> = {};
+      questions.forEach(q => {
+        const ch = q.chapter || 'General / Uncategorized';
+        if (!chapterMap[ch]) chapterMap[ch] = [];
+        chapterMap[ch].push(q);
+      });
+
+      let docHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>JEE Question Bank Export - ${exportSubject}</title><style>
+        body { font-family: Arial, sans-serif; margin: 40px; color: #1e293b; line-height: 1.6; }
+        h1 { color: #0f172a; border-bottom: 3px solid #6366f1; padding-bottom: 10px; }
+        h2 { color: #4338ca; margin-top: 30px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        .question-card { margin-bottom: 25px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .pyq-tag { display: inline-block; font-weight: bold; color: #4338ca; background: #e0e7ff; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-bottom: 8px; }
+        .options-list { margin: 10px 0; padding-left: 20px; }
+        .answer { font-weight: bold; color: #047857; margin-top: 8px; }
+        .solution { font-size: 13px; color: #475569; background: #fff; padding: 10px; border-radius: 6px; margin-top: 8px; border-left: 3px solid #6366f1; }
+      </style></head><body>`;
+
+      docHtml += `<h1>OFFICIAL JEE QUESTION BANK - ${exportSubject.toUpperCase()}</h1>`;
+      docHtml += `<p>Total Questions Compiled: <strong>${questions.length}</strong> | Export Date: ${new Date().toLocaleDateString()}</p><hr/>`;
+
+      let qIndex = 1;
+      for (const [chapName, qList] of Object.entries(chapterMap)) {
+        docHtml += `<h2>CHAPTER: ${chapName.toUpperCase()} (${qList.length} Questions)</h2>`;
+        qList.forEach((q, idx) => {
+          const pyqRef = q.year || q.exam_session || q.pyq_info ? `[${q.year || 'JEE Official'} ${q.exam_session || ''} Q${idx+1}]` : `[JEE Main PYQ Archive - ${q.subject} Q${idx+1}]`;
+          
+          docHtml += `<div class="question-card">`;
+          docHtml += `<div class="pyq-tag">${pyqRef}</div>`;
+          docHtml += `<div><strong>Q${qIndex}.</strong> ${q.statement || q.question || ''}</div>`;
+          
+          if (q.options && typeof q.options === 'object') {
+            docHtml += `<div class="options-list">`;
+            Object.entries(q.options).forEach(([k, v]) => {
+              docHtml += `<div><strong>(${k})</strong> ${v}</div>`;
+            });
+            docHtml += `</div>`;
+          }
+
+          if (q.correctAnswer) {
+            docHtml += `<div class="answer">Correct Answer: (${q.correctAnswer})</div>`;
+          }
+
+          if (q.solution || q.explanation) {
+            docHtml += `<div class="solution"><strong>Solution & Explanation:</strong> ${q.solution || q.explanation}</div>`;
+          }
+
+          docHtml += `</div>`;
+          qIndex++;
+        });
+      }
+
+      docHtml += `</body></html>`;
+
+      const blob = new Blob([docHtml], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `question_bank_chapterwise_${exportSubject}_${Date.now()}.doc`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setToast({ message: `Successfully exported Chapter-Wise Document for ${questions.length} questions!`, type: 'success' });
+    } catch (err: any) {
+      console.error(err);
+      setToast({ message: err.message || "Failed to download Document", type: 'error' });
     } finally {
       setIsExporting(false);
       setExportType(null);
@@ -1409,40 +1526,71 @@ const SuperAdmin = () => {
               </div>
             </div>
 
-            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4 flex flex-col justify-between">
+            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4 flex flex-col justify-between col-span-1 md:col-span-2 lg:col-span-3">
               <div className="space-y-4">
-                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <Download className="w-4 h-4 text-emerald-500" />
-                  Backup & Export Question Bank
-                </h4>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                  Download all active questions from the database as either raw JSON or fully-escaped SQL insert scripts to backup or migrate data.
-                </p>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                      <Download className="w-4 h-4 text-emerald-500" />
+                      Backup & Export Question Bank
+                    </h4>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                      Filter by Subject and download active questions as JS modules, raw JSON, escaped SQL dump scripts, or Chapter-Wise formatted Documents with PYQ references!
+                    </p>
+                  </div>
+                  
+                  {/* Subject Filter Selection */}
+                  <div className="flex bg-slate-200/70 p-1 rounded-2xl shrink-0 gap-1">
+                    {(['All', 'Physics', 'Chemistry', 'Mathematics'] as const).map((sub) => (
+                      <button
+                        key={sub}
+                        onClick={() => setExportSubject(sub)}
+                        className={`px-3 py-1.5 rounded-xl text-[11px] font-black transition-all ${
+                          exportSubject === sub ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="space-y-3 mt-auto">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+                <button
+                  onClick={handleDownloadJS}
+                  disabled={isExporting}
+                  className="py-3.5 px-4 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-amber-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isExporting && exportType === 'JS' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                  {isExporting && exportType === 'JS' ? 'Compiling JS...' : `Export JS (.js)`}
+                </button>
+
                 <button
                   onClick={handleDownloadJSON}
                   disabled={isExporting}
-                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {isExporting && exportType === 'JSON' ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <FileText className="w-4 h-4" />
-                  )}
-                  {isExporting && exportType === 'JSON' ? 'Compiling JSON...' : 'Download as JSON'}
+                  {isExporting && exportType === 'JSON' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                  {isExporting && exportType === 'JSON' ? 'Compiling JSON...' : `Download JSON (.json)`}
                 </button>
+
                 <button
                   onClick={handleDownloadSQL}
                   disabled={isExporting}
-                  className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {isExporting && exportType === 'SQL' ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Database className="w-4 h-4 text-indigo-400" />
-                  )}
-                  {isExporting && exportType === 'SQL' ? 'Compiling SQL...' : 'Download as SQL (.sql)'}
+                  {isExporting && exportType === 'SQL' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4 text-indigo-400" />}
+                  {isExporting && exportType === 'SQL' ? 'Compiling SQL...' : `Download SQL (.sql)`}
+                </button>
+
+                <button
+                  onClick={handleDownloadDOC}
+                  disabled={isExporting}
+                  className="py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isExporting && exportType === 'DOC' ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
+                  {isExporting && exportType === 'DOC' ? 'Generating DOC...' : `Chapter Doc (.doc)`}
                 </button>
               </div>
             </div>

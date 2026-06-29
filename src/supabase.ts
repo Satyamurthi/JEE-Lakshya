@@ -827,46 +827,61 @@ export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Prom
   }
 };
 
-export const getAllQuestionsFromDB = async (): Promise<any[]> => {
-  if (!supabase) {
+export const getAllQuestionsFromDB = async (subjectFilter?: string, maxRecords: number = 15000): Promise<any[]> => {
+  let allData: any[] = [];
+  if (supabase) {
     try {
-      const res = await fetch('http://localhost/api/questions.php?mcqCount=5000&numericalCount=5000');
-      return await res.json() || [];
-    } catch (e) {
-      console.warn("Local XAMPP questions fetch failed:", e);
-      return [];
-    }
-  }
+      let from = 0;
+      const limit = 1000;
+      let keepFetching = true;
 
-  try {
-    let allData: any[] = [];
-    let from = 0;
-    const limit = 1000;
-    let keepFetching = true;
+      while (keepFetching && allData.length < maxRecords) {
+        let query = supabase
+          .from('questions')
+          .select('*');
+          
+        if (subjectFilter && subjectFilter !== 'All') {
+          query = query.ilike('subject', `%${subjectFilter}%`);
+        }
 
-    while (keepFetching) {
-      const { data, error } = await supabase
-        .from('questions')
-        .select('*')
-        .range(from, from + limit - 1)
-        .order('created_at', { ascending: false });
+        const { data, error } = await query
+          .range(from, from + limit - 1)
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      if (!data || data.length === 0) {
-        keepFetching = false;
-      } else {
-        allData = [...allData, ...data];
-        if (data.length < limit) {
+        if (error) {
+          console.warn("Supabase range query warning:", error);
+          break;
+        }
+        if (!data || data.length === 0) {
           keepFetching = false;
         } else {
-          from += limit;
+          allData = [...allData, ...data];
+          if (data.length < limit) {
+            keepFetching = false;
+          } else {
+            from += limit;
+          }
         }
       }
+    } catch (e) {
+      console.warn("Supabase fetch all questions warning, falling back to local dataset:", e);
     }
-    return allData;
-  } catch (e) {
-    console.error("Supabase fetch all questions failed:", e);
-    return [];
   }
+
+  // Fallback to officialJeePyqBank if database returned empty
+  if (!allData || allData.length === 0) {
+    try {
+      const { OFFICIAL_JEE_PYQ_BANK } = await import('./data/officialJeePyqBank');
+      let localBank = OFFICIAL_JEE_PYQ_BANK || [];
+      if (subjectFilter && subjectFilter !== 'All') {
+        localBank = localBank.filter((q: any) => q.subject && q.subject.toLowerCase().includes(subjectFilter.toLowerCase()));
+      }
+      return localBank;
+    } catch (err) {
+      console.error("Local PYQ bank import failed:", err);
+    }
+  }
+
+  return allData;
 };
 
