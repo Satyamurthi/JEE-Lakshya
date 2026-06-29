@@ -51,6 +51,14 @@ create table if not exists public.profiles (
   admin_id uuid references public.profiles(id) on delete set null,
   admin_max_students integer default 30,
   has_used_free_test boolean default false,
+  super_admin_permission boolean default false,
+  can_access_daily boolean default false,
+  can_access_full_exam boolean default false,
+  can_access_practice boolean default false,
+  mobile_number text,
+  college_name text,
+  college_address text,
+  stream text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -85,7 +93,7 @@ create table if not exists public.questions (
   subject text not null,
   chapter text,
   type text,
-  difficulty text,
+  difficulty text default 'Medium' check (difficulty in ('Easy', 'Medium', 'Hard')),
   statement text unique not null,
   options jsonb,
   "correctAnswer" text not null,
@@ -165,10 +173,12 @@ drop policy if exists "Public profiles are viewable by everyone" on profiles;
 create policy "Public profiles are viewable by everyone" on profiles for select using (true);
 drop policy if exists "Enable insert for all signup users" on profiles;
 create policy "Enable insert for all signup users" on profiles for insert with check (true);
+drop policy if exists "Enable update for all signup users" on profiles;
+create policy "Enable update for all signup users" on profiles for update using (true);
 drop policy if exists "Users can update own profile" on profiles;
-create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
+create policy "Users can update own profile" on profiles for update using (true);
 drop policy if exists "Admins can update all profiles" on profiles;
-create policy "Admins can update all profiles" on profiles for update using (public.is_admin(auth.uid()));
+create policy "Admins can update all profiles" on profiles for update using (true);
 drop policy if exists "Admins can delete profiles" on profiles;
 create policy "Admins can delete profiles" on profiles for delete using (true);
 
@@ -176,7 +186,7 @@ alter table public.questions enable row level security;
 drop policy if exists "Read questions" on questions;
 create policy "Read questions" on questions for select using (true);
 drop policy if exists "Manage questions" on questions;
-create policy "Manage questions" on questions for all using (public.is_admin(auth.uid()));
+create policy "Manage questions" on questions for all using (true);
 
 alter table public.daily_challenges enable row level security;
 drop policy if exists "Public Read Daily" on daily_challenges;
@@ -186,25 +196,25 @@ create policy "Public Insert Daily" on daily_challenges for insert with check (t
 drop policy if exists "Public Update Daily" on daily_challenges;
 create policy "Public Update Daily" on daily_challenges for update using (true);
 drop policy if exists "Manage challenges" on daily_challenges;
-create policy "Manage challenges" on daily_challenges for all using (public.is_admin(auth.uid()));
+create policy "Manage challenges" on daily_challenges for all using (true);
 
 alter table public.daily_attempts enable row level security;
 drop policy if exists "Users can insert own attempts" on daily_attempts;
-create policy "Users can insert own attempts" on daily_attempts for insert with check (auth.uid() = user_id OR auth.uid() is null);
+create policy "Users can insert own attempts" on daily_attempts for insert with check (true);
 drop policy if exists "Users can update own attempts" on daily_attempts;
-create policy "Users can update own attempts" on daily_attempts for update using (auth.uid() = user_id OR auth.uid() is null);
+create policy "Users can update own attempts" on daily_attempts for update using (true);
 drop policy if exists "Users can view own attempts" on daily_attempts;
-create policy "Users can view own attempts" on daily_attempts for select using (auth.uid() = user_id OR auth.uid() is null);
+create policy "Users can view own attempts" on daily_attempts for select using (true);
 drop policy if exists "Admins view all attempts" on daily_attempts;
-create policy "Admins view all attempts" on daily_attempts for select using (public.is_admin(auth.uid()));
+create policy "Admins view all attempts" on daily_attempts for select using (true);
 
 alter table public.exam_attempts enable row level security;
 drop policy if exists "Users can insert own exam attempts" on exam_attempts;
-create policy "Users can insert own exam attempts" on exam_attempts for insert with check (auth.uid() = user_id OR auth.uid() is null);
+create policy "Users can insert own exam attempts" on exam_attempts for insert with check (true);
 drop policy if exists "Users can view own exam attempts" on exam_attempts;
-create policy "Users can view own exam attempts" on exam_attempts for select using (auth.uid() = user_id OR auth.uid() is null);
+create policy "Users can view own exam attempts" on exam_attempts for select using (true);
 drop policy if exists "Admins view all exam attempts" on exam_attempts;
-create policy "Admins view all exam attempts" on exam_attempts for select using (public.is_admin(auth.uid()));
+create policy "Admins view all exam attempts" on exam_attempts for select using (true);
 
 alter table public.system_config enable row level security;
 drop policy if exists "Read system config" on system_config;
@@ -252,9 +262,9 @@ begin
     new.email,
     coalesce(new.raw_user_meta_data->>'full_name', 'Student'),
     'student',
-    'pending'
+    'approved'
   )
-  on conflict (id) do nothing;
+  on conflict (id) do update set status = 'approved';
   return new;
 end;
 $$;
