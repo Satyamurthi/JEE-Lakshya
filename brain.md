@@ -8,24 +8,24 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 LIVE / STRICT NUMERICAL VS MCQ SECTION ENFORCEMENT & SUPABASE SYNC COMPLETED
-* **Last Updated Timestamp**: 2026-06-29 22:01 IST
+* **Session Status**: 🟢 LIVE / STRICT LATEST NTA SYLLABUS AUDIT & OUT-OF-SYLLABUS PURGE COMPLETED
+* **Last Updated Timestamp**: 2026-06-29 22:06 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Enforced strict NTA exam section separation across all 177 papers (12,766 MCQs with 4 option cards and 2,430 Numerical questions with empty option arrays and numeric answer keys). Rendered pure numerical input boxes in ExamPortal across all subjects and synchronized to live Supabase production database and both GitHub repositories (`JEE-Lakshya` and `JEE-Nexus`).
+* **Last Completed Task**: Audited entire question bank against the latest official NTA JEE Main syllabus (2024–2026). Purged 817 deleted topic questions (Gaseous State, Solid State, Surface Chemistry, Environmental Chemistry, Polymers, Chemistry in Everyday Life, Hydrogen, s-Block Elements, Metallurgy, Communication Systems, Mathematical Reasoning, Induction) from SQLite database and replaced 886 out-of-syllabus entries in `officialJeeExtractedPapers.json` with active in-syllabus questions. Synchronized to live Supabase production database and both GitHub repositories (`JEE-Lakshya` and `JEE-Nexus`).
 
 ### 🎯 Active Task Overview
-* **Goal**: Maintain authentic CBT testing environment distinguishing MCQs (option buttons) from Numerical Value Questions (numeric response input box) across all year-wise papers.
+* **Goal**: Provide 100% active, in-syllabus question banks strictly aligned with the latest NTA competitive exam guidelines without outdated or removed topics.
 
 ### 📝 Step-by-Step Progress Tracking
-- [x] **Step 1**: Identified issue where Numerical questions in Year-Wise PYQs were incorrectly stored as MCQs with dummy option cards.
-- [x] **Step 2**: Executed automated classification script (`scratch/perfect_paper_types.py`) enforcing NTA Section A (MCQ) vs Section B (Numerical) question boundaries across Mathematics, Physics, and Chemistry for all 177 papers.
-- [x] **Step 3**: Verified question structure in `scratch/verify_numerical_structures.py` (Q20: MCQ 4 options, Q21: Numerical 0 options with numeric answer key).
-- [x] **Step 4**: Verified `ExamPortal.tsx` rendering logic displaying numerical input boxes when `type === 'Numerical'`.
-- [x] **Step 5**: Batch uploaded updated question pool to Supabase production endpoints (`https://daitgcrjlimjajmqoemm.supabase.co`).
+- [x] **Step 1**: Identified user requirement to purge out-of-syllabus questions according to the latest NTA JEE Main syllabus guidelines.
+- [x] **Step 2**: Audited 105 distinct chapters in SQLite DB (`scratch/audit_all_removed_chapters.py`), identifying 10 deleted chapter categories.
+- [x] **Step 3**: Executed automated purging script (`scratch/purge_out_of_syllabus.py`) removing 817 out-of-syllabus questions from SQLite DB and replacing 886 entries in `officialJeeExtractedPapers.json`.
+- [x] **Step 4**: Conducted verification audit (`scratch/find_out_of_syllabus_questions.py`) confirming **0.00% out-of-syllabus questions remaining**.
+- [x] **Step 5**: Batch uploaded 14,173 active in-syllabus questions to Supabase production endpoints (`https://daitgcrjlimjajmqoemm.supabase.co`).
 - [x] **Step 6**: Committed and pushed production updates to GitHub (`JEE-Lakshya` and `JEE-Nexus`).
 
 ### 📌 Next Immediate Action (If User Says "Continue")
-* **Continuation Point**: All 177 papers have authentic MCQ and Numerical section separation. Ready for next instructions.
+* **Continuation Point**: All question banks are strictly updated and aligned with the latest NTA JEE syllabus. Ready for next instructions.
 
 ---
 
