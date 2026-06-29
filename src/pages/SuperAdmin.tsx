@@ -3,7 +3,7 @@ import {
   Crown, Users, UserPlus, Sliders, Zap, CheckCircle2, X, Eye, 
   Settings2, Loader2, Sparkles, Database, ShieldAlert, ArrowUpRight, 
   Trash2, DollarSign, Award, Calendar, RefreshCw, Key, Lock, Unlock, Edit3, ShieldCheck, Layers, Plus, Snowflake,
-  Download, FileText
+  Download, FileText, BookOpen
 } from 'lucide-react';
 import { 
   supabase, getAllProfiles, updateAdminMaxLimit, 
@@ -166,7 +166,7 @@ const SuperAdmin = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'ADMINS' || activeTab === 'INDEPENDENT_STUDENTS') {
+    if (activeTab === 'ADMINS' || activeTab === 'INDEPENDENT_STUDENTS' || activeTab === 'QUESTION_BANK') {
       loadDashboardData();
     } else if (activeTab === 'DAILY_CHALLENGES') {
       loadChallenges();
