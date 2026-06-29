@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Award, Calendar, Sparkles, Lock, CheckCircle2, ChevronRight, BookOpen, Search, Filter, ShieldCheck, DollarSign, Loader2 } from 'lucide-react';
 import { initiateRazorpayPayment } from '../utils/payment';
 import MathText from '../components/MathText';
+import { officialJeePyqList } from '../data/officialJeePyqList';
 
 interface PYQPaper {
   id: string;
@@ -13,12 +14,12 @@ interface PYQPaper {
   totalQuestions: number;
   durationMinutes: number;
   priceRupees: number;
+  pdfUrl?: string;
 }
 
 const generatePYQList = (isNeet: boolean = false): PYQPaper[] => {
-  const list: PYQPaper[] = [];
-
   if (isNeet) {
+    const list: PYQPaper[] = [];
     const neetYears = Array.from({ length: 2026 - 2013 + 1 }, (_, i) => 2026 - i);
     neetYears.forEach(yr => {
       list.push({
@@ -35,178 +36,7 @@ const generatePYQList = (isNeet: boolean = false): PYQPaper[] => {
     return list;
   }
 
-  const years = Array.from({ length: 2026 - 2013 + 1 }, (_, i) => 2026 - i); // 2026 down to 2013
-
-  years.forEach(yr => {
-    if (yr === 2026) {
-      // 2026 (NTA) - 22 Shifts Total
-      const s1 = [
-        { d: 'Jan 24', m: 'jan24_s1', e: 'jan24_s2' },
-        { d: 'Jan 28', m: 'jan28_s1', e: 'jan28_s2' },
-        { d: 'Jan 29', m: 'jan29_s1', e: 'jan29_s2' },
-        { d: 'Jan 30', m: 'jan30_s1', e: 'jan30_s2' },
-        { d: 'Feb 1',  m: 'feb01_s1', e: 'feb01_s2' }
-      ];
-      s1.forEach(item => {
-        list.push({ id: `pyq_2026_${item.m}`, year: 2026, session: 'Session 1 (January 2026)', shift: 'Shift 1 (Morning 9:00 AM - 12:00 PM)', title: `JEE Main 2026 Official Paper 1 (B.E./B.Tech) - Session 1 (${item.d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2026_${item.e}`, year: 2026, session: 'Session 1 (January 2026)', shift: 'Shift 2 (Evening 3:00 PM - 6:00 PM)', title: `JEE Main 2026 Official Paper 1 (B.E./B.Tech) - Session 1 (${item.d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-      const s2 = [
-        { d: 'April 4', m: 'apr04_s1', e: 'apr04_s2' },
-        { d: 'April 5', m: 'apr05_s1', e: 'apr05_s2' },
-        { d: 'April 6', m: 'apr06_s1', e: 'apr06_s2' },
-        { d: 'April 8', m: 'apr08_s1', e: 'apr08_s2' },
-        { d: 'April 9', m: 'apr09_s1', e: 'apr09_s2' }
-      ];
-      s2.forEach(item => {
-        list.push({ id: `pyq_2026_${item.m}`, year: 2026, session: 'Session 2 (April 2026)', shift: 'Shift 1 (Morning 9:00 AM - 12:00 PM)', title: `JEE Main 2026 Official Paper 1 (B.E./B.Tech) - Session 2 (${item.d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2026_${item.e}`, year: 2026, session: 'Session 2 (April 2026)', shift: 'Shift 2 (Evening 3:00 PM - 6:00 PM)', title: `JEE Main 2026 Official Paper 1 (B.E./B.Tech) - Session 2 (${item.d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-      list.push({ id: `pyq_2026_apr12_s1`, year: 2026, session: 'Session 2 (April 2026)', shift: 'Shift 1 (Morning)', title: `JEE Main 2026 Official Paper 2A/2B (B.Arch & B.Plan) - April 12 Shift 1`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: `pyq_2026_apr12_s2`, year: 2026, session: 'Session 2 (April 2026)', shift: 'Shift 2 (Evening)', title: `JEE Main 2026 Official Paper 2A/2B (B.Arch & B.Plan) - April 12 Shift 2`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-
-    } else if (yr === 2025) {
-      // 2025 (NTA) - 19 Shifts Total
-      const s1 = [
-        { d: 'Jan 22', m: 'jan22_s1', e: 'jan22_s2' },
-        { d: 'Jan 23', m: 'jan23_s1', e: 'jan23_s2' },
-        { d: 'Jan 24', m: 'jan24_s1', e: 'jan24_s2' },
-        { d: 'Jan 28', m: 'jan28_s1', e: 'jan28_s2' },
-        { d: 'Jan 29', m: 'jan29_s1', e: 'jan29_s2' }
-      ];
-      s1.forEach(item => {
-        list.push({ id: `pyq_2025_${item.m}`, year: 2025, session: 'Session 1 (January 2025)', shift: 'Shift 1 (Morning)', title: `JEE Main 2025 Official Paper 1 - Session 1 (${item.d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2025_${item.e}`, year: 2025, session: 'Session 1 (January 2025)', shift: 'Shift 2 (Evening)', title: `JEE Main 2025 Official Paper 1 - Session 1 (${item.d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-      const s2 = [
-        { d: 'April 2', m: 'apr02_s1', e: 'apr02_s2' },
-        { d: 'April 3', m: 'apr03_s1', e: 'apr03_s2' },
-        { d: 'April 4', m: 'apr04_s1', e: 'apr04_s2' },
-        { d: 'April 7', m: 'apr07_s1', e: 'apr07_s2' }
-      ];
-      s2.forEach(item => {
-        list.push({ id: `pyq_2025_${item.m}`, year: 2025, session: 'Session 2 (April 2025)', shift: 'Shift 1 (Morning)', title: `JEE Main 2025 Official Paper 1 - Session 2 (${item.d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2025_${item.e}`, year: 2025, session: 'Session 2 (April 2025)', shift: 'Shift 2 (Evening)', title: `JEE Main 2025 Official Paper 1 - Session 2 (${item.d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-      list.push({ id: `pyq_2025_apr08_s1`, year: 2025, session: 'Session 2 (April 2025)', shift: 'Shift 1 (Morning)', title: `JEE Main 2025 Official Paper 1 - Session 2 (April 8 Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-
-    } else if (yr === 2024) {
-      // 2024 (NTA) - 20 Shifts Total
-      const s1Dates = ['Jan 27', 'Jan 29', 'Jan 30', 'Jan 31', 'Feb 1'];
-      s1Dates.forEach((d, idx) => {
-        list.push({ id: `pyq_2024_s1_${idx}_1`, year: 2024, session: 'Session 1 (January 2024)', shift: 'Shift 1 (Morning)', title: `JEE Main 2024 Official Paper - Session 1 (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2024_s1_${idx}_2`, year: 2024, session: 'Session 1 (January 2024)', shift: 'Shift 2 (Evening)', title: `JEE Main 2024 Official Paper - Session 1 (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-      const s2Dates = ['April 4', 'April 5', 'April 6', 'April 8', 'April 9'];
-      s2Dates.forEach((d, idx) => {
-        list.push({ id: `pyq_2024_s2_${idx}_1`, year: 2024, session: 'Session 2 (April 2024)', shift: 'Shift 1 (Morning)', title: `JEE Main 2024 Official Paper - Session 2 (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2024_s2_${idx}_2`, year: 2024, session: 'Session 2 (April 2024)', shift: 'Shift 2 (Evening)', title: `JEE Main 2024 Official Paper - Session 2 (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-
-    } else if (yr === 2023) {
-      // 2023 (NTA) - 24 Shifts Total
-      const s1Dates = ['Jan 24', 'Jan 25', 'Jan 29', 'Jan 30', 'Jan 31', 'Feb 1'];
-      s1Dates.forEach((d, idx) => {
-        list.push({ id: `pyq_2023_s1_${idx}_1`, year: 2023, session: 'Session 1 (January 2023)', shift: 'Shift 1 (Morning)', title: `JEE Main 2023 Official Paper - Session 1 (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2023_s1_${idx}_2`, year: 2023, session: 'Session 1 (January 2023)', shift: 'Shift 2 (Evening)', title: `JEE Main 2023 Official Paper - Session 1 (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-      const s2Dates = ['April 6', 'April 8', 'April 10', 'April 11', 'April 13', 'April 15'];
-      s2Dates.forEach((d, idx) => {
-        list.push({ id: `pyq_2023_s2_${idx}_1`, year: 2023, session: 'Session 2 (April 2023)', shift: 'Shift 1 (Morning)', title: `JEE Main 2023 Official Paper - Session 2 (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2023_s2_${idx}_2`, year: 2023, session: 'Session 2 (April 2023)', shift: 'Shift 2 (Evening)', title: `JEE Main 2023 Official Paper - Session 2 (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-
-    } else if (yr === 2022) {
-      // 2022 (NTA) - 24 Shifts Total
-      const s1Dates = ['June 23', 'June 24', 'June 25', 'June 26', 'June 27', 'June 28', 'June 29'];
-      s1Dates.forEach((d, idx) => {
-        list.push({ id: `pyq_2022_s1_${idx}_1`, year: 2022, session: 'Session 1 (June 2022)', shift: 'Shift 1 (Morning)', title: `JEE Main 2022 Official Paper - Session 1 (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2022_s1_${idx}_2`, year: 2022, session: 'Session 1 (June 2022)', shift: 'Shift 2 (Evening)', title: `JEE Main 2022 Official Paper - Session 1 (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-      const s2Dates = ['July 25', 'July 26', 'July 27', 'July 28', 'July 29'];
-      s2Dates.forEach((d, idx) => {
-        list.push({ id: `pyq_2022_s2_${idx}_1`, year: 2022, session: 'Session 2 (July 2022)', shift: 'Shift 1 (Morning)', title: `JEE Main 2022 Official Paper - Session 2 (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2022_s2_${idx}_2`, year: 2022, session: 'Session 2 (July 2022)', shift: 'Shift 2 (Evening)', title: `JEE Main 2022 Official Paper - Session 2 (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-
-    } else if (yr === 2021) {
-      // 2021 (NTA 4-Session Era) - 26 Shifts Total
-      const sessions = [
-        { name: 'February 2021', dates: ['Feb 24', 'Feb 25', 'Feb 26'] },
-        { name: 'March 2021', dates: ['March 16', 'March 17', 'March 18'] },
-        { name: 'July 2021', dates: ['July 20', 'July 22', 'July 25', 'July 27'] },
-        { name: 'August/September 2021', dates: ['Aug 26', 'Aug 27', 'Aug 31', 'Sept 1'] }
-      ];
-      sessions.forEach((sess, sIdx) => {
-        sess.dates.forEach((d, dIdx) => {
-          list.push({ id: `pyq_2021_s${sIdx}_${dIdx}_1`, year: 2021, session: `Session (${sess.name})`, shift: 'Shift 1 (Morning)', title: `JEE Main 2021 Official Paper - ${sess.name} (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-          list.push({ id: `pyq_2021_s${sIdx}_${dIdx}_2`, year: 2021, session: `Session (${sess.name})`, shift: 'Shift 2 (Evening)', title: `JEE Main 2021 Official Paper - ${sess.name} (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        });
-      });
-
-    } else if (yr === 2020) {
-      // 2020 (NTA) - 16 Shifts Total
-      const janDates = ['Jan 7', 'Jan 8', 'Jan 9'];
-      janDates.forEach((d, idx) => {
-        list.push({ id: `pyq_2020_jan_${idx}_1`, year: 2020, session: 'January Session 2020', shift: 'Shift 1 (Morning)', title: `JEE Main 2020 Official Paper - January (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2020_jan_${idx}_2`, year: 2020, session: 'January Session 2020', shift: 'Shift 2 (Evening)', title: `JEE Main 2020 Official Paper - January (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-      const septDates = ['Sept 2', 'Sept 3', 'Sept 4', 'Sept 5', 'Sept 6'];
-      septDates.forEach((d, idx) => {
-        list.push({ id: `pyq_2020_sep_${idx}_1`, year: 2020, session: 'September Session 2020', shift: 'Shift 1 (Morning)', title: `JEE Main 2020 Official Paper - September (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2020_sep_${idx}_2`, year: 2020, session: 'September Session 2020', shift: 'Shift 2 (Evening)', title: `JEE Main 2020 Official Paper - September (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-
-    } else if (yr === 2019) {
-      // 2019 (NTA Inaugural CBT) - 16 Shifts Total
-      const janDates = ['Jan 9', 'Jan 10', 'Jan 11', 'Jan 12'];
-      janDates.forEach((d, idx) => {
-        list.push({ id: `pyq_2019_jan_${idx}_1`, year: 2019, session: 'January Session 2019', shift: 'Shift 1 (Morning)', title: `JEE Main 2019 Official Paper - January (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2019_jan_${idx}_2`, year: 2019, session: 'January Session 2019', shift: 'Shift 2 (Evening)', title: `JEE Main 2019 Official Paper - January (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-      const aprDates = ['April 8', 'April 9', 'April 10', 'April 12'];
-      aprDates.forEach((d, idx) => {
-        list.push({ id: `pyq_2019_apr_${idx}_1`, year: 2019, session: 'April Session 2019', shift: 'Shift 1 (Morning)', title: `JEE Main 2019 Official Paper - April (${d} Shift 1)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-        list.push({ id: `pyq_2019_apr_${idx}_2`, year: 2019, session: 'April Session 2019', shift: 'Shift 2 (Evening)', title: `JEE Main 2019 Official Paper - April (${d} Shift 2)`, totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      });
-
-    } else if (yr === 2018) {
-      list.push({ id: 'pyq_2018_off', year: 2018, session: 'Offline Pen-Paper Test', shift: 'Morning Shift', title: 'JEE Main 2018 Official Offline Paper (April 8)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2018_on1', year: 2018, session: 'Online CBT Test', shift: 'Shift 1 (April 15)', title: 'JEE Main 2018 Official Online CBT Paper (Shift 1)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2018_on2', year: 2018, session: 'Online CBT Test', shift: 'Shift 2 (April 16)', title: 'JEE Main 2018 Official Online CBT Paper (Shift 2)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-
-    } else if (yr === 2017) {
-      list.push({ id: 'pyq_2017_off', year: 2017, session: 'Offline Pen-Paper Test', shift: 'Morning Shift', title: 'JEE Main 2017 Official Offline Paper (April 2)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2017_on1', year: 2017, session: 'Online CBT Test', shift: 'Shift 1 (April 8)', title: 'JEE Main 2017 Official Online CBT Paper (Shift 1)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2017_on2', year: 2017, session: 'Online CBT Test', shift: 'Shift 2 (April 9)', title: 'JEE Main 2017 Official Online CBT Paper (Shift 2)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-
-    } else if (yr === 2016) {
-      list.push({ id: 'pyq_2016_off', year: 2016, session: 'Offline Pen-Paper Test', shift: 'Morning Shift', title: 'JEE Main 2016 Official Offline Paper (April 3)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2016_on1', year: 2016, session: 'Online CBT Test', shift: 'Shift 1 (April 9)', title: 'JEE Main 2016 Official Online CBT Paper (Shift 1)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2016_on2', year: 2016, session: 'Online CBT Test', shift: 'Shift 2 (April 10)', title: 'JEE Main 2016 Official Online CBT Paper (Shift 2)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-
-    } else if (yr === 2015) {
-      list.push({ id: 'pyq_2015_off', year: 2015, session: 'Offline Pen-Paper Test', shift: 'Morning Shift', title: 'JEE Main 2015 Official Offline Paper (April 4)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2015_on1', year: 2015, session: 'Online CBT Test', shift: 'Shift 1 (April 10)', title: 'JEE Main 2015 Official Online CBT Paper (Shift 1)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2015_on2', year: 2015, session: 'Online CBT Test', shift: 'Shift 2 (April 11)', title: 'JEE Main 2015 Official Online CBT Paper (Shift 2)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-
-    } else if (yr === 2014) {
-      list.push({ id: 'pyq_2014_off', year: 2014, session: 'Offline Pen-Paper Test', shift: 'Morning Shift', title: 'JEE Main 2014 Official Offline Paper (April 6)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2014_on1', year: 2014, session: 'Online CBT Test', shift: 'Shift 1 (April 9)', title: 'JEE Main 2014 Official Online CBT Paper (Shift 1)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2014_on2', year: 2014, session: 'Online CBT Test', shift: 'Shift 2 (April 11)', title: 'JEE Main 2014 Official Online CBT Paper (Shift 2)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2014_on3', year: 2014, session: 'Online CBT Test', shift: 'Shift 3 (April 12)', title: 'JEE Main 2014 Official Online CBT Paper (Shift 3)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2014_on4', year: 2014, session: 'Online CBT Test', shift: 'Shift 4 (April 19)', title: 'JEE Main 2014 Official Online CBT Paper (Shift 4)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-
-    } else if (yr === 2013) {
-      list.push({ id: 'pyq_2013_off', year: 2013, session: 'Offline Pen-Paper Test', shift: 'Morning Shift', title: 'JEE Main 2013 Official Offline Paper (April 7)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2013_on1', year: 2013, session: 'Online CBT Test', shift: 'Shift 1 (April 9)', title: 'JEE Main 2013 Official Online CBT Paper (Shift 1)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2013_on2', year: 2013, session: 'Online CBT Test', shift: 'Shift 2 (April 22)', title: 'JEE Main 2013 Official Online CBT Paper (Shift 2)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2013_on3', year: 2013, session: 'Online CBT Test', shift: 'Shift 3 (April 23)', title: 'JEE Main 2013 Official Online CBT Paper (Shift 3)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-      list.push({ id: 'pyq_2013_on4', year: 2013, session: 'Online CBT Test', shift: 'Shift 4 (April 25)', title: 'JEE Main 2013 Official Online CBT Paper (Shift 4)', totalQuestions: 90, durationMinutes: 180, priceRupees: 20 });
-    }
-  });
-
-  return list;
+  return officialJeePyqList;
 };
 
 const YearWisePYQ = () => {
@@ -275,15 +105,18 @@ const YearWisePYQ = () => {
 
       // Sanitize statements and options to remove any internal tags and fix LaTeX
       questions = questions.map(q => {
-        const cleanedOpts: any = {};
-        if (q.options && typeof q.options === 'object') {
+        let cleanedOpts: any = q.options;
+        if (Array.isArray(q.options)) {
+          cleanedOpts = q.options.map(opt => typeof opt === 'string' ? cleanQuestionText(opt) : opt);
+        } else if (q.options && typeof q.options === 'object') {
+          cleanedOpts = {};
           Object.entries(q.options).forEach(([k, v]) => {
             cleanedOpts[k] = typeof v === 'string' ? cleanQuestionText(v) : v;
           });
         }
         return {
           ...q,
-          statement: cleanQuestionText(q.statement || q.question || ''),
+          statement: cleanQuestionText(q.statement || ''),
           options: cleanedOpts,
           solution: cleanQuestionText(q.solution || q.explanation || '')
         };
@@ -296,7 +129,8 @@ const YearWisePYQ = () => {
         type: isNeet ? `NEET UG ${paper.year} (${paper.shift})` : `JEE Main ${paper.year} (${paper.shift})`,
         questions: questions,
         startTime: Date.now(),
-        durationMinutes: paper.durationMinutes || 180
+        durationMinutes: paper.durationMinutes || 180,
+        pdfUrl: paper.pdfUrl
       };
 
       localStorage.setItem('active_session', JSON.stringify(sessionData));

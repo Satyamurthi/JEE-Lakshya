@@ -1,6 +1,41 @@
 # 🧠 BRAIN.md - JEE Nexus & NEET Lakshya AI Knowledge Base & Exhaustive Project Memory
 
-> **CRITICAL INSTRUCTION FOR AGENT / AI ASSISTANT**: Read this file completely whenever the user says *"remember from the brain"*. It contains an exhaustive, line-by-line directory map of EVERY SINGLE FILE in this project (`d:\JEE`), what it is, where it is located, and what logic it executes, along with the full chronological development trace and future roadmap instructions.
+> **CRITICAL INSTRUCTION FOR AGENT / AI ASSISTANT**: Read this file completely whenever the user starts a session, asks to *"remember from the brain"*, or says *"continue"* / *"continue at next meet"*. It contains an exhaustive file map, full development trace, and the **LIVE WORK RESUME CHECKPOINT** below which tracks exact ongoing work and state so execution can resume seamlessly without stopping or missing context.
+
+---
+
+## ⏸️ LIVE WORK RESUME CHECKPOINT & SESSION LOG
+
+> **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
+
+* **Session Status**: 🟢 STANDBY / GIT PATH CONFIGURED & UNIVERSAL PYQS LIVE
+* **Last Updated Timestamp**: 2026-06-29 14:30 IST
+* **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
+* **Last Completed Task**: Successfully configured `C:\Program Files\Git\cmd` into Windows User Environment PATH registry permanently, enabling native `git` execution across all terminals. Deployed universal 177 PYQs (2013-2026).
+
+### 🎯 Active Task Overview
+* **Goal**: Process all 177 PDF question papers uploaded in `d:\JEE\JEE PYQ`, remove placeholder questions, extract authentic questions with LaTeX equations and answer keys, and generate universally standardized exam papers named in format `JEE Main 'Year' ('Date' 'Shift')` accessible to all students and teachers.
+
+### 📝 Step-by-Step Progress Tracking
+- [x] **Step 1**: Audit uploaded PDF archives in `d:\JEE\JEE PYQ` (177 PDF files found covering 2013 to 2026).
+- [x] **Step 2**: Inspect existing PYQ components (`YearWisePYQ.tsx`, `officialJeePyqList.ts`, `officialJeePyqBank.ts`).
+- [x] **Step 3**: Formulate comprehensive technical implementation plan (`implementation_plan.md`) approved by user.
+- [x] **Step 4**: Built & executed automated PDF extraction pipeline (`DB/extract_all_jee_pyqs.py`) extracting questions, options, subjects, and answer keys from all 177 PDFs.
+- [x] **Step 5**: Structured extracted questions into dynamic repository data modules (`officialJeeExtractedPapers.json`).
+- [x] **Step 6**: Updated `YearWisePYQ.tsx` and `officialJeePyqBank.ts` to dynamically serve these authentic universal papers with standardized titles `JEE Main 'Year' ('Date' 'Shift')`.
+- [x] **Step 7**: Verified build and exam launch flow in CBT Exam Portal.
+
+### 📌 Next Immediate Action (If User Says "Continue")
+* **Continuation Point**: All 177 JEE Main official papers (2013–2026) are extracted, standardized, and universally live for all students and teachers. Ready for any new user instructions or feature additions.
+
+---
+
+## 🤖 MANDATORY AGENT EXECUTION & CHECKPOINT RULES
+
+1. **PERSISTENT LOGGING**: Every single significant change, file edit, database alteration, or structural task MUST be documented in `brain.md`.
+2. **MIDWAY STOPPING GUARD**: If execution stops in the middle (due to rate limits, turn limits, or user pausing), update the `## ⏸️ LIVE WORK RESUME CHECKPOINT` with the exact line of code or task step where work halted.
+3. **ZERO-FRICTION RESUMPTION**: When the user says *"continue"*, *"continue at next meet"*, or *"resume"*, immediately read `## ⏸️ LIVE WORK RESUME CHECKPOINT` and execute the pending items immediately.
+4. **MULTI-REPO SYNCHRONIZATION**: Always maintain alignment across target repositories (`JEE-Nexus` and `JEE-Lakshya`).
 
 ---
 
@@ -23,7 +58,7 @@ d:\JEE\
 ├── 📄 .gitignore                        # Git ignore rules for node_modules, dist, builds
 ├── 📄 Backend.MD                        # Complete Supabase setup guide, PostgreSQL SQL DDL scripts & reset routines
 ├── 📄 NEETbackend.MD                   # Dedicated NEET UG database setup, 180 MCQ specs & SQL scripts
-├── 📄 brain.md                          # THIS FILE - Exhaustive project memory base & file map
+├── 📄 brain.md                          # THIS FILE - Exhaustive project memory base, file map & live checkpoint log
 ├── 📄 README.md                         # General repository description and startup instructions
 ├── 📄 setup.md                          # Platform setup guide and architectural documentation
 ├── 📄 XAMPP_SETUP.md                    # Setup guide for local XAMPP Apache/MySQL PHP API testing
@@ -37,6 +72,9 @@ d:\JEE\
 ├── 📄 eslint.config.js                  # ESLint code quality rules configuration
 ├── 📄 sw.js                             # Service Worker script for offline caching and PWA functionality
 ├── 📄 _redirects                         # Netlify single-page application (SPA) routing redirect rules
+├── 📄 android_update_schema.sql         # SQL migration script for Android synchronization
+├── 📄 JEE_Lakshya_Android.apk           # Compiled debug Android application package
+├── 📄 JEE_Lakshya_Android_Release.apk   # Compiled release Android application package
 │
 ├── 📁 src/                              # Core React TypeScript Frontend Source Directory
 │   ├── 📄 App.tsx                       # Main React router, context providers, role-based protected route guards
@@ -93,28 +131,33 @@ d:\JEE\
 │   ├── 📄 populate_sqlite_from_pkl.py   # Python utility unpickling raw datasets into SQLite
 │   └── 📄 export_to_mysql_dump.py       # Python script converting local SQLite database into MySQL SQL dump format
 │
-└── 📁 neetdb/                           # Dedicated NEET Database & 60,000 Questions Engine
-    ├── 📄 schema.sql                    # Dedicated NEET PostgreSQL/SQLite database schema
-    ├── 📄 neet_nexus_mysql.sql           # Dedicated NEET MySQL database dump
-    ├── 📄 neet_questions.db              # Dedicated NEET SQLite database (~31MB)
-    ├── 📄 generate_60k_neet_bank.py     # Python generator seeding 15,000 hard questions per subject (60,000 total)
-    ├── 📄 generate_massive_neet_bank.py # Standalone NEET question bank compilation script
-    ├── 📄 clean_and_insert_neet_questions.sql # SQL script clearing old questions and inserting NEET PYQ batches
-    ├── 📄 master_neet_setup.sql          # Master 960KB SQL setup file for Supabase NEET database
-    ├── 📄 migrate_to_supabase.py       # Python migration tool transferring NEET questions into Supabase
-    ├── 📄 fetch_all_neetprep_to_neetdb.py # Python scraper/fetcher aggregating external NEET question sources
-    ├── 📄 import_all_new_sources.py     # Python utility importing external datasets into local NEET SQLite
-    ├── 📄 generate_chunked_sql.py       # Generates 5,000-row chunked SQL files for easy Supabase execution
-    ├── 📄 generate_master_sql.py        # Compiles all chunked NEET SQL files into master_neet_setup.sql
-    ├── 📄 generate_sql_clean_and_insert.py # Generates standalone cleanup and insertion SQL scripts
-    ├── 📄 check_supabase_count.py       # Python verification script checking live question counts in Supabase
-    ├── 📄 rebuild_and_migrate_all.py    # Master one-click Python script rebuilding local DB and migrating to Supabase
-    └── 📁 sql_chunks/                   # Directory containing 5,000-row chunked SQL files for smooth execution
+├── 📁 neetdb/                           # Dedicated NEET Database & 60,000 Questions Engine
+│   ├── 📄 schema.sql                    # Dedicated NEET PostgreSQL/SQLite database schema
+│   ├── 📄 neet_nexus_mysql.sql           # Dedicated NEET MySQL database dump
+│   ├── 📄 neet_questions.db              # Dedicated NEET SQLite database (~31MB)
+│   ├── 📄 generate_60k_neet_bank.py     # Python generator seeding 15,000 hard questions per subject (60,000 total)
+│   ├── 📄 generate_massive_neet_bank.py # Standalone NEET question bank compilation script
+│   ├── 📄 clean_and_insert_neet_questions.sql # SQL script clearing old questions and inserting NEET PYQ batches
+│   ├── 📄 master_neet_setup.sql          # Master 960KB SQL setup file for Supabase NEET database
+│   ├── 📄 migrate_to_supabase.py       # Python migration tool transferring NEET questions into Supabase
+│   ├── 📄 fetch_all_neetprep_to_neetdb.py # Python scraper/fetcher aggregating external NEET question sources
+│   ├── 📄 import_all_new_sources.py     # Python utility importing external datasets into local NEET SQLite
+│   ├── 📄 generate_chunked_sql.py       # Generates 5,000-row chunked SQL files for easy Supabase execution
+│   ├── 📄 generate_master_sql.py        # Compiles all chunked NEET SQL files into master_neet_setup.sql
+│   ├── 📄 generate_sql_clean_and_insert.py # Generates standalone cleanup and insertion SQL scripts
+│   ├── 📄 check_supabase_count.py       # Python verification script checking live question counts in Supabase
+│   ├── 📄 rebuild_and_migrate_all.py    # Master one-click Python script rebuilding local DB and migrating to Supabase
+│   └── 📁 sql_chunks/                   # Directory containing 5,000-row chunked SQL files for smooth execution
 │
 └── 📁 Android/                          # Native Android Studio Mobile Application Source
-    ├── 📁 app/src/main/java/com/example/myapplication/
-    │   └── 📄 MainActivity.kt           # Native Kotlin WebView activity with back-button & loading handler
-    └── 📁 app/src/main/res/             # Android resources (activity_main.xml layout, colors.xml, themes.xml)
+    ├── 📁 app/src/main/
+    │   ├── 📄 AndroidManifest.xml       # Native Android manifest with network permissions & WebView settings
+    │   ├── 📁 java/com/neetlakshya/app/
+    │   │   └── 📄 MainActivity.kt       # Native Kotlin WebView activity with back-button & loading handler
+    │   └── 📁 res/                      # Android resources
+    │       ├── 📁 drawable/             # Android app launch icons and drawables
+    │       └── 📁 values/               # Android colors.xml, themes.xml, strings.xml, env_config.xml
+    └── 📄 build.gradle / settings.gradle# Android Gradle build scripts
 ```
 
 ---
@@ -146,21 +189,25 @@ d:\JEE\
   - `https://github.com/Satyamurthi/JEE-Lakshya.git` (`main` branch)
 
 ### Phase 5: Native Android Mobile Application Setup
-- **Android Native WebView Application (`Android/`)**: Generated native Android Kotlin source code (`MainActivity.kt`), XML layouts (`activity_main.xml`), permissions (`AndroidManifest.xml`), and color themes (`colors.xml`, `themes.xml`) matching the dark slate/indigo web application branding.
+- **Android Native WebView Application (`Android/`)**: Generated native Android Kotlin source code ([MainActivity.kt](file:///d:/JEE/Android/app/src/main/java/com/neetlakshya/app/MainActivity.kt)), XML layouts, permissions, and color themes ([env_config.xml](file:///d:/JEE/Android/app/src/main/res/values/env_config.xml)) matching the dark slate/indigo web application branding.
 - Android application configured with hardware acceleration, dom storage, and back-button navigation for CBT tests.
+
+### Phase 6: Standardized Checkpoint & Work Resumption Protocol
+- Established explicit live work resume logging inside [brain.md](file:///d:/JEE/brain.md).
+- Formatted memory structure so any session that halts midway can immediately pick up where it stopped when the user says "continue at next meet".
 
 ---
 
 ## 🔮 Current Memory State & Next Action Guide
 
 ### Where the Project Stands Right Now:
-* **Production Build**: Verified clean builds (`✓ built in 9.42s`).
+* **Production Build**: Verified clean builds.
 * **Database Readiness**: Fully configured for both JEE Main/Advanced and NEET UG (180 MCQs, 720 Marks).
-* **Version Control**: Both remote GitHub repositories (`JEE-Nexus` and `JEE-Lakshya`) are force-updated and aligned on branch `main`.
+* **Version Control**: Remote GitHub repositories aligned on branch `main`.
+* **Session Memory**: 100% active and persistent via `## ⏸️ LIVE WORK RESUME CHECKPOINT`.
 
-### What to Start Next / Future Prompt Response Logic:
-When the user gives a prompt asking to *"remember from the brain"* or resume work, follow these guidelines:
-1. **Check Active Stream Context**: Verify whether the user is focusing on **NEET UG** (`JEE-Lakshya`) or **JEE Main/Advanced** (`JEE-Nexus`).
-2. **Question Bank Seeding**: If generating or seeding questions, ensure NEET mode uses 100% MCQs across Physics, Chemistry, Botany, and Zoology with Match-the-Following and Diagrammatical options.
-3. **Multi-Repo Pushing**: Whenever committing new updates, always push to both target repositories (`JEE-Nexus` and `JEE-Lakshya`).
-4. **Verification**: Always validate changes using `npm run build` prior to committing.
+### What to Do When User Says "Continue":
+1. Open and read `## ⏸️ LIVE WORK RESUME CHECKPOINT` in [brain.md](file:///d:/JEE/brain.md).
+2. Check **Current Active Stream Context** and **Next Immediate Action**.
+3. Execute the pending step in **Step-by-Step Progress Tracking** without restarting analysis from scratch.
+4. Keep `brain.md` updated after every major execution step.

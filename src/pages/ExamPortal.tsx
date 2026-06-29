@@ -15,6 +15,8 @@ const ExamPortal = () => {
   const [answers, setAnswers] = useState<Record<number, any>>({});
   const [status, setStatus] = useState<Record<number, 'answered' | 'marked' | 'marked-answered' | 'not-visited' | 'not-answered'>>({});
   const [timeLeft, setTimeLeft] = useState(0);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<'pdf' | 'answers'>('pdf');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
@@ -118,6 +120,9 @@ const ExamPortal = () => {
       const session = JSON.parse(activeSession);
       examQuestions = session.questions || [];
       examConfig = { type: session.type, duration: session.durationMinutes };
+      if (session.pdfUrl) {
+        setPdfUrl(session.pdfUrl);
+      }
     } else if (dailyChallenge && dailyConfig) {
       examQuestions = JSON.parse(dailyChallenge) || [];
       examConfig = JSON.parse(dailyConfig);
@@ -297,8 +302,8 @@ const ExamPortal = () => {
     ? ['Physics', 'Chemistry', 'Biology', 'Botany', 'Zoology'] 
     : ['Physics', 'Chemistry', 'Mathematics'];
   
-  const subjects = defaultOrder.filter(s => detectedSubjects.includes(s))
-    .concat(detectedSubjects.filter(s => !defaultOrder.includes(s)));
+  const subjects = (defaultOrder as any[]).filter(s => (detectedSubjects as any[]).includes(s))
+    .concat((detectedSubjects as any[]).filter(s => !(defaultOrder as any[]).includes(s)));
     
   if (subjects.length === 0) {
     subjects.push(...defaultOrder);
@@ -361,65 +366,139 @@ const ExamPortal = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Question Area */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <div className="flex items-center justify-between">
-               <span className="px-4 py-1 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg">
-                 Question {currentIndex + 1}
-               </span>
-               <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> +4 Correct</span>
-                  <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500" /> -1 Wrong</span>
-               </div>
+        {pdfUrl ? (
+          <>
+            {/* Left side: PDF Viewer */}
+            <div className={`w-full lg:w-[65%] border-r border-slate-200 h-full flex flex-col bg-slate-100 ${
+              mobileView === 'pdf' ? 'flex' : 'hidden lg:flex'
+            }`}>
+              <iframe
+                src={`${pdfUrl}#toolbar=0&navpanes=0`}
+                className="w-full h-full border-0"
+                title="JEE Question Paper PDF"
+              />
             </div>
 
-            <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-slate-200 space-y-10">
-               <div className="prose prose-slate max-w-none">
-                  <MathText className="text-xl font-bold text-slate-800 leading-relaxed">
-                    {currentQuestion.statement}
-                  </MathText>
-               </div>
+            {/* Right side: OMR Answer Panel */}
+            <div className={`w-full lg:w-[35%] flex flex-col h-full bg-slate-50 ${
+              mobileView === 'answers' ? 'flex' : 'hidden lg:flex'
+            }`}>
+              {/* Question Subject & Header */}
+              <div className="p-6 border-b border-slate-200 bg-white flex items-center justify-between shrink-0 shadow-sm">
+                <span className="px-4 py-1.5 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg">
+                  Question {currentIndex + 1}
+                </span>
+                <span className="px-4 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                  {currentQuestion?.subject}
+                </span>
+              </div>
 
-               {currentQuestion.type === 'MCQ' ? (
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   {Object.entries(currentQuestion.options || {}).map(([key, val]: [string, any]) => (
-                     <button
-                       key={key}
-                       onClick={() => handleAnswer(key)}
-                       className={`p-6 rounded-2xl border-2 text-left transition-all flex items-center gap-4 group ${
-                         answers[currentIndex] === key
-                           ? 'border-indigo-600 bg-indigo-50 shadow-md'
-                           : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'
-                       }`}
-                     >
-                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs transition-colors ${
-                         answers[currentIndex] === key ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border border-slate-200'
-                       }`}>
-                         {key}
-                       </div>
-                       <MathText className={`font-bold text-sm ${answers[currentIndex] === key ? 'text-indigo-900' : 'text-slate-600'}`}>
-                         {val}
-                       </MathText>
-                     </button>
-                   ))}
+              {/* OMR Options */}
+              <div className="flex-1 overflow-y-auto p-8 flex flex-col justify-center space-y-8 bg-slate-50/50">
+                <div className="text-center space-y-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Answer in OMR Sheet</p>
+                  <p className="text-slate-500 font-medium text-xs leading-relaxed">
+                    Read Question {currentIndex + 1} from the PDF on the left, then bubble your answer below.
+                  </p>
+                </div>
+
+                {currentQuestion?.type === 'MCQ' ? (
+                  <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto w-full">
+                    {['A', 'B', 'C', 'D'].map((key) => (
+                      <button
+                        key={key}
+                        onClick={() => handleAnswer(key)}
+                        className={`p-6 rounded-2xl border-2 text-center transition-all flex flex-col items-center justify-center gap-2 group ${
+                          answers[currentIndex] === key
+                            ? 'border-indigo-600 bg-indigo-50 shadow-md scale-105'
+                            : 'border-slate-200 hover:border-slate-350 bg-white'
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm transition-colors ${
+                          answers[currentIndex] === key ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {key}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="max-w-xs mx-auto w-full space-y-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Numerical Response</p>
+                    <input 
+                      type="number"
+                      step="any"
+                      value={answers[currentIndex] || ''}
+                      onChange={(e) => handleAnswer(e.target.value)}
+                      placeholder="Enter response..."
+                      className="w-full p-5 bg-white border-2 border-slate-200 rounded-2xl font-black text-xl text-center text-slate-900 focus:border-indigo-500 outline-none transition-all shadow-sm"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Question Area */
+          <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
+            <div className="max-w-4xl mx-auto space-y-8">
+              <div className="flex items-center justify-between">
+                 <span className="px-4 py-1 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg">
+                   Question {currentIndex + 1}
+                 </span>
+                 <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> +4 Correct</span>
+                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500" /> -1 Wrong</span>
                  </div>
-               ) : (
-                 <div className="space-y-4">
-                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Numerical Answer</p>
-                   <input 
-                     type="number"
-                     step="any"
-                     value={answers[currentIndex] || ''}
-                     onChange={(e) => handleAnswer(e.target.value)}
-                     placeholder="Enter your numerical response..."
-                     className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-2xl text-slate-900 focus:border-indigo-500 focus:bg-white outline-none transition-all"
-                   />
+              </div>
+
+              <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-slate-200 space-y-10">
+                 <div className="prose prose-slate max-w-none">
+                    <MathText className="text-xl font-bold text-slate-800 leading-relaxed">
+                      {currentQuestion.statement}
+                    </MathText>
                  </div>
-               )}
+
+                 {currentQuestion.type === 'MCQ' ? (
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     {Object.entries(currentQuestion.options || {}).map(([key, val]: [string, any]) => (
+                       <button
+                         key={key}
+                         onClick={() => handleAnswer(key)}
+                         className={`p-6 rounded-2xl border-2 text-left transition-all flex items-center gap-4 group ${
+                           answers[currentIndex] === key
+                             ? 'border-indigo-600 bg-indigo-50 shadow-md'
+                             : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'
+                         }`}
+                       >
+                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs transition-colors ${
+                           answers[currentIndex] === key ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border border-slate-200'
+                         }`}>
+                           {key}
+                         </div>
+                         <MathText className={`font-bold text-sm ${answers[currentIndex] === key ? 'text-indigo-900' : 'text-slate-600'}`}>
+                           {val}
+                         </MathText>
+                       </button>
+                     ))}
+                   </div>
+                 ) : (
+                   <div className="space-y-4">
+                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Numerical Answer</p>
+                     <input 
+                       type="number"
+                       step="any"
+                       value={answers[currentIndex] || ''}
+                       onChange={(e) => handleAnswer(e.target.value)}
+                       placeholder="Enter your numerical response..."
+                       className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-2xl text-slate-900 focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                     />
+                   </div>
+                 )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Question Palette - Desktop Sidebar */}
         <aside className={`fixed lg:relative inset-y-0 lg:inset-auto right-0 lg:right-auto z-40 lg:z-0 w-80 h-full bg-white border-l border-slate-200 transform ${showPalette ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none`}>
@@ -477,6 +556,14 @@ const ExamPortal = () => {
       {/* Bottom Controls */}
       <footer className="bg-white border-t border-slate-200 p-4 md:px-8 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
+          {pdfUrl && (
+            <button
+              onClick={() => setMobileView(mobileView === 'pdf' ? 'answers' : 'pdf')}
+              className="lg:hidden px-6 py-3 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest"
+            >
+              {mobileView === 'pdf' ? 'Show OMR' : 'Show PDF'}
+            </button>
+          )}
           <button 
             onClick={handleMarkForReview}
             className="px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all border border-indigo-100 hidden sm:flex items-center gap-2"
