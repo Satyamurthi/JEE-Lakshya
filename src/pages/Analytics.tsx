@@ -8,6 +8,7 @@ import {
   ChevronRight, Award, Clock, ArrowUpRight, ArrowDownRight, Lightbulb
 } from 'lucide-react';
 import { getUserExamAttempts, getUserAllDailyAttempts, getDailyChallenge, getDailyAttemptsByChallenge } from '../supabase';
+import { calculateOverallAccuracy } from '../utils/metricsHelper';
 
 const Analytics = () => {
   const [examAttempts, setExamAttempts] = useState<any[]>([]);
@@ -147,13 +148,7 @@ const Analytics = () => {
       }
     }
 
-    const avgAccuracy = allAttempts.length > 0 ? Math.round(
-      allAttempts.reduce((acc, curr) => {
-        const total = curr.total_marks || curr.totalQuestions || 100;
-        const score = curr.score || 0;
-        return acc + (total > 0 ? (score / total) : 0);
-      }, 0) / allAttempts.length * 100
-    ) : 0;
+    const avgAccuracy = calculateOverallAccuracy(allAttempts);
 
     return {
       progressData,

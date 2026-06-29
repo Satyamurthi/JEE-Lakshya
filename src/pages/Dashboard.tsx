@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Award, Target, TrendingUp, BookOpen, ChevronRight, Brain, Flame, Activity, Zap, Layers, Crown, Sparkles, X, Loader2, CheckCircle2 } from 'lucide-react';
 
 import { getUserExamAttempts, getUserAllDailyAttempts } from '../supabase';
+import { calculateDailyStreak, calculateOverallAccuracy, calculatePercentile, calculateTotalXP } from '../utils/metricsHelper';
 
 const StatCard = ({ Icon, label, value, subValue, gradient, delay }: any) => (
   <div 
@@ -35,50 +36,12 @@ const Dashboard = () => {
     accuracy: 0,
     percentile: 0,
     testsTaken: 0,
-    streak: 0
+    streak: 0,
+    xp: 0
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [weakAreas, setWeakAreas] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Helper to calculate streak
-  const calculateStreak = (history: any[]) => {
-    if (!history || history.length === 0) return 0;
-    
-    // Extract unique dates (YYYY-MM-DD)
-    const dates = Array.from(new Set(history.map((h: any) => {
-        const d = h.completedAt || h.submitted_at || h.date || h.created_at;
-        if (!d) return null;
-        try { return new Date(d).toISOString().split('T')[0]; } catch(e) { return null; }
-    }).filter(Boolean))).sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime());
-
-    if (dates.length === 0) return 0;
-
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-    // If they completed a test today or yesterday, streak is active
-    let streak = 1;
-    if (dates[0] !== today && dates[0] !== yesterday) {
-      // If they have completed tests, treat active streak as at least 1 for completed sessions
-      return Math.min(dates.length, 1);
-    }
-
-    let currentDate = new Date(dates[0]);
-    for (let i = 1; i < dates.length; i++) {
-        const prevDate = new Date(dates[i]);
-        const diffTime = Math.abs(currentDate.getTime() - prevDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-
-        if (diffDays === 1) {
-          streak++;
-          currentDate = prevDate;
-        } else {
-          break;
-        }
-    }
-    return streak;
-  };
 
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [inputApiKey, setInputApiKey] = useState('');
@@ -94,9 +57,6 @@ const Dashboard = () => {
 
       const activeStream = localStorage.getItem('active_stream') || userProf.selected_stream || 'JEE Main & Advanced';
       const isNeet = activeStream.toLowerCase().includes('neet');
-      const defaultDiagnosticTopics = isNeet 
-        ? ['Cell Structure & Function', 'Genetics & Inheritance', 'Human Physiology']
-        : ['Rotational Dynamics', 'Complex Numbers', 'Chemical Thermodynamics'];
 
       const historyRaw = localStorage.getItem('exam_history');
       let combinedHistory = historyRaw ? JSON.parse(historyRaw) : [];
@@ -116,24 +76,21 @@ const Dashboard = () => {
         index === self.findIndex((t: any) => (t.id && t.id === item.id) || (t.submitted_at && t.submitted_at === item.submitted_at))
       );
 
-      const currentStreak = calculateStreak(history);
+      const currentStreak = calculateDailyStreak(history);
 
       if (history.length > 0) {
         const totalScore = history.reduce((acc: number, curr: any) => acc + (curr.score || 0), 0);
-        const avgAcc = history.reduce((acc: number, curr: any) => {
-          const total = curr.total_marks || curr.totalQuestions || 100;
-          const score = curr.score || 0;
-          return acc + (total > 0 ? (score / total) * 100 : 0);
-        }, 0) / history.length;
-        
-        const estPercentile = Math.min(99.9, (Math.log10(avgAcc + 10) * 48)).toFixed(1);
+        const accuracy = calculateOverallAccuracy(history);
+        const percentile = calculatePercentile(accuracy);
+        const xp = calculateTotalXP(history, currentStreak);
 
         setStats({
           avgScore: Math.round(totalScore / history.length),
-          accuracy: Math.round(avgAcc),
-          percentile: parseFloat(estPercentile),
+          accuracy,
+          percentile,
           testsTaken: history.length,
-          streak: currentStreak > 0 ? currentStreak : 1
+          streak: currentStreak,
+          xp
         });
 
         const conceptMap: Record<string, { total: number, correct: number }> = {};
@@ -243,7 +200,7 @@ const Dashboard = () => {
         <StatCard 
             Icon={Zap} 
             label="Total XP" 
-            value={`${stats.testsTaken * 150}`} 
+            value={`${stats.xp}`} 
             subValue="Knowledge Points" 
             gradient="bg-gradient-to-br from-cyan-500 to-blue-600"
             delay={0.3} 
