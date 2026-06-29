@@ -407,8 +407,13 @@ const SuperAdmin = () => {
       const allQs = isNeet 
         ? [...result.physics, ...result.chemistry, ...(result.biology || [])]
         : [...result.physics, ...result.chemistry, ...(result.mathematics || [])];
-      setParsedQuestions(allQs);
-      setToast({ message: `Generated ${allQs.length}-Question ${isNeet ? 'NEET' : 'JEE'} Daily Challenge!`, type: 'success' });
+      
+      const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
+      const uniqueQs = filterUniqueQuestions(allQs);
+      recordSeenQuestions(uniqueQs);
+
+      setParsedQuestions(uniqueQs);
+      setToast({ message: `Generated ${uniqueQs.length}-Question ${isNeet ? 'NEET' : 'JEE'} Daily Challenge!`, type: 'success' });
     } catch (e: any) {
       const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
       const service = await getStreamGeminiService(activeStream);
@@ -420,8 +425,13 @@ const SuperAdmin = () => {
       const fbChem = service.generateFallbackQuestions(('Chemistry' as any), mcqN, numN);
       const fbThird = service.generateFallbackQuestions(isNeet ? ('Biology' as any) : ('Mathematics' as any), mcqN, numN);
       const fbQs = [...fbPhysics, ...fbChem, ...fbThird];
-      setParsedQuestions(fbQs);
-      setToast({ message: `Loaded ${fbQs.length}-Question ${isNeet ? 'NEET' : 'JEE'} Question Bank fallback!`, type: 'success' });
+      
+      const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
+      const uniqueQs = filterUniqueQuestions(fbQs);
+      recordSeenQuestions(uniqueQs);
+
+      setParsedQuestions(uniqueQs);
+      setToast({ message: `Loaded ${uniqueQs.length}-Question ${isNeet ? 'NEET' : 'JEE'} Question Bank fallback!`, type: 'success' });
     } finally {
       setIsGeneratingChallenge(false);
     }

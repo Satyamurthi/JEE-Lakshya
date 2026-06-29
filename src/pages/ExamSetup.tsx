@@ -186,11 +186,15 @@ const ExamSetup = () => {
       }
     }
 
-    const qCount = preparedQuestions.length;
+    const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
+    const finalQuestions = filterUniqueQuestions(preparedQuestions);
+    recordSeenQuestions(finalQuestions);
+
+    const qCount = finalQuestions.length;
     const duration = Math.ceil(qCount * 2);
     const sessionData = {
       type: examType,
-      questions: preparedQuestions,
+      questions: finalQuestions,
       startTime: Date.now(),
       durationMinutes: duration
     };

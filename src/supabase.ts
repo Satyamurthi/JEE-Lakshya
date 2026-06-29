@@ -200,12 +200,14 @@ export const fetchQuestionsFromDB = async (subject?: string, chapter?: string, t
     }
   }
   try {
+    const { filterUniqueQuestions, recordSeenQuestions } = await import('./utils/questionTracker');
+    
     const fetchByType = async (type: string, count: number) => {
         if (count <= 0) return [];
         let query = supabase.from('questions').select('id').eq('type', type);
         if (subject) query = query.eq('subject', subject);
         if (chapter) query = query.eq('chapter', chapter);
-        if (topics && topics.length > 0) query = query.in('concept', topics); // Assuming 'concept' is used for topics in DB
+        if (topics && topics.length > 0) query = query.in('concept', topics);
         
         const { data: idData, error: idError } = await query;
         if (idError) throw idError;
@@ -214,14 +216,18 @@ export const fetchQuestionsFromDB = async (subject?: string, chapter?: string, t
         // Pick random set of IDs
         const shuffledIds = idData
           .map(x => x.id)
-          .sort(() => Math.random() - 0.5)
-          .slice(0, count);
+          .sort(() => Math.random() - 0.5);
         
         if (shuffledIds.length === 0) return [];
         
-        const { data, error } = await supabase.from('questions').select('*').in('id', shuffledIds);
+        const { data, error } = await supabase.from('questions').select('*').in('id', shuffledIds.slice(0, Math.min(count * 3, shuffledIds.length)));
         if (error) throw error;
-        return data || [];
+        
+        const fetchedList = data || [];
+        // Filter out previously seen questions to guarantee no repetition until pool exhaustion
+        const uniqueFetched = filterUniqueQuestions(fetchedList, count);
+        recordSeenQuestions(uniqueFetched);
+        return uniqueFetched;
     };
 
     const [mcqs, numericals] = await Promise.all([

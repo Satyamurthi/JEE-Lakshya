@@ -99,7 +99,11 @@ const Practice = () => {
       return;
     }
 
-    localStorage.setItem('active_exam_questions', JSON.stringify(questions));
+    const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
+    const finalQuestions = filterUniqueQuestions(questions, mcqCount + numericalCount);
+    recordSeenQuestions(finalQuestions);
+
+    localStorage.setItem('active_exam_questions', JSON.stringify(finalQuestions));
     localStorage.setItem('active_exam_config', JSON.stringify({
       type: 'Chapter Practice',
       subject: selectedSubject,

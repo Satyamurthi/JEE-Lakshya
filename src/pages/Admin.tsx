@@ -618,7 +618,12 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
           const allQs = isNeet 
             ? [...result.physics, ...result.chemistry, ...(result.biology || [])]
             : [...result.physics, ...result.chemistry, ...(result.mathematics || [])];
-          setParsedQuestions(allQs);
+          
+          const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
+          const uniqueQs = filterUniqueQuestions(allQs);
+          recordSeenQuestions(uniqueQs);
+
+          setParsedQuestions(uniqueQs);
           setToast({ message: "Generation Complete!", type: 'success' });
       } catch (e: any) {
           console.warn("AI generation failed, falling back to database...", e);
@@ -651,7 +656,10 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
               
               const allDBQs = [...physicsQs, ...chemistryQs, ...thirdQs];
               if (allDBQs.length > 0) {
-                  setParsedQuestions(allDBQs);
+                  const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
+                  const uniqueQs = filterUniqueQuestions(allDBQs);
+                  recordSeenQuestions(uniqueQs);
+                  setParsedQuestions(uniqueQs);
                   setToast({ message: "Loaded questions from database successfully", type: 'success' });
               } else {
                   throw new Error("No questions found in database.");
@@ -664,7 +672,11 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
               const fallbackChemistry = service.generateFallbackQuestions(('Chemistry' as any), generationConfig.chemistry.mcq, generationConfig.chemistry.numerical);
               const thirdSubject = isNeet ? 'Biology' : 'Mathematics';
               const fallbackThird = service.generateFallbackQuestions((thirdSubject as any), generationConfig.mathematics.mcq, generationConfig.mathematics.numerical);
-              setParsedQuestions([...fallbackPhysics, ...fallbackChemistry, ...fallbackThird]);
+              
+              const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
+              const uniqueQs = filterUniqueQuestions([...fallbackPhysics, ...fallbackChemistry, ...fallbackThird]);
+              recordSeenQuestions(uniqueQs);
+              setParsedQuestions(uniqueQs);
               setToast({ message: `Loaded built-in ${isNeet ? 'NEET' : 'JEE'} Question Bank successfully!`, type: 'success' });
           }
       } finally {
