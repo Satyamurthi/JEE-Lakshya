@@ -8,25 +8,24 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 STANDBY / EXAM PORTAL RUNTIME ISSUE RESOLVED & DUAL REPOS SYNCED
+* **Session Status**: 🟡 IN-PROGRESS (Deep PDF Question & Option Extraction Pipeline)
 * **Last Updated Timestamp**: 2026-06-29 14:50 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Resolved `Uncaught ReferenceError: require is not defined` in `ExamPortal.tsx` by replacing legacy Node.js `require()` statements with ES modules. Verified production build (`✓ built in 11.57s`) and pushed to both GitHub repositories.
+* **Last Completed Task**: Received user instruction to convert all 177 PYQ papers to standard full-width CBT exam format (rendering question statements and options A, B, C, D directly on screen, eliminating the left-side PDF embed viewer).
 
 ### 🎯 Active Task Overview
-* **Goal**: Process all 177 PDF question papers uploaded in `d:\JEE\JEE PYQ`, remove placeholder questions, extract authentic questions with LaTeX equations and answer keys, and generate universally standardized exam papers named in format `JEE Main 'Year' ('Date' 'Shift')` accessible to all students and teachers.
+* **Goal**: Build and run an exhaustive Python extraction engine (`DB/deep_extract_all_pyqs.py`) to parse every single question statement and all four options (A, B, C, D) / numerical answers from all 177 PDFs in `d:\JEE\JEE PYQ`. Update `ExamPortal.tsx` to render all PYQs in pure standard CBT mode without split-screen PDF view.
 
 ### 📝 Step-by-Step Progress Tracking
-- [x] **Step 1**: Audit uploaded PDF archives in `d:\JEE\JEE PYQ` (177 PDF files found covering 2013 to 2026).
-- [x] **Step 2**: Inspect existing PYQ components (`YearWisePYQ.tsx`, `officialJeePyqList.ts`, `officialJeePyqBank.ts`).
-- [x] **Step 3**: Formulate comprehensive technical implementation plan (`implementation_plan.md`) approved by user.
-- [x] **Step 4**: Built & executed automated PDF extraction pipeline (`DB/extract_all_jee_pyqs.py`) extracting questions, options, subjects, and answer keys from all 177 PDFs.
-- [x] **Step 5**: Structured extracted questions into dynamic repository data modules (`officialJeeExtractedPapers.json`).
-- [x] **Step 6**: Updated `YearWisePYQ.tsx` and `officialJeePyqBank.ts` to dynamically serve these authentic universal papers with standardized titles `JEE Main 'Year' ('Date' 'Shift')`.
-- [x] **Step 7**: Verified build and exam launch flow in CBT Exam Portal.
+- [x] **Step 1**: Identify user requirement to replace split-screen PDF view with standard full-width CBT question rendering.
+- [ ] **Step 2**: Create implementation plan (`implementation_plan.md`) detailing deep PDF parsing and UI rendering updates.
+- [ ] **Step 3**: Build comprehensive Python deep extractor (`DB/deep_extract_all_pyqs.py`) to parse full question texts, options A/B/C/D, LaTeX formulas, and answer keys across all 177 PDFs.
+- [ ] **Step 4**: Regenerate `src/data/officialJeeExtractedPapers.json` with extracted question texts and options.
+- [ ] **Step 5**: Update `YearWisePYQ.tsx` and `ExamPortal.tsx` so `pdfUrl` does not trigger split-screen PDF view for PYQs, presenting standard CBT UI.
+- [ ] **Step 6**: Verify production build, test exam portal launch, commit and push to both GitHub repositories.
 
 ### 📌 Next Immediate Action (If User Says "Continue")
-* **Continuation Point**: All 177 JEE Main official papers (2013–2026) are extracted, standardized, and universally live for all students and teachers. Ready for any new user instructions or feature additions.
+* **Continuation Point**: Currently at Step 2 & 3. Create `implementation_plan.md` and execute `DB/deep_extract_all_pyqs.py` to process all 177 PDFs.
 
 ---
 

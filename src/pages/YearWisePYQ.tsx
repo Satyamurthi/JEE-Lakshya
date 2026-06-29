@@ -129,8 +129,7 @@ const YearWisePYQ = () => {
         type: isNeet ? `NEET UG ${paper.year} (${paper.shift})` : `JEE Main ${paper.year} (${paper.shift})`,
         questions: questions,
         startTime: Date.now(),
-        durationMinutes: paper.durationMinutes || 180,
-        pdfUrl: paper.pdfUrl
+        durationMinutes: paper.durationMinutes || 180
       };
 
       localStorage.setItem('active_session', JSON.stringify(sessionData));
