@@ -174,11 +174,6 @@ const Dashboard = () => {
   }, []);
 
   const handleTriggerRemedialPlan = () => {
-    const savedKey = localStorage.getItem('user_gemini_api_key');
-    if (!savedKey) {
-      setIsApiKeyModalOpen(true);
-      return;
-    }
     navigate('/exam-setup');
   };
 

@@ -73,12 +73,6 @@ const ExamSetup = () => {
   const [inputApiKey, setInputApiKey] = useState('');
 
   const preparePaper = async () => {
-    const savedKey = localStorage.getItem('user_gemini_api_key');
-    if (!savedKey) {
-      setIsApiKeyModalOpen(true);
-      return;
-    }
-
     if (needsPayment && !isPaid) {
       handleUnlockMock();
       return;
@@ -95,34 +89,42 @@ const ExamSetup = () => {
     try {
       const totalPerSubject = questionCounts.mcq + questionCounts.numerical;
       const { saveQuestionsToDB, fetchQuestionsFromDB } = await import('../supabase');
+      const savedKey = localStorage.getItem('user_gemini_api_key') || (import.meta as any).env?.VITE_GEMINI_API_KEY;
 
       const generationPromises = selectedSubjects.map(async (sub) => {
         setProgress(prev => ({ ...prev, [sub]: 'loading' }));
-        setPreparationLogs(prev => [...prev, `Attempting AI generation for ${sub}...`]);
         
         let questions: any[] = [];
-        let source = "AI engine";
+        let source = "Database Engine";
 
-        try {
-          const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
-          const service = await getStreamGeminiService(activeStream);
-          questions = await service.generateJEEQuestions(
-              sub, 
-              totalPerSubject, 
-              examType,
-              undefined,
-              undefined,
-              undefined,
-              { mcq: questionCounts.mcq, numerical: questionCounts.numerical }
-          );
+        if (savedKey) {
+          try {
+            setPreparationLogs(prev => [...prev, `Attempting AI generation for ${sub}...`]);
+            const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+            const service = await getStreamGeminiService(activeStream);
+            questions = await service.generateJEEQuestions(
+                sub, 
+                totalPerSubject, 
+                examType,
+                undefined,
+                undefined,
+                undefined,
+                { mcq: questionCounts.mcq, numerical: questionCounts.numerical }
+            );
 
-          if (questions && questions.length > 0) {
-              setPreparationLogs(prev => [...prev, `Saving ${sub} AI questions to database...`]);
-              await saveQuestionsToDB(questions);
+            if (questions && questions.length > 0) {
+                source = "AI Engine";
+                setPreparationLogs(prev => [...prev, `Saving ${sub} AI questions to database...`]);
+                await saveQuestionsToDB(questions);
+            }
+          } catch (aiErr: any) {
+            setPreparationLogs(prev => [...prev, `⚠️ AI generation unavailable for ${sub}. Fetching from DB...`]);
           }
-        } catch (aiErr: any) {
-          setPreparationLogs(prev => [...prev, `⚠️ AI failed for ${sub}. Falling back to DB...`]);
-          source = "Database Fallback";
+        }
+
+        if (!questions || questions.length === 0) {
+          setPreparationLogs(prev => [...prev, `Fetching JEE questions for ${sub} from Question Bank...`]);
+          source = "Database Question Bank";
           try {
             questions = await fetchQuestionsFromDB(
               sub,
@@ -132,7 +134,7 @@ const ExamSetup = () => {
               questionCounts.numerical
             );
           } catch (dbErr: any) {
-            console.error(`[ExamSetup] Database fallback failed for ${sub}:`, dbErr);
+            console.error(`[ExamSetup] Database fetch failed for ${sub}:`, dbErr);
           }
         }
 
