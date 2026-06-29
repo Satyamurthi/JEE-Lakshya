@@ -593,59 +593,97 @@ const SuperAdmin = () => {
         chapterMap[ch].push(q);
       });
 
-      let docHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>JEE Question Bank Export - ${exportSubject}</title><style>
-        body { font-family: Arial, sans-serif; margin: 40px; color: #1e293b; line-height: 1.6; }
-        h1 { color: #0f172a; border-bottom: 3px solid #6366f1; padding-bottom: 10px; }
-        h2 { color: #4338ca; margin-top: 30px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
-        .question-card { margin-bottom: 25px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-        .pyq-tag { display: inline-block; font-weight: bold; color: #4338ca; background: #e0e7ff; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-bottom: 8px; }
-        .options-list { margin: 10px 0; padding-left: 20px; }
-        .answer { font-weight: bold; color: #047857; margin-top: 8px; }
-        .solution { font-size: 13px; color: #475569; background: #fff; padding: 10px; border-radius: 6px; margin-top: 8px; border-left: 3px solid #6366f1; }
-      </style></head><body>`;
+      const sortedChapterNames = Object.keys(chapterMap).sort();
 
-      docHtml += `<h1>OFFICIAL JEE QUESTION BANK - ${exportSubject.toUpperCase()}</h1>`;
-      docHtml += `<p>Total Questions Compiled: <strong>${questions.length}</strong> | Export Date: ${new Date().toLocaleDateString()}</p><hr/>`;
+      let docHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset='utf-8'>
+<title>JEE Question Bank Export - ${exportSubject}</title>
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+<w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+body { font-family: 'Calibri', 'Arial', sans-serif; margin: 1in; color: #1e293b; line-height: 1.5; font-size: 11pt; }
+h1 { font-size: 20pt; color: #1e1b4b; text-align: center; border-bottom: 2pt solid #4f46e5; padding-bottom: 6pt; margin-bottom: 8pt; font-weight: bold; }
+h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10pt; margin-top: 18pt; margin-bottom: 10pt; border-left: 4pt solid #4f46e5; font-weight: bold; }
+.meta-info { text-align: center; font-size: 10pt; color: #64748b; margin-bottom: 20pt; font-weight: bold; }
+.question-block { margin-bottom: 16pt; page-break-inside: avoid; }
+.q-statement { font-size: 11pt; color: #0f172a; margin-bottom: 6pt; }
+.pyq-tag { font-weight: bold; color: #3730a3; background-color: #e0e7ff; padding: 2pt 6pt; font-size: 9.5pt; margin-right: 4pt; }
+.options-table { width: 100%; margin-top: 6pt; margin-bottom: 6pt; border-collapse: collapse; }
+.options-table td { padding: 4pt 8pt; vertical-align: top; font-size: 10.5pt; width: 50%; }
+.ans-box { font-weight: bold; color: #15803d; background-color: #f0fdf4; padding: 4pt 8pt; border: 1pt solid #bbf7d0; font-size: 10pt; margin-top: 6pt; margin-bottom: 4pt; display: inline-block; }
+.sol-box { font-size: 10pt; color: #334155; background-color: #f8fafc; padding: 6pt 10pt; border-left: 2.5pt solid #6366f1; margin-top: 6pt; }
+</style>
+</head>
+<body>
+<h1>OFFICIAL JEE QUESTION BANK - ${exportSubject.toUpperCase()}</h1>
+<div class='meta-info'>Arranged Chapter-Wise | Total Questions: <strong>${questions.length}</strong> | Generated: ${new Date().toLocaleDateString()}</div>
+`;
 
       let qIndex = 1;
-      for (const [chapName, qList] of Object.entries(chapterMap)) {
-        docHtml += `<h2>CHAPTER: ${chapName.toUpperCase()} (${qList.length} Questions)</h2>`;
+      for (const chapName of sortedChapterNames) {
+        const qList = chapterMap[chapName];
+        docHtml += `<h2>CHAPTER: ${chapName.toUpperCase()} (${qList.length} Questions)</h2>\n`;
+        
         qList.forEach((q, idx) => {
-          const pyqRef = q.year || q.exam_session || q.pyq_info ? `[${q.year || 'JEE Official'} ${q.exam_session || ''} Q${idx+1}]` : `[JEE Main PYQ Archive - ${q.subject} Q${idx+1}]`;
-          
-          docHtml += `<div class="question-card">`;
-          docHtml += `<div class="pyq-tag">${pyqRef}</div>`;
-          docHtml += `<div><strong>Q${qIndex}.</strong> ${q.statement || q.question || ''}</div>`;
-          
-          if (q.options && typeof q.options === 'object') {
-            docHtml += `<div class="options-list">`;
-            Object.entries(q.options).forEach(([k, v]) => {
-              docHtml += `<div><strong>(${k})</strong> ${v}</div>`;
-            });
-            docHtml += `</div>`;
+          const yearVal = q.year || q.exam_session || q.pyq_info;
+          const pyqRef = yearVal ? `[${yearVal} Q${idx + 1}]` : `[JEE Main PYQ Archive - Q${idx + 1}]`;
+          const stmt = q.statement || q.question || '';
+
+          docHtml += `<div class="question-block">\n`;
+          docHtml += `<div class="q-statement"><strong>Q${qIndex}.</strong> <span class="pyq-tag">${pyqRef}</span> ${stmt}</div>\n`;
+
+          // Format Options cleanly
+          if (q.options) {
+            docHtml += `<table class="options-table"><tr>`;
+            if (typeof q.options === 'object' && !Array.isArray(q.options)) {
+              const keys = Object.keys(q.options);
+              keys.forEach((k, i) => {
+                if (i > 0 && i % 2 === 0) docHtml += `</tr><tr>`;
+                docHtml += `<td><strong>(${k})</strong> ${q.options[k]}</td>`;
+              });
+            } else if (Array.isArray(q.options)) {
+              const labels = ['A', 'B', 'C', 'D'];
+              q.options.forEach((val: string, i: number) => {
+                if (i > 0 && i % 2 === 0) docHtml += `</tr><tr>`;
+                const lbl = labels[i] || String(i + 1);
+                docHtml += `<td><strong>(${lbl})</strong> ${val}</td>`;
+              });
+            }
+            docHtml += `</tr></table>\n`;
           }
 
-          if (q.correctAnswer) {
-            docHtml += `<div class="answer">Correct Answer: (${q.correctAnswer})</div>`;
+          const corr = q.correctAnswer || q.answer;
+          if (corr) {
+            docHtml += `<div class="ans-box">Correct Answer: (${corr})</div>\n`;
           }
 
-          if (q.solution || q.explanation) {
-            docHtml += `<div class="solution"><strong>Solution & Explanation:</strong> ${q.solution || q.explanation}</div>`;
+          const sol = q.solution || q.explanation;
+          if (sol) {
+            docHtml += `<div class="sol-box"><strong>Solution & Explanation:</strong> ${sol}</div>\n`;
           }
 
-          docHtml += `</div>`;
+          docHtml += `</div>\n<hr style="border: none; border-top: 1px dashed #cbd5e1; margin: 12pt 0;"/>\n`;
           qIndex++;
         });
       }
 
       docHtml += `</body></html>`;
 
-      const blob = new Blob([docHtml], { type: 'application/msword' });
+      // Include UTF-8 Byte Order Mark (\uFEFF) to prevent MS Word read-only file lock
+      const blob = new Blob(['\uFEFF' + docHtml], { type: 'application/msword;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `question_bank_chapterwise_${exportSubject}_${Date.now()}.doc`;
+      link.download = `JEE_Question_Bank_${exportSubject}_Chapterwise_${Date.now()}.doc`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
