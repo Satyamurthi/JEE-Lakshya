@@ -65,6 +65,7 @@ const SuperAdmin = () => {
 
   // Daily Challenge State
   const [uploadDate, setUploadDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dailyDifficulty, setDailyDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
   const [dailyQuestionCount, setDailyQuestionCount] = useState<number>(10);
   const [patternMode, setPatternMode] = useState<'MINI' | 'STANDARD'>('STANDARD');
   const [mcqCountPerSubject, setMcqCountPerSubject] = useState<number>(25);
@@ -1325,8 +1326,34 @@ const SuperAdmin = () => {
                 </div>
               </div>
 
+              {/* Difficulty Selection */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Target Difficulty Standard</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { lvl: 'Easy', desc: 'Standard JEE Main' },
+                    { lvl: 'Medium', desc: '+1 Step Above Main' },
+                    { lvl: 'Hard', desc: 'JEE Advanced Level' }
+                  ].map(({ lvl, desc }) => (
+                    <button
+                      key={lvl}
+                      type="button"
+                      onClick={() => setDailyDifficulty(lvl as any)}
+                      className={`p-3 rounded-xl border transition-all text-left flex flex-col justify-between ${
+                        dailyDifficulty === lvl 
+                          ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 shadow-sm font-black' 
+                          : 'border-slate-100 bg-white text-slate-600 font-bold hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-xs font-black uppercase tracking-wider">{lvl}</span>
+                      <span className="text-[9px] opacity-70">{desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="p-5 bg-indigo-50/50 border border-indigo-100 rounded-2xl text-xs text-indigo-800 leading-relaxed">
-                🤖 <span className="font-black">Challenge Blueprint:</span> Generates **{(mcqCountPerSubject + (activeStream.toLowerCase().includes('neet') ? 0 : numericalCountPerSubject)) * 3} Questions** total ({mcqCountPerSubject} MCQs {activeStream.toLowerCase().includes('neet') ? '' : `+ ${numericalCountPerSubject} Numericals`} per subject across Physics, Chemistry, and {activeStream.toLowerCase().includes('neet') ? 'Biology' : 'Mathematics'}).
+                🤖 <span className="font-black">Challenge Blueprint:</span> Generates **{(mcqCountPerSubject + (activeStream.toLowerCase().includes('neet') ? 0 : numericalCountPerSubject)) * 3} Questions** total ({mcqCountPerSubject} MCQs {activeStream.toLowerCase().includes('neet') ? '' : `+ ${numericalCountPerSubject} Numericals`} per subject across Physics, Chemistry, and {activeStream.toLowerCase().includes('neet') ? 'Biology' : 'Mathematics'}) at <span className="font-black uppercase text-indigo-900">{dailyDifficulty}</span> difficulty.
               </div>
 
               <button

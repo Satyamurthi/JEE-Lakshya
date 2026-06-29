@@ -186,12 +186,20 @@ export const saveQuestionsToDB = async (questions: any[]) => {
   }
 };
 
-export const fetchQuestionsFromDB = async (subject?: string, chapter?: string, topics?: string[], mcqCount: number = 10, numericalCount: number = 0) => {
+export const fetchQuestionsFromDB = async (
+  subject?: string, 
+  chapter?: string, 
+  topics?: string[], 
+  mcqCount: number = 10, 
+  numericalCount: number = 0,
+  difficulty?: string
+) => {
   if (!supabase) {
     try {
       let url = `http://localhost/api/questions.php?mcqCount=${mcqCount}&numericalCount=${numericalCount}`;
       if (subject) url += `&subject=${encodeURIComponent(subject)}`;
       if (chapter) url += `&chapter=${encodeURIComponent(chapter)}`;
+      if (difficulty) url += `&difficulty=${encodeURIComponent(difficulty)}`;
       const res = await fetch(url);
       return await res.json() || [];
     } catch (e) {
@@ -208,9 +216,20 @@ export const fetchQuestionsFromDB = async (subject?: string, chapter?: string, t
         if (subject) query = query.eq('subject', subject);
         if (chapter) query = query.eq('chapter', chapter);
         if (topics && topics.length > 0) query = query.in('concept', topics);
+        if (difficulty) query = query.ilike('difficulty', `%${difficulty}%`);
         
-        const { data: idData, error: idError } = await query;
+        let { data: idData, error: idError } = await query;
         if (idError) throw idError;
+        
+        // If strict difficulty query returned empty, fall back to any difficulty for this subject/chapter
+        if (!idData || idData.length === 0) {
+          let fallbackQuery = supabase.from('questions').select('id').eq('type', type);
+          if (subject) fallbackQuery = fallbackQuery.eq('subject', subject);
+          if (chapter) fallbackQuery = fallbackQuery.eq('chapter', chapter);
+          const { data: fbData } = await fallbackQuery;
+          idData = fbData || [];
+        }
+        
         if (!idData || idData.length === 0) return [];
         
         // Pick random set of IDs
@@ -235,7 +254,22 @@ export const fetchQuestionsFromDB = async (subject?: string, chapter?: string, t
         fetchByType('Numerical', numericalCount)
     ]);
 
-    return [...mcqs, ...numericals];
+    // Fallback to local PYQ bank if database returned 0 questions
+    let resultQuestions = [...mcqs, ...numericals];
+    if (resultQuestions.length === 0) {
+      try {
+        const { OFFICIAL_JEE_PYQ_BANK } = await import('./data/officialJeePyqBank');
+        let filtered = OFFICIAL_JEE_PYQ_BANK || [];
+        if (subject) filtered = filtered.filter((q: any) => q.subject && q.subject.toLowerCase().includes(subject.toLowerCase()));
+        if (chapter) filtered = filtered.filter((q: any) => q.chapter && q.chapter.toLowerCase().includes(chapter.toLowerCase()));
+        if (difficulty) filtered = filtered.filter((q: any) => q.difficulty && q.difficulty.toLowerCase().includes(difficulty.toLowerCase()));
+        resultQuestions = filterUniqueQuestions(filtered, mcqCount + numericalCount);
+      } catch (err) {
+        console.error("Local bank fallback in fetchQuestionsFromDB failed:", err);
+      }
+    }
+
+    return resultQuestions;
   } catch (e) {
     console.warn("Supabase fetch failed:", e);
     return [];

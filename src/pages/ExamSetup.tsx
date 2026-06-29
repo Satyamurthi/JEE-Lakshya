@@ -27,6 +27,7 @@ const ExamSetup = () => {
     ? (isNeet ? { mcq: 10, numerical: 0 } : { mcq: 8, numerical: 2 }) 
     : (isNeet ? { mcq: 45, numerical: 0 } : { mcq: 25, numerical: 5 });
   const [questionCounts, setQuestionCounts] = useState(initialCounts);
+  const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
   const [preparationLogs, setPreparationLogs] = useState<string[]>([]);
   
   const [isPaid, setIsPaid] = useState(false);
@@ -48,9 +49,9 @@ const ExamSetup = () => {
       } else {
         alert("Payment verification failed or was cancelled.");
       }
-    } catch (e: any) {
-      console.error("Razorpay setup failed:", e);
-      alert(`Razorpay error: ${e.message || e}`);
+    } catch (err: any) {
+      console.error("Razorpay error:", err);
+      alert(`Razorpay error: ${err.message || err}`);
     } finally {
       setIsProcessingPayment(false);
     }
@@ -80,7 +81,7 @@ const ExamSetup = () => {
 
     setIsPreparing(true);
     setPreparedQuestions([]);
-    setPreparationLogs(["Initializing Generation Flow..."]);
+    setPreparationLogs([`Initializing paper generation for ${examType}...`]);
     
     const resetProgress = { ...progress };
     selectedSubjects.forEach(s => resetProgress[s] = 'pending');
@@ -99,7 +100,7 @@ const ExamSetup = () => {
 
         if (savedKey) {
           try {
-            setPreparationLogs(prev => [...prev, `Attempting AI generation for ${sub}...`]);
+            setPreparationLogs(prev => [...prev, `Attempting AI generation for ${sub} (${difficulty} Level)...`]);
             const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
             const service = await getStreamGeminiService(activeStream);
             questions = await service.generateJEEQuestions(
@@ -107,7 +108,7 @@ const ExamSetup = () => {
                 totalPerSubject, 
                 examType,
                 undefined,
-                undefined,
+                difficulty,
                 undefined,
                 { mcq: questionCounts.mcq, numerical: questionCounts.numerical }
             );
@@ -123,7 +124,7 @@ const ExamSetup = () => {
         }
 
         if (!questions || questions.length === 0) {
-          setPreparationLogs(prev => [...prev, `Fetching JEE questions for ${sub} from Question Bank...`]);
+          setPreparationLogs(prev => [...prev, `Fetching ${difficulty} level JEE questions for ${sub} from Question Bank...`]);
           source = "Database Question Bank";
           try {
             questions = await fetchQuestionsFromDB(
@@ -131,7 +132,8 @@ const ExamSetup = () => {
               undefined,
               undefined,
               questionCounts.mcq,
-              questionCounts.numerical
+              questionCounts.numerical,
+              difficulty
             );
           } catch (dbErr: any) {
             console.error(`[ExamSetup] Database fetch failed for ${sub}:`, dbErr);
@@ -346,6 +348,35 @@ const ExamSetup = () => {
                       <input type="number" min="0" max="10" disabled={isIndependent && !profile.has_used_free_test} value={questionCounts.numerical} onChange={(e) => setQuestionCounts({...questionCounts, numerical: parseInt(e.target.value) || 0})} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-black text-xl text-slate-800 text-center focus:border-blue-500 outline-none disabled:opacity-50" />
                   </div>
                 )}
+            </div>
+          </div>
+
+          {/* Difficulty Selection */}
+          <div className={`glass-panel p-8 rounded-[2.5rem] transition-opacity ${isPreparing ? 'opacity-50 pointer-events-none' : ''}`}>
+            <h2 className="text-lg font-black text-slate-900 mb-2 flex items-center gap-3">
+              <div className="p-2 bg-amber-100 text-amber-600 rounded-lg"><Sparkles className="w-5 h-5" /></div>
+              Target Difficulty Level
+            </h2>
+            <p className="text-xs text-slate-400 font-medium mb-6">Select the conceptual difficulty standard for this exam session.</p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { level: 'Easy', desc: 'Meets standard JEE Main level' },
+                { level: 'Medium', desc: 'One step above JEE Main level' },
+                { level: 'Hard', desc: 'Level of JEE Advanced' }
+              ].map(({ level, desc }) => (
+                <button
+                  key={level}
+                  onClick={() => setDifficulty(level as any)}
+                  className={`p-4 rounded-2xl border-2 transition-all text-left flex flex-col justify-between ${
+                    difficulty === level 
+                      ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 shadow-md' 
+                      : 'border-slate-100 bg-white hover:border-slate-200 text-slate-600'
+                  }`}
+                >
+                  <span className="font-black text-sm uppercase tracking-wider block mb-1">{level}</span>
+                  <span className="text-[10px] font-bold opacity-75 leading-tight">{desc}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

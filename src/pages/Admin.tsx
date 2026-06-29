@@ -189,6 +189,7 @@ const Admin = () => {
 
   // Daily Paper Upload State
   const [uploadDate, setUploadDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dailyDifficulty, setDailyDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
   const [hideConfig, setHideConfig] = useState(false);
   const [qFile, setQFile] = useState<File | null>(null);
   const [sFile, setSFile] = useState<File | null>(null);
@@ -636,21 +637,24 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                       generationConfig.physics.chapters[0] || undefined,
                       generationConfig.physics.topics,
                       generationConfig.physics.mcq,
-                      generationConfig.physics.numerical
+                      generationConfig.physics.numerical,
+                      dailyDifficulty
                   ),
                   fetchQuestionsFromDB(
                       'Chemistry',
                       generationConfig.chemistry.chapters[0] || undefined,
                       generationConfig.chemistry.topics,
                       generationConfig.chemistry.mcq,
-                      generationConfig.chemistry.numerical
+                      generationConfig.chemistry.numerical,
+                      dailyDifficulty
                   ),
                   fetchQuestionsFromDB(
                       thirdSubject,
                       generationConfig.mathematics.chapters[0] || undefined,
                       generationConfig.mathematics.topics,
                       generationConfig.mathematics.mcq,
-                      generationConfig.mathematics.numerical
+                      generationConfig.mathematics.numerical,
+                      dailyDifficulty
                   )
               ]);
               
@@ -867,6 +871,32 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                               className="flex-1 p-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm text-slate-700 outline-none focus:border-indigo-500 focus:bg-white transition-all" 
                             />
                             <button onClick={() => setUploadDate(new Date().toISOString().split('T')[0])} className="px-6 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-100 transition-colors">Today</button>
+                        </div>
+                    </div>
+
+                    {/* Difficulty Selection for Daily Challenge */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Target Difficulty Level</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { lvl: 'Easy', desc: 'Standard JEE Main' },
+                              { lvl: 'Medium', desc: '+1 Step Above Main' },
+                              { lvl: 'Hard', desc: 'JEE Advanced Level' }
+                            ].map(({ lvl, desc }) => (
+                                <button
+                                  key={lvl}
+                                  type="button"
+                                  onClick={() => setDailyDifficulty(lvl as any)}
+                                  className={`p-3 rounded-xl border transition-all text-left flex flex-col justify-between ${
+                                    dailyDifficulty === lvl 
+                                      ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 shadow-sm font-black' 
+                                      : 'border-slate-100 bg-white text-slate-600 font-bold hover:bg-slate-50'
+                                  }`}
+                                >
+                                    <span className="text-xs font-black uppercase tracking-wider">{lvl}</span>
+                                    <span className="text-[9px] opacity-70">{desc}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
 

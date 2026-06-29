@@ -15,6 +15,7 @@ const Practice = () => {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [mcqCount, setMcqCount] = useState(10);
   const [numericalCount, setNumericalCount] = useState(() => isNeet ? 0 : 5);
+  const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
   const [isPreparing, setIsPreparing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -105,7 +106,7 @@ const Practice = () => {
         mcqCount + numericalCount,
         isNeet ? ExamType.NEET : ExamType.Advanced,
         [selectedChapter],
-        'Medium',
+        difficulty,
         selectedTopics,
         { mcq: mcqCount, numerical: numericalCount }
       );
@@ -123,7 +124,8 @@ const Practice = () => {
           selectedChapter, 
           selectedTopics, 
           mcqCount, 
-          numericalCount
+          numericalCount,
+          difficulty
         );
       } catch (dbErr: any) {
         console.error("[Practice] Database fetch fallback failed:", dbErr);
@@ -279,6 +281,31 @@ const Practice = () => {
                      />
                   </div>
                 )}
+
+                <div className="space-y-3 pt-2 border-t border-slate-100">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Target Difficulty</label>
+                   <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { lvl: 'Easy', label: 'Main' },
+                        { lvl: 'Medium', label: '+1 Step' },
+                        { lvl: 'Hard', label: 'Adv' }
+                      ].map(({ lvl, label }) => (
+                         <button
+                           key={lvl}
+                           type="button"
+                           onClick={() => setDifficulty(lvl as any)}
+                           className={`py-2 px-1 rounded-xl text-[10px] font-black uppercase transition-all flex flex-col items-center justify-center ${
+                             difficulty === lvl 
+                               ? 'bg-indigo-600 text-white shadow-md' 
+                               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                           }`}
+                         >
+                            <span>{lvl}</span>
+                            <span className="text-[8px] opacity-75 font-normal">{label}</span>
+                         </button>
+                      ))}
+                   </div>
+                </div>
 
                 <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
                    <div className="flex justify-between items-center">
