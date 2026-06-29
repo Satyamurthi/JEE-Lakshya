@@ -8,10 +8,10 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 STANDBY / ALL EXTRACTED DATA, CODEBASE & ANDROID APK 100% PUSHED TO GITHUB
-* **Last Updated Timestamp**: 2026-06-29 15:30 IST
+* **Session Status**: 🟢 STANDBY / ANDROID AUTO-RECOVERY FIX DEPLOYED & SYNCED TO GITHUB
+* **Last Updated Timestamp**: 2026-06-29 15:35 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Committed and force-pushed final background extracted papers database (`officialJeeExtractedPapers.json`) and universal list (`officialJeePyqList.ts`) under commit `910de5d` cleanly across both GitHub remote repositories (`JEE-Lakshya` and `JEE-Nexus`).
+* **Last Completed Task**: Resolved `net::ERR_CONNECTION_CLOSED` in Android WebView by updating `MainActivity.kt` with internal domain-aware routing (`jeelakshya.netlify.app`), SSL error resilience, and silent 3-second auto-recovery retries on network drops. Recompiled and force-pushed updated APK binaries across both GitHub repositories (`JEE-Lakshya` and `JEE-Nexus`).
 
 ### 🎯 Active Task Overview
 * **Goal**: Process all 177 PDF question papers uploaded in `d:\JEE\JEE PYQ`, remove split-screen PDF view, extract authentic questions with LaTeX equations and options A, B, C, D, and present universally standardized CBT exam papers accessible to all students and teachers.
