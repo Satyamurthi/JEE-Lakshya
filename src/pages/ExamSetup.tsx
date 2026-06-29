@@ -188,9 +188,18 @@ const ExamSetup = () => {
       }
     }
 
-    const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
-    const finalQuestions = filterUniqueQuestions(preparedQuestions);
-    recordSeenQuestions(finalQuestions);
+    let finalQuestions = preparedQuestions;
+    try {
+      const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
+      finalQuestions = filterUniqueQuestions(preparedQuestions);
+      recordSeenQuestions(finalQuestions);
+    } catch (trackerErr) {
+      console.warn("Question tracker error in launchExam, proceeding with prepared questions:", trackerErr);
+    }
+
+    if (!finalQuestions || finalQuestions.length === 0) {
+      finalQuestions = preparedQuestions;
+    }
 
     const qCount = finalQuestions.length;
     const duration = Math.ceil(qCount * 2);

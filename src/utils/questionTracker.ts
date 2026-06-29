@@ -9,7 +9,7 @@ const HISTORY_KEY = 'seen_question_hashes_history_v2';
 // Generate a quick string hash from question statement or ID
 export const getQuestionHash = (q: any): string => {
   if (!q) return '';
-  if (q.id && typeof q.id === 'string' && !q.id.startswith('temp')) {
+  if (q.id && typeof q.id === 'string' && !q.id.startsWith('temp')) {
     return `id_${q.id}`;
   }
   const stmt = (q.statement || q.question || '').replace(/\s+/g, '').toLowerCase();
