@@ -287,7 +287,14 @@ const Dashboard = () => {
              
              <div className="space-y-4 relative z-10">
                {weakAreas.length > 0 ? weakAreas.map((area, i) => (
-                  <div key={i} className="flex items-center justify-between p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 hover:bg-white hover:shadow-lg hover:shadow-fuchsia-100/50 hover:border-fuchsia-100 transition-all cursor-pointer group">
+                  <div 
+                    key={i} 
+                    onClick={() => {
+                      localStorage.setItem('focus_practice_target', JSON.stringify({ topic: area }));
+                      navigate('/practice');
+                    }}
+                    className="flex items-center justify-between p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 hover:bg-white hover:shadow-lg hover:shadow-fuchsia-100/50 hover:border-fuchsia-100 transition-all cursor-pointer group"
+                  >
                      <div className="flex items-center gap-4">
                          <span className="text-xs font-black text-slate-300">0{i+1}</span>
                          <p className="text-sm font-bold text-slate-700 group-hover:text-fuchsia-700 transition-colors line-clamp-1">{area}</p>
@@ -306,9 +313,17 @@ const Dashboard = () => {
                 )}
               </div>
               
-              <button onClick={handleTriggerRemedialPlan} className="w-full mt-8 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-200">
+              <button 
+                onClick={() => {
+                  if (weakAreas.length > 0) {
+                    localStorage.setItem('focus_practice_target', JSON.stringify({ topic: weakAreas[0] }));
+                  }
+                  navigate('/practice');
+                }} 
+                className="w-full mt-8 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-200"
+              >
                  <Sparkles className="w-4 h-4 text-fuchsia-400" />
-                 Generate Remedial Plan
+                 Target Weak Area Drill
               </button>
          </div>
 

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, ChevronRight, Atom, Beaker, FunctionSquare, Play, Sparkles, Search, Filter, Database } from 'lucide-react';
 import { NCERT_CHAPTERS, SUBJECTS_CONFIG } from '../constants';
@@ -17,6 +17,65 @@ const Practice = () => {
   const [numericalCount, setNumericalCount] = useState(() => isNeet ? 0 : 5);
   const [isPreparing, setIsPreparing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const rawTarget = localStorage.getItem('focus_practice_target');
+    if (rawTarget) {
+      try {
+        const { topic } = JSON.parse(rawTarget);
+        if (topic) {
+          let foundSubject: string | null = null;
+          let foundChapter: string | null = null;
+          let foundTopics: string[] = [];
+
+          const topicLower = topic.toLowerCase();
+
+          for (const [sub, chapList] of Object.entries(NCERT_CHAPTERS)) {
+            if (foundChapter) break;
+            for (const ch of (chapList as any[])) {
+              const chNameLower = ch.name.toLowerCase();
+              if (chNameLower.includes(topicLower) || topicLower.includes(chNameLower)) {
+                foundSubject = sub;
+                foundChapter = ch.name;
+                break;
+              }
+              if (Array.isArray(ch.topics)) {
+                for (const tp of ch.topics) {
+                  if (tp.toLowerCase().includes(topicLower) || topicLower.includes(tp.toLowerCase())) {
+                    foundSubject = sub;
+                    foundChapter = ch.name;
+                    foundTopics = [tp];
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          if (!foundChapter) {
+            if (topicLower.includes('complex') || topicLower.includes('matrix') || topicLower.includes('calculus') || topicLower.includes('algebra') || topicLower.includes('trig') || topicLower.includes('vector') || topicLower.includes('integration') || topicLower.includes('equation')) {
+              foundSubject = 'Mathematics';
+              foundChapter = 'Algebra';
+            } else if (topicLower.includes('thermo') || topicLower.includes('chem') || topicLower.includes('bond') || topicLower.includes('atom') || topicLower.includes('organic') || topicLower.includes('solution') || topicLower.includes('kinetics')) {
+              foundSubject = 'Chemistry';
+              foundChapter = 'Chemical Bonding';
+            } else {
+              foundSubject = 'Physics';
+              foundChapter = 'Rotational Motion';
+            }
+          }
+
+          if (foundSubject) setSelectedSubject(foundSubject);
+          if (foundChapter) setSelectedChapter(foundChapter);
+          if (foundTopics.length > 0) setSelectedTopics(foundTopics);
+        }
+      } catch (e) {
+        console.warn("Auto-selection error:", e);
+      } finally {
+        localStorage.removeItem('focus_practice_target');
+      }
+    }
+  }, []);
 
   const subjects = isNeet 
     ? ['Physics', 'Chemistry', 'Botany', 'Zoology'] 
