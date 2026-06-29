@@ -879,8 +879,7 @@ export const getAllQuestionsFromDB = async (subjectFilter?: string, maxRecords: 
         }
 
         const { data, error } = await query
-          .range(from, from + limit - 1)
-          .order('created_at', { ascending: false });
+          .range(from, from + limit - 1);
 
         if (error) {
           console.warn("Supabase range query warning:", error);
