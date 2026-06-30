@@ -53,11 +53,19 @@ export const initiateRazorpayPayment = async (
         
         if (!orderRes.ok) {
           let errMsg = 'Failed to create order on server';
+          let detailsMsg = '';
           try {
             const errData = await orderRes.json();
             if (errData.error) errMsg = errData.error;
+            if (errData.details) {
+              if (errData.details.error && errData.details.error.description) {
+                detailsMsg = ` Reason: ${errData.details.error.description}`;
+              } else {
+                detailsMsg = ` Details: ${JSON.stringify(errData.details)}`;
+              }
+            }
           } catch (_) {}
-          alert(`Order creation failed: ${errMsg}. Please check if Razorpay environment variables (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET) are configured in your Netlify/hosting dashboard.`);
+          alert(`Order creation failed: ${errMsg}.${detailsMsg}`);
           resolve(false);
           return;
         }
