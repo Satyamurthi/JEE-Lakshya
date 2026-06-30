@@ -4,7 +4,7 @@ import {
   Clock, ChevronLeft, ChevronRight, CheckCircle2, Flag, 
   RotateCcw, Send, Menu, X, Brain
 } from 'lucide-react';
-import { submitExamAttempt, submitDailyAttempt } from '../supabase';
+import { submitExamAttempt, submitDailyAttempt, supabase } from '../supabase';
 import MathText from '../components/MathText';
 import { cleanQuestionText } from '../utils/sanitizer';
 import { recordSeenQuestions } from '../utils/questionTracker';
@@ -22,6 +22,8 @@ const ExamPortal = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [isSessionBlocked, setIsSessionBlocked] = useState(false);
+  const [sessionCheckLoading, setSessionCheckLoading] = useState(true);
 
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
 
@@ -86,6 +88,21 @@ const ExamPortal = () => {
         return;
       }
       
+      // Clear database session locks
+      if (supabase && profile.id) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              current_exam_token: null,
+              current_exam_started_at: null
+            })
+            .eq('id', profile.id);
+        } catch (dbErr) {
+          console.warn("Could not clear database session lock on submission:", dbErr);
+        }
+      }
+      
       // Clear session
       localStorage.removeItem('active_session');
       localStorage.removeItem('active_exam_questions');
@@ -108,6 +125,70 @@ const ExamPortal = () => {
       setIsSubmitting(false);
     }
   }, [questions, answers, config, profile, navigate]);
+
+  // Session Lock / Anti-Cheat Check
+  useEffect(() => {
+    const verifyAndLockSession = async () => {
+      if (!supabase || !profile.id) {
+        setSessionCheckLoading(false);
+        return;
+      }
+
+      try {
+        // 1. Get unique device token from localStorage (create one if not exists)
+        let deviceToken = localStorage.getItem('exam_device_token');
+        if (!deviceToken) {
+          deviceToken = `dev_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+          localStorage.setItem('exam_device_token', deviceToken);
+        }
+
+        // 2. Query user's current session tokens from supabase
+        const { data: dbProfile, error } = await supabase
+          .from('profiles')
+          .select('current_exam_token, current_exam_started_at')
+          .eq('id', profile.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (dbProfile) {
+          const dbToken = dbProfile.current_exam_token;
+          const dbStartedAt = dbProfile.current_exam_started_at;
+
+          // Check if session has expired (active window is 3.5 hours)
+          const isExpired = dbStartedAt 
+            ? (Date.now() - new Date(dbStartedAt).getTime() > 3.5 * 60 * 60 * 1000)
+            : true;
+
+          if (dbToken && dbToken !== deviceToken && !isExpired) {
+            // Block user - session is active on another device!
+            setIsSessionBlocked(true);
+            setSessionCheckLoading(false);
+            return;
+          }
+        }
+
+        // 3. Otherwise, session is free or it belongs to the same device!
+        // Lock/renew the session in the database
+        const { error: lockError } = await supabase
+          .from('profiles')
+          .update({
+            current_exam_token: deviceToken,
+            current_exam_started_at: new Date().toISOString()
+          })
+          .eq('id', profile.id);
+
+        if (lockError) console.warn("Failed to set exam session lock in database:", lockError.message);
+
+      } catch (err) {
+        console.warn("Anti-cheat session check bypassed due to network error:", err);
+      } finally {
+        setSessionCheckLoading(false);
+      }
+    };
+
+    verifyAndLockSession();
+  }, [profile.id]);
 
   // Load Exam Data
   useEffect(() => {
@@ -311,6 +392,41 @@ const ExamPortal = () => {
   }
 
   const currentSubject = currentQuestion.subject || subjects[0];
+
+  if (sessionCheckLoading) {
+    return (
+      <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center z-[300] gap-4">
+        <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+        <p className="text-slate-400 font-black text-xs uppercase tracking-widest animate-pulse">Securing Testing Terminal...</p>
+      </div>
+    );
+  }
+
+  if (isSessionBlocked) {
+    return (
+      <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center p-6 z-[300] text-center select-none">
+        <div className="w-24 h-24 bg-red-500/10 text-red-500 rounded-3xl border border-red-500/20 flex items-center justify-center mb-6 shadow-2xl shadow-red-950 animate-bounce">
+          <Brain className="w-12 h-12" />
+        </div>
+        <h2 className="text-2xl font-black text-white uppercase tracking-wider mb-2">Active Session Locked</h2>
+        <p className="text-red-400 text-xs font-black uppercase tracking-widest mb-6">Error Code: SEC_DUPLICATE_LOGIN</p>
+        <div className="bg-slate-900/60 border border-white/5 rounded-3xl p-6 max-w-md space-y-4 mb-8">
+          <p className="text-xs text-slate-300 font-bold leading-relaxed">
+            By system integrity policy, you are not allowed to open two exam sessions simultaneously or login from a second system (Android/Web/Mobile) while taking a mock test.
+          </p>
+          <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wide">
+            Your active session token is locked to another browser window or device.
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/')}
+          className="px-8 py-4 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-slate-50 flex flex-col z-[100] overflow-hidden">

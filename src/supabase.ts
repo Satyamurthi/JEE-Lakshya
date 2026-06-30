@@ -961,3 +961,34 @@ export const deleteSubscriptionPlan = async (planId: string): Promise<boolean> =
   }
 };
 
+export const grantFreePremiumAccess = async (email: string, tier: string, expiresAt: string): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Database connection failed' };
+  try {
+    const cleanEmail = email.toLowerCase().trim();
+    // 1. Fetch user by email
+    const { data: user, error: fetchError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', cleanEmail)
+      .maybeSingle();
+      
+    if (fetchError) throw fetchError;
+    if (!user) return { success: false, error: `No student account found with email "${email}"` };
+    
+    // 2. Update profile subscription fields
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        subscription_tier: tier,
+        subscription_expires_at: expiresAt
+      })
+      .eq('id', user.id);
+      
+    if (updateError) throw updateError;
+    return { success: true };
+  } catch (e: any) {
+    console.error("Failed to grant free premium access:", e);
+    return { success: false, error: e.message || 'Unknown database error' };
+  }
+};
+

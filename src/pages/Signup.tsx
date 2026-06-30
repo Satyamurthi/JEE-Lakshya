@@ -86,6 +86,24 @@ const Signup = () => {
       }
     }
 
+    if (supabase) {
+      try {
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email.toLowerCase().trim())
+          .maybeSingle();
+
+        if (existingUser) {
+          setError("An account has already been registered with this email address. Please log in instead.");
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Pre-enrollment email verification check bypassed:", err);
+      }
+    }
+
     try {
       let finalUserId = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);

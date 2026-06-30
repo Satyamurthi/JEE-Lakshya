@@ -11,7 +11,7 @@ import {
   getAdminStudentCount, updateAdminDetails, toggleAdminModuleAccess, updateAdminModulePermissions,
   getSystemStreams, saveSystemStreams, deleteAdminAndStudents, toggleAdminFreezeStatus,
   getQuestionsCountFromDB, seedMassiveQuestionsToDB, getAllQuestionsFromDB, getActualTotalRevenue,
-  getSubscriptionPlans, saveSubscriptionPlan, deleteSubscriptionPlan
+  getSubscriptionPlans, saveSubscriptionPlan, deleteSubscriptionPlan, grantFreePremiumAccess
 } from '../supabase';
 import MathText from '../components/MathText';
 import YearWisePYQ from './YearWisePYQ';
@@ -111,6 +111,12 @@ const SuperAdmin = () => {
   });
   const [newFeatureText, setNewFeatureText] = useState('');
   const [isSavingPlan, setIsSavingPlan] = useState(false);
+
+  // Free Pass / Promo Grant Form State
+  const [grantEmail, setGrantEmail] = useState('');
+  const [grantTier, setGrantTier] = useState('premium');
+  const [grantDuration, setGrantDuration] = useState('365'); // default 1 year
+  const [isGrantingAccess, setIsGrantingAccess] = useState(false);
 
   // Future PYQ Ingestion State
   const [isPyqModalOpen, setIsPyqModalOpen] = useState(false);
@@ -796,6 +802,37 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
     }
   };
 
+  const handleGrantFreeAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!grantEmail.trim()) {
+      alert("Please enter a valid Gmail address.");
+      return;
+    }
+    setIsGrantingAccess(true);
+    try {
+      const days = parseInt(grantDuration) || 365;
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + days);
+      const isoExpiryStr = expiryDate.toISOString();
+
+      const result = await grantFreePremiumAccess(grantEmail.trim(), grantTier, isoExpiryStr);
+      if (result.success) {
+        setToast({ 
+          message: `🎉 Successfully granted free "${grantTier}" pass to student ${grantEmail.trim()} for ${days} days!`, 
+          type: 'success' 
+        });
+        setGrantEmail('');
+        loadDashboardData();
+      } else {
+        setToast({ message: result.error || "Failed to grant access.", type: 'error' });
+      }
+    } catch (e: any) {
+      setToast({ message: e.message || "An exception occurred.", type: 'error' });
+    } finally {
+      setIsGrantingAccess(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Toast Notification */}
@@ -1260,10 +1297,46 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
 
       {activeTab === 'INDEPENDENT_STUDENTS' && (
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
-          <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-            <Crown className="w-5 h-5 text-indigo-500" />
-            Independent (External) Students
-          </h3>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Crown className="w-5 h-5 text-indigo-500" />
+                Independent (External) Students
+              </h3>
+              <p className="text-xs text-slate-500 font-bold">List of students registered directly on the portal without coaching center affiliation.</p>
+            </div>
+            {independentStudents.length > 0 && (
+              <button
+                onClick={() => {
+                  let csv = "\uFEFFStudent Name,Email Address,Password,Free Mock Test Status,Subscription Tier,Subscription Expiry\n";
+                  independentStudents.forEach(s => {
+                    const name = s.full_name ? `"${s.full_name.replace(/"/g, '""')}"` : "";
+                    const email = s.email ? `"${s.email.replace(/"/g, '""')}"` : "";
+                    const pass = s.password ? `"${s.password.replace(/"/g, '""')}"` : "None";
+                    const freeTest = s.has_used_free_test ? "Used" : "Available";
+                    const tier = s.subscription_tier || "free";
+                    const expiry = s.subscription_expires_at || "N/A";
+                    csv += `${name},${email},${pass},${freeTest},${tier},${expiry}\n`;
+                  });
+                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `independent_students_export_${Date.now()}.csv`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  URL.revokeObjectURL(url);
+                  setToast({ message: "🎉 Exported student credential roster successfully!", type: 'success' });
+                }}
+                className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md"
+              >
+                <Download className="w-4 h-4 text-emerald-400" />
+                Export CSV Credentials
+              </button>
+            )}
+          </div>
+
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
@@ -1277,28 +1350,42 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
                   <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     <th className="py-4">Student Name</th>
                     <th className="py-4">Email</th>
-                    <th className="py-4">Free Mock Test Status</th>
-                    <th className="py-4">Verification</th>
+                    <th className="py-4">Login Password</th>
+                    <th className="py-4">Free Test Limit</th>
+                    <th className="py-4">Subscription Plan</th>
+                    <th className="py-4">Expires At</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {independentStudents.map(student => (
                     <tr key={student.id}>
                       <td className="py-4 font-black text-slate-900">{student.full_name}</td>
-                      <td className="py-4 text-slate-500">{student.email}</td>
+                      <td className="py-4 text-slate-500 font-medium">{student.email}</td>
+                      <td className="py-4 font-mono font-bold text-slate-600 select-all">{student.password || 'N/A'}</td>
                       <td className="py-4">
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${
+                        <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase ${
                           student.has_used_free_test 
-                            ? 'bg-amber-100 text-amber-700' 
-                            : 'bg-emerald-100 text-emerald-700'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-100' 
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                         }`}>
-                          {student.has_used_free_test ? 'Used (Subsequent Paid)' : 'Available (Free)'}
+                          {student.has_used_free_test ? 'Used (₹10/test)' : 'Free Test Available'}
                         </span>
                       </td>
-                      <td className="py-4">
-                        <span className="px-3 py-1 rounded-full text-[9px] bg-green-50 text-green-700 border border-green-100 font-black uppercase">
-                          External Approved
+                      <td className="py-4 font-bold">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase ${
+                          student.subscription_tier === 'ultimate'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            : student.subscription_tier === 'premium'
+                            ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        }`}>
+                          {student.subscription_tier === 'ultimate' ? 'Ultimate Pass' : student.subscription_tier === 'premium' ? 'Premium Pro' : 'Free Pass'}
                         </span>
+                      </td>
+                      <td className="py-4 text-slate-400 font-bold">
+                        {student.subscription_expires_at 
+                          ? new Date(student.subscription_expires_at).toLocaleDateString()
+                          : 'N/A'}
                       </td>
                     </tr>
                   ))}
@@ -1824,6 +1911,67 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
                   </button>
                 )}
               </div>
+
+              {/* Bypass Control: Grant Free Premium Pass */}
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <Award className="w-5 h-5 text-indigo-500 animate-bounce" />
+                    Bypass Control: Grant Free Premium Pass
+                  </h3>
+                  <p className="text-xs font-bold text-slate-500 mt-1">Activate immediate free premium access for any student by entering their registered Gmail address.</p>
+                </div>
+
+                <form onSubmit={handleGrantFreeAccess} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 font-mono">Student Gmail Address</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="student@gmail.com"
+                      value={grantEmail}
+                      onChange={(e) => setGrantEmail(e.target.value)}
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 font-mono">Select Access Tier</label>
+                    <select
+                      value={grantTier}
+                      onChange={(e) => setGrantTier(e.target.value)}
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    >
+                      <option value="premium">Premium Pro Plan</option>
+                      <option value="ultimate">Ultimate Year Plan</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 font-mono">Duration Period</label>
+                    <select
+                      value={grantDuration}
+                      onChange={(e) => setGrantDuration(e.target.value)}
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    >
+                      <option value="30">1 Month (30 Days)</option>
+                      <option value="90">3 Months (90 Days)</option>
+                      <option value="180">6 Months (180 Days)</option>
+                      <option value="365">1 Year (365 Days)</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isGrantingAccess}
+                    className="px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 h-14"
+                  >
+                    {isGrantingAccess ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-300" />}
+                    Grant Free Pass
+                  </button>
+                </form>
+              </div>
+
 
               {/* Database Synchronization Notice / SQL Console Helper */}
               <div className="p-6 bg-slate-900 text-slate-100 rounded-[2rem] border border-white/5 shadow-2xl relative overflow-hidden space-y-4">

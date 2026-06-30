@@ -8,10 +8,10 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 LIVE / DYNAMIC PREMIUM PLANS & BUTTON STYLE SYNC COMPLETED
-* **Last Updated Timestamp**: 2026-06-30 22:50 IST
+* **Session Status**: 🟢 LIVE / DYNAMIC BYPASS CONTROL & SECURE LOCKS COMPLETED
+* **Last Updated Timestamp**: 2026-06-30 23:08 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Resolved tag nesting errors in the Super Admin panel (`src/pages/SuperAdmin.tsx`), restored plans dashboard layout, and updated write policy for `subscription_plans` to enable anonymous upserts. Dynamically mapped pricing button gradient class and glow box-shadow coordinates to Super Admin settings in `src/pages/Pricing.tsx`.
+* **Last Completed Task**: Integrated Bypass Control form for manual free plan grants, credentials viewer with plaintext passwords, and CSV credentials exporter inside the Super Admin panel. Added signup pre-validation to block duplicate email enrollments. Engineered a secure device/session locking check and lock screen in `src/pages/ExamPortal.tsx` to prevent students from taking exams on two devices concurrently.
 
 ### 🎯 Active Task Overview
 * **Goal**: Provide standard Razorpay payment configurations, pricing selector cycles, and bypass controls to unlock premium mock exam features.
