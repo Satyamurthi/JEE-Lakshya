@@ -8,10 +8,10 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 LIVE / DYNAMIC KEY FLOWS AND LINT ALIGNMENT COMPLETED
-* **Last Updated Timestamp**: 2026-06-30 10:55 IST
+* **Session Status**: 🟢 LIVE / FREE ARCHIVES AND SUBSCRIPTION FIXES COMPLETED
+* **Last Updated Timestamp**: 2026-06-30 11:00 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Cast `import.meta` as `any` in `payment.ts` to clear TypeScript build-time environment variable compilation errors (commit `40ac9e9`), allowing clean lint compilation under all deployment checks. Pushed all optimizations to both repositories.
+* **Last Completed Task**: Re-structured payment gates (commit `87bf7ca`): made Year-Wise PYQ CBTs 100% free with no locks, locked Full Mock Exams and Chapter-Wise Practice to always require ₹10 per attempt (no free trial bypasses) for unsubscribed independent students, and configured the Premium Pro monthly price as ₹199 (Yearly at ₹1,188). Syncing both git repositories completed.
 
 ### 🎯 Active Task Overview
 * **Goal**: Provide standard Razorpay payment configurations, pricing selector cycles, and bypass controls to unlock premium mock exam features.
@@ -26,7 +26,7 @@
 - [x] **Step 7**: Update `Backend.MD` and `Admin.tsx` schema repair SQL text.
 
 ### 📌 Next Immediate Action (If User Says "Continue")
-* **Continuation Point**: Dynamic key flows, lint checks, and workspace sync complete. Ready for next instructions.
+* **Continuation Point**: Free archives, ₹10 locks, and adjusted Premium pricing complete and pushed to both remote repositories. Ready for next instructions.
 
 ---
 
