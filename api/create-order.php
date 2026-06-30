@@ -87,5 +87,6 @@ if ($http_code !== 200) {
 echo json_encode([
     'order_id' => $data['id'],
     'amount' => $data['amount'],
-    'currency' => $data['currency']
+    'currency' => $data['currency'],
+    'key_id' => $key_id
 ]);

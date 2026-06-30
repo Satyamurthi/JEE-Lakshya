@@ -50,6 +50,7 @@ export const initiateRazorpayPayment = async (
 
       // Step 1: Attempt backend order creation
       let orderId: string | undefined;
+      let serverKeyId: string | undefined;
       try {
         const orderRes = await fetch(getPaymentApiUrl('create-order'), {
           method: 'POST',
@@ -83,6 +84,7 @@ export const initiateRazorpayPayment = async (
         const orderData = await orderRes.json();
         if (orderData.order_id) {
           orderId = orderData.order_id;
+          serverKeyId = orderData.key_id;
         } else {
           alert("Payment gateway returned an invalid order ID. Please try again.");
           resolve(false);
@@ -97,7 +99,7 @@ export const initiateRazorpayPayment = async (
 
       // Step 2: Open Razorpay Standard Checkout Modal
       const options: any = {
-        key: razorpayKey,
+        key: serverKeyId || razorpayKey,
         amount: amountInPaise,
         currency: 'INR',
         name: 'JEE Nexus AI',
@@ -157,11 +159,6 @@ export const initiateRazorpayPayment = async (
       }
 
       const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (resp: any) {
-        console.error("Razorpay Payment Failed Event:", resp.error);
-        alert(`Payment Failed: ${resp.error?.description || 'Transaction cancelled or declined'}`);
-        resolve(false);
-      });
       rzp.open();
     } catch (err: any) {
       console.error("Razorpay checkout launch error:", err);

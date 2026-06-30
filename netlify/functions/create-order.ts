@@ -63,7 +63,8 @@ export default async (req: Request, context: Context) => {
     return new Response(JSON.stringify({
       order_id: data.id,
       amount: data.amount,
-      currency: data.currency
+      currency: data.currency,
+      key_id: keyId
     }), {
       status: 200,
       headers: {
