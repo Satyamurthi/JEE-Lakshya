@@ -854,7 +854,7 @@ const AppContent = () => {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const location = useLocation();
   const isAuth = location.pathname.startsWith('/login') || location.pathname.startsWith('/signup');
-  const isExamPortal = location.pathname.startsWith('/exam-portal');
+  const isExamPortal = location.pathname.startsWith('/exam-portal') || location.pathname.startsWith('/exam_portal');
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -984,6 +984,7 @@ const AppContent = () => {
             <ProtectedRoute>
               <Routes>
                 <Route path="/exam-portal" element={<ExamPortal />} />
+                <Route path="/exam_portal" element={<ExamPortal />} />
               </Routes>
             </ProtectedRoute>
           </div>
