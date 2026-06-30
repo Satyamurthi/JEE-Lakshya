@@ -95,94 +95,6 @@ const ExamPortal = () => {
   } catch (e) {
     console.error("Safe profile parse failed in ExamPortal:", e);
   }
-  const isRestricted = profile.role !== 'super_admin';
-  const [securityWarnings, setSecurityWarnings] = useState(3);
-
-  // Anti-Cheat / Integrity constraints
-  useEffect(() => {
-    if (!isRestricted || questions.length === 0) return;
-
-    // 1. Enter Fullscreen Mode automatically on exam start
-    const triggerFullscreen = async () => {
-      try {
-        if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
-        }
-      } catch (err) {
-        console.warn("Fullscreen request bypassed:", err);
-      }
-    };
-    triggerFullscreen();
-
-    // Android App Bridge Start lockdown (Locks app screen on custom WebView wrappers)
-    if ((window as any).AndroidBridge && typeof (window as any).AndroidBridge.startLockdown === 'function') {
-      try {
-        (window as any).AndroidBridge.startLockdown();
-      } catch (err) {
-        console.warn("Android bridge startLockdown failed:", err);
-      }
-    }
-
-    // 2. Prevent right-click context menu and keyboard defaults
-    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
-        return;
-      }
-      e.preventDefault();
-      return false;
-    };
-
-    window.addEventListener('contextmenu', handleContextMenu);
-    window.addEventListener('keydown', handleKeyDown);
-
-    // 3. Tab focus / Visibility warning checks
-    const handleVisibility = () => {
-      if (document.hidden) {
-        setSecurityWarnings((prev) => {
-          const next = prev - 1;
-          if (next <= 0) {
-            alert("🚨 SECURITY VIOLATION: Multiple tab/app switches detected. Your exam has been automatically submitted.");
-            handleSubmit();
-            return 0;
-          } else {
-            alert(`⚠️ SECURITY WARNING: You are not allowed to leave the exam window! Tab switching is blocked. Remaining warnings before auto-submission: ${next}`);
-            return next;
-          }
-        });
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    // 4. Back navigation / History locks
-    window.history.pushState(null, "", window.location.href);
-    const handlePopState = () => {
-      window.history.pushState(null, "", window.location.href);
-      alert("⚠️ NAVIGATION LOCKED: You cannot go back or leave the active exam. Please click 'Confirm Submission' to exit.");
-    };
-    window.addEventListener('popstate', handlePopState);
-
-    // 5. Page exit warnings
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "Active exam in progress. Leaving will forfeit your attempt.";
-      return e.returnValue;
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
-    };
-  }, [isRestricted, questions.length, handleSubmit]);
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
@@ -291,6 +203,98 @@ const ExamPortal = () => {
       setIsSubmitting(false);
     }
   }, [questions, answers, config, profile, navigate]);
+
+  // Anti-Cheat / Integrity constraints
+  useEffect(() => {
+    if (!isRestricted || questions.length === 0) return;
+
+    // 1. Enter Fullscreen Mode automatically on exam start
+    const triggerFullscreen = async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (err) {
+        console.warn("Fullscreen request bypassed:", err);
+      }
+    };
+    triggerFullscreen();
+
+    // Android App Bridge Start lockdown (Locks app screen on custom WebView wrappers)
+    if ((window as any).AndroidBridge && typeof (window as any).AndroidBridge.startLockdown === 'function') {
+      try {
+        (window as any).AndroidBridge.startLockdown();
+      } catch (err) {
+        console.warn("Android bridge startLockdown failed:", err);
+      }
+    }
+
+    // 2. Prevent right-click context menu and keyboard defaults
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+        return;
+      }
+      e.preventDefault();
+      return false;
+    };
+
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
+
+    // 3. Tab focus / Visibility warning checks
+    const handleVisibility = () => {
+      if (document.hidden) {
+        setSecurityWarnings((prev) => {
+          const next = prev - 1;
+          if (next <= 0) {
+            alert("🚨 SECURITY VIOLATION: Multiple tab/app switches detected. Your exam has been automatically submitted.");
+            handleSubmit();
+            return 0;
+          } else {
+            alert(`⚠️ SECURITY WARNING: You are not allowed to leave the exam window! Tab switching is blocked. Remaining warnings before auto-submission: ${next}`);
+            return next;
+          }
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // 4. Back navigation / History locks
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+      alert("⚠️ NAVIGATION LOCKED: You cannot go back or leave the active exam. Please click 'Confirm Submission' to exit.");
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    // 5. Page exit warnings
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Active exam in progress. Leaving will forfeit your attempt.";
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, [isRestricted, questions.length, handleSubmit]);
+  const isRestricted = profile.role !== 'super_admin';
+  const [securityWarnings, setSecurityWarnings] = useState(3);
+
+  
+
+  
 
   // Session Lock / Anti-Cheat Check
   useEffect(() => {
