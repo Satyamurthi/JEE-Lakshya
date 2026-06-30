@@ -375,21 +375,19 @@ const Pricing = () => {
       {/* Pricing Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
         {plans.map((plan) => {
-          const price = billingPeriod === 'monthly' ? plan.priceMonthly : plan.priceYearly;
-          const displayPrice = plan.id === 'ultimate' && billingPeriod === 'yearly' 
-            ? '999' 
-            : plan.id === 'premium' && billingPeriod === 'yearly'
-            ? '99'
-            : price;
+          const isFree = plan.priceMonthly === 0;
+          const displayPrice = isFree
+            ? 0
+            : billingPeriod === 'monthly'
+            ? plan.priceMonthly
+            : Math.round(plan.priceYearly / 12);
           
-          const labelSuffix = plan.priceMonthly === 0 ? '' : billingPeriod === 'yearly' ? '/mo' : '/mo';
-          const billingInfo = plan.priceMonthly === 0 
+          const labelSuffix = isFree ? '' : '/mo';
+          const billingInfo = isFree 
             ? 'Free forever basic features' 
-            : plan.id === 'ultimate' && billingPeriod === 'yearly'
-            ? 'Billed ₹999 annually'
-            : plan.id === 'premium' && billingPeriod === 'yearly'
-            ? 'Billed ₹1,188 annually (₹99/mo)'
-            : `Billed ₹${price} monthly`;
+            : billingPeriod === 'monthly'
+            ? `Billed ₹${plan.priceMonthly} monthly`
+            : `Billed ₹${plan.priceYearly.toLocaleString('en-IN')} annually`;
 
           return (
             <div

@@ -8,10 +8,10 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 LIVE / DYNAMIC PREMIUM PLANS MANAGEMENT COMPLETED
-* **Last Updated Timestamp**: 2026-06-30 22:15 IST
+* **Session Status**: 🟢 LIVE / DYNAMIC PREMIUM PLANS & BUTTON STYLE SYNC COMPLETED
+* **Last Updated Timestamp**: 2026-06-30 22:50 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Added a Dynamic Premium Plan Management system (commit `9cb7d1f`). Created the `subscription_plans` Supabase schema structure and integrated helper methods (`getSubscriptionPlans`, `saveSubscriptionPlan`, `deleteSubscriptionPlan`) in `src/supabase.ts`. Re-wired `src/pages/Pricing.tsx` to dynamically fetch the pricing plans from this table (with a fallback to static plans to avoid crashes). Designed a premium Plans Management tab under the Super Admin panel (`src/pages/SuperAdmin.tsx`) allowing full CRUD operations, customization of badge tags, price values, gradients, and custom features list builders, alongside a SQL console migration copy-helper.
+* **Last Completed Task**: Resolved tag nesting errors in the Super Admin panel (`src/pages/SuperAdmin.tsx`), restored plans dashboard layout, and updated write policy for `subscription_plans` to enable anonymous upserts. Dynamically mapped pricing button gradient class and glow box-shadow coordinates to Super Admin settings in `src/pages/Pricing.tsx`.
 
 ### 🎯 Active Task Overview
 * **Goal**: Provide standard Razorpay payment configurations, pricing selector cycles, and bypass controls to unlock premium mock exam features.
