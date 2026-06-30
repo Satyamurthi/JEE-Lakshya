@@ -2006,7 +2006,13 @@ CREATE POLICY "Plans read policy" ON public.subscription_plans FOR SELECT USING 
 DROP POLICY IF EXISTS "Plans write policy" ON public.subscription_plans;
 CREATE POLICY "Plans write policy" ON public.subscription_plans FOR ALL USING (
   exists (select 1 from profiles where profiles.id = auth.uid() and profiles.role = 'super_admin')
-);`}
+);
+
+-- Profiles Subscription & Anti-Cheat Session Columns:
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'free';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS current_exam_token TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS current_exam_started_at TIMESTAMPTZ;`}
                 </pre>
               </div>
 
