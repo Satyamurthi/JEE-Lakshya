@@ -108,6 +108,15 @@ const ExamPortal = () => {
     };
     triggerFullscreen();
 
+    // Android App Bridge Start lockdown (Locks app screen on custom WebView wrappers)
+    if ((window as any).AndroidBridge && typeof (window as any).AndroidBridge.startLockdown === 'function') {
+      try {
+        (window as any).AndroidBridge.startLockdown();
+      } catch (err) {
+        console.warn("Android bridge startLockdown failed:", err);
+      }
+    }
+
     // 2. Prevent right-click context menu and keyboard defaults
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -242,6 +251,15 @@ const ExamPortal = () => {
             .eq('id', profile.id);
         } catch (dbErr) {
           console.warn("Could not clear database session lock on submission:", dbErr);
+        }
+      }
+
+      // Android App Bridge Stop lockdown (Unlocks app screen on completion)
+      if ((window as any).AndroidBridge && typeof (window as any).AndroidBridge.stopLockdown === 'function') {
+        try {
+          (window as any).AndroidBridge.stopLockdown();
+        } catch (err) {
+          console.warn("Android bridge stopLockdown failed:", err);
         }
       }
       
