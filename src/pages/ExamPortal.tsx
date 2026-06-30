@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Clock, ChevronLeft, ChevronRight, CheckCircle2, Flag, 
-  RotateCcw, Send, Menu, X, Brain
+  RotateCcw, Send, Menu, X, Brain, ShieldAlert, Lock
 } from 'lucide-react';
 import { submitExamAttempt, submitDailyAttempt, supabase } from '../supabase';
 import MathText from '../components/MathText';
@@ -88,6 +88,10 @@ const ExamPortal = () => {
   const [isSessionBlocked, setIsSessionBlocked] = useState(false);
   const [sessionCheckLoading, setSessionCheckLoading] = useState(true);
 
+  // Security and Lockout State
+  const [securityWarnings, setSecurityWarnings] = useState(3);
+  const [activeViolation, setActiveViolation] = useState<'fullscreen' | 'focus' | 'tab' | null>(null);
+
   let profile: any = {};
   try {
     const raw = localStorage.getItem('user_profile');
@@ -95,6 +99,22 @@ const ExamPortal = () => {
   } catch (e) {
     console.error("Safe profile parse failed in ExamPortal:", e);
   }
+
+  const isRestricted = profile.role !== 'super_admin';
+
+  const handleResumeExam = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (err) {
+      console.warn("Could not request fullscreen on resume:", err);
+    } finally {
+      setTimeout(() => {
+        setActiveViolation(null);
+      }, 300);
+    }
+  };
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
@@ -208,7 +228,7 @@ const ExamPortal = () => {
   useEffect(() => {
     if (!isRestricted || questions.length === 0) return;
 
-    // 1. Enter Fullscreen Mode automatically on exam start
+    // Enter Fullscreen Mode automatically on exam start
     const triggerFullscreen = async () => {
       try {
         if (!document.fullscreenElement) {
@@ -229,47 +249,87 @@ const ExamPortal = () => {
       }
     }
 
-    // 2. Prevent right-click context menu and keyboard defaults
+    // 1. Prevent right-click context menu and keyboard defaults
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
         return;
       }
+      
+      // Allow numerical and decimal typing for numerical input elements
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        const allowedKeys = ['0','1','2','3','4','5','6','7','8','9','.','-','Backspace','Delete','ArrowLeft','ArrowRight','Tab'];
+        if (allowedKeys.includes(e.key) || e.ctrlKey || e.metaKey) {
+          return;
+        }
+      }
+
       e.preventDefault();
       return false;
     };
 
+    // Prevent Copy, Cut, Paste, and Selection
+    const handleCopy = (e: ClipboardEvent) => e.preventDefault();
+    const handleCut = (e: ClipboardEvent) => e.preventDefault();
+    const handlePaste = (e: ClipboardEvent) => e.preventDefault();
+    const handleSelectStart = (e: Event) => e.preventDefault();
+
     window.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('copy', handleCopy);
+    window.addEventListener('cut', handleCut);
+    window.addEventListener('paste', handlePaste);
+    window.addEventListener('selectstart', handleSelectStart);
+
+    // Violation trigger function
+    const triggerViolation = (type: 'fullscreen' | 'focus' | 'tab') => {
+      const isAlreadyViolated = document.getElementById('security-lockout-overlay') !== null;
+      if (isAlreadyViolated) return;
+
+      setActiveViolation(type);
+      setSecurityWarnings((prev) => {
+        const next = prev - 1;
+        if (next <= 0) {
+          handleSubmit();
+          return 0;
+        }
+        return next;
+      });
+    };
+
+    // 2. Fullscreen Change
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        triggerViolation('fullscreen');
+      }
+    };
 
     // 3. Tab focus / Visibility warning checks
     const handleVisibility = () => {
       if (document.hidden) {
-        setSecurityWarnings((prev) => {
-          const next = prev - 1;
-          if (next <= 0) {
-            alert("🚨 SECURITY VIOLATION: Multiple tab/app switches detected. Your exam has been automatically submitted.");
-            handleSubmit();
-            return 0;
-          } else {
-            alert(`⚠️ SECURITY WARNING: You are not allowed to leave the exam window! Tab switching is blocked. Remaining warnings before auto-submission: ${next}`);
-            return next;
-          }
-        });
+        triggerViolation('tab');
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibility);
+    // 4. Window focus loss (switching applications)
+    const handleBlur = () => {
+      triggerViolation('focus');
+    };
 
-    // 4. Back navigation / History locks
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleBlur);
+
+    // 5. Back navigation / History locks
     window.history.pushState(null, "", window.location.href);
     const handlePopState = () => {
       window.history.pushState(null, "", window.location.href);
-      alert("⚠️ NAVIGATION LOCKED: You cannot go back or leave the active exam. Please click 'Confirm Submission' to exit.");
+      triggerViolation('focus');
     };
     window.addEventListener('popstate', handlePopState);
 
-    // 5. Page exit warnings
+    // 6. Page exit warnings
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "Active exam in progress. Leaving will forfeit your attempt.";
@@ -280,7 +340,13 @@ const ExamPortal = () => {
     return () => {
       window.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('copy', handleCopy);
+      window.removeEventListener('cut', handleCut);
+      window.removeEventListener('paste', handlePaste);
+      window.removeEventListener('selectstart', handleSelectStart);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       
@@ -289,8 +355,6 @@ const ExamPortal = () => {
       }
     };
   }, [isRestricted, questions.length, handleSubmit]);
-  const isRestricted = profile.role !== 'super_admin';
-  const [securityWarnings, setSecurityWarnings] = useState(3);
 
   
 
@@ -948,6 +1012,64 @@ const ExamPortal = () => {
               >
                 Return to Exam
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeViolation && (
+        <div 
+          id="security-lockout-overlay"
+          className="fixed inset-0 z-[300] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-6 text-center select-none"
+        >
+          <div className="bg-slate-900 border border-red-500/30 rounded-[2.5rem] w-full max-w-md p-10 space-y-8 shadow-2xl shadow-red-950/20 animate-in zoom-in duration-300">
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl border border-red-500/20 flex items-center justify-center mx-auto shadow-lg animate-pulse">
+                <ShieldAlert className="w-10 h-10" />
+              </div>
+              <h3 className="text-2xl font-black text-white tracking-tight uppercase">Terminal Blocked</h3>
+              <p className="text-red-400 font-extrabold uppercase tracking-widest text-[10px] bg-red-500/10 py-1.5 px-4 rounded-full inline-block border border-red-500/20">
+                Security Violation Detected
+              </p>
+              
+              <div className="pt-2 text-slate-300 text-sm font-medium leading-relaxed">
+                {activeViolation === 'fullscreen' && "You exited Fullscreen mode. To maintain test integrity, the exam requires you to stay in fullscreen."}
+                {activeViolation === 'focus' && "The exam terminal lost focus. Switching windows, clicking external notifications, or launching external tools is blocked."}
+                {activeViolation === 'tab' && "You switched browser tabs. This action is recorded and blocked."}
+              </div>
+            </div>
+
+            <div className="bg-slate-950/50 p-6 rounded-3xl border border-white/5 space-y-3">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Integrity Status</p>
+              <div className="flex items-center justify-center gap-3">
+                {[1, 2, 3].map((num) => {
+                  const isActive = num <= securityWarnings;
+                  return (
+                    <div 
+                      key={num} 
+                      className={`w-10 h-3 rounded-full transition-all duration-300 ${
+                        isActive ? 'bg-red-500 shadow-sm shadow-red-500/50' : 'bg-slate-800'
+                      }`} 
+                    />
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-red-400 font-extrabold uppercase tracking-wider mt-1">
+                {securityWarnings} of 3 attempts remaining
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <button 
+                onClick={handleResumeExam}
+                className="w-full py-5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-red-900/40 flex items-center justify-center gap-2 active:scale-98 transition-all"
+              >
+                <Lock className="w-4 h-4" />
+                Resume & Re-Lock Terminal
+              </button>
+              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                Exiting again or losing warnings will trigger an automatic submission of your exam paper.
+              </p>
             </div>
           </div>
         </div>

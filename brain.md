@@ -2,31 +2,30 @@
 
 > **CRITICAL INSTRUCTION FOR AGENT / AI ASSISTANT**: Read this file completely whenever the user starts a session, asks to *"remember from the brain"*, or says *"continue"* / *"continue at next meet"*. It contains an exhaustive file map, full development trace, and the **LIVE WORK RESUME CHECKPOINT** below which tracks exact ongoing work and state so execution can resume seamlessly without stopping or missing context.
 
----
-
-## ⏸️ LIVE WORK RESUME CHECKPOINT & SESSION LOG
+---## ⏸️ LIVE WORK RESUME CHECKPOINT & SESSION LOG
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 LIVE / NATIVE ANDROID SYSTEM-LEVEL LOCK INTEGRATED
-* **Last Updated Timestamp**: 2026-07-01 00:02 IST
+* **Session Status**: 🟢 LIVE / WEB-LEVEL LOCKDOWN & EXAM PORTAL BLANK SCREEN FIX COMPLETED
+* **Last Updated Timestamp**: 2026-07-01 00:45 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Discovered the local Kotlin Android app source code at `d:/JEE/Android`. Integrated full system-level exam lockdown constraints directly into `d:/JEE/Android/app/src/main/java/com/neetlakshya/app/MainActivity.kt`. Attached a Javascript Interface bridge `AndroidBridge` invoking Android OS Screen Pinning (`startLockTask`/`stopLockTask`) dynamically on exam start/submit, and locked physical Android back navigation keys.
+* **Last Completed Task**: 
+  - Fixed the temporal dead zone reference error (`isRestricted` used before initialization) causing a blank screen in [ExamPortal.tsx](file:///d:/JEE/src/pages/ExamPortal.tsx).
+  - Integrated full browser-level lockdown mode in the web app: auto-fullscreen on exam start, blocking of context menus, copy/cut/paste, and text selection.
+  - Added listeners for tab visibility, window focus (Alt-Tab/app switching), and fullscreen exits, freezing the screen with a custom lockout overlay warning, auto-submitting on 3 warnings, and providing a "Resume & Re-Lock Terminal" restoration button.
 
 ### 🎯 Active Task Overview
-* **Goal**: Provide standard Razorpay payment configurations, pricing selector cycles, and bypass controls to unlock premium mock exam features.
+* **Goal**: Git multi-remote alignment and Supabase live schema verification.
 
 ### 📝 Step-by-Step Progress Tracking
-- [x] **Step 1**: Finalize implementation plan and receive user approval.
-- [x] **Step 2**: Add subscription checking utilities in `src/utils/payment.ts`.
-- [x] **Step 3**: Add routing and navigation options for `/pricing` in `src/App.tsx` and `src/constants.tsx`.
-- [x] **Step 4**: Create `src/pages/Pricing.tsx` plan selection and checkout UI with glassmorphic cards and nice micro-animations.
-- [x] **Step 5**: Integrate subscription verification endpoints (`create-order` and `verify-payment` backend and local fallbacks).
-- [x] **Step 6**: Update test locking gates across daily challenges, full mock tests, practice tests, and year-wise PYQs.
-- [x] **Step 7**: Update `Backend.MD` and `Admin.tsx` schema repair SQL text.
+- [x] **Step 1**: Fix ExamPortal initialization ReferenceError and verify rendering.
+- [x] **Step 2**: Add window blur, fullscreen exit, and tab hidden lockdown checks.
+- [x] **Step 3**: Create custom security lockout blocker overlay UI with warnings-left indicators.
+- [x] **Step 4**: Test registration, checkout/premium bypass, and exam launch flows in local browser.
+- [x] **Step 5**: Update `brain.md` session status and chronological history.
 
 ### 📌 Next Immediate Action (If User Says "Continue")
-* **Continuation Point**: Strict subscription gating, session caching cleanup, and dynamic route sync complete. Ready for next instructions.
+* **Continuation Point**: Git repository push and Supabase sync verified. Ready for next feature tasks.
 
 ---
 
@@ -59,7 +58,6 @@ Below is the complete, granular inventory of every single directory and file in 
 
 ```
 d:\JEE\
-│
 ├── 📄 .env                              # Primary environment configuration (VITE_SUPABASE_URL, API keys)
 ├── 📄 .env.example                      # Template environment variables reference
 ├── 📄 .gitignore                        # Git ignore rules for node_modules, dist, builds
@@ -154,7 +152,7 @@ d:\JEE\
 │   ├── 📄 generate_sql_clean_and_insert.py # Generates standalone cleanup and insertion SQL scripts
 │   ├── 📄 check_supabase_count.py       # Python verification script checking live question counts in Supabase
 │   ├── 📄 rebuild_and_migrate_all.py    # Master one-click Python script rebuilding local DB and migrating to Supabase
-│   └── 📁 sql_chunks/                   # Directory containing 5,000-row chunked SQL files for smooth execution
+│   └── 📁 sql_chunks/                   # Directory containing 5,000-row chunked SQL files for easy Supabase execution
 │
 └── 📁 Android/                          # Native Android Studio Mobile Application Source
     ├── 📁 app/src/main/
@@ -202,6 +200,11 @@ d:\JEE\
 ### Phase 6: Standardized Checkpoint & Work Resumption Protocol
 - Established explicit live work resume logging inside [brain.md](file:///d:/JEE/brain.md).
 - Formatted memory structure so any session that halts midway can immediately pick up where it stopped when the user says "continue at next meet".
+
+### Phase 7: Web-Level Fullscreen Lockdown & Exam Portal Bugfix
+- Fixed temporal dead zone `ReferenceError` with `isRestricted` blocking the CBT Exam Portal render cycle, resolving the blank page issue.
+- Integrated a secure web application lockdown sandbox: automatic fullscreen entrance, disabled key controls (reload, inspect, standard hotkeys), disabled text selection, right-click context menus, and copy/cut/paste event processing.
+- Implemented window focus (`blur`), tab switches (`visibilitychange`), and fullscreen exit (`fullscreenchange`) detection systems, warning the student via a custom React Security Lockout Overlay UI and auto-submitting the exam session after 3 violations.
 
 ---
 
