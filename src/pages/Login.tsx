@@ -138,6 +138,13 @@ const Login = () => {
 
       // In this version, we'll allow access if the user exists in either directory.
       // For a real production app, we would use supabase.auth.signInWithPassword here.
+      localStorage.removeItem('user_subscription_tier');
+      localStorage.removeItem('user_subscription_expires_at');
+      localStorage.removeItem('unlocked_pyq_papers');
+      localStorage.removeItem('user_payment_logs');
+      localStorage.removeItem('active_session');
+      localStorage.removeItem('active_exam_questions');
+      localStorage.removeItem('active_exam_config');
       localStorage.setItem('user_profile', JSON.stringify(user));
       
       // Auto-switch database instance to the user's selected stream

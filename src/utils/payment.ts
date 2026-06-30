@@ -184,8 +184,6 @@ export const checkSubscriptionActive = (profile: any): boolean => {
     if (profile.subscription_expires_at) {
       const expiry = new Date(profile.subscription_expires_at);
       if (expiry > new Date()) return true;
-    } else {
-      return true;
     }
   }
 
@@ -196,8 +194,6 @@ export const checkSubscriptionActive = (profile: any): boolean => {
     if (localExpiry) {
       const expiry = new Date(localExpiry);
       if (expiry > new Date()) return true;
-    } else {
-      return true;
     }
   }
 

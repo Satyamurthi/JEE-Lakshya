@@ -157,6 +157,19 @@ const StudentModuleRoute: FC<{ children: ReactNode; moduleKey?: string }> = ({ c
           if (data && isMounted) {
             const merged = { ...parsed, ...data };
             localStorage.setItem('user_profile', JSON.stringify(merged));
+            
+            // Sync local subscription state with database values to prevent caching bugs
+            if (data.subscription_tier) {
+              localStorage.setItem('user_subscription_tier', data.subscription_tier);
+            } else {
+              localStorage.removeItem('user_subscription_tier');
+            }
+            if (data.subscription_expires_at) {
+              localStorage.setItem('user_subscription_expires_at', data.subscription_expires_at);
+            } else {
+              localStorage.removeItem('user_subscription_expires_at');
+            }
+            
             setLiveProfile(merged);
           }
         } catch (e) {
@@ -283,6 +296,13 @@ const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean
   const handleLogout = async () => {
     if (supabase) await supabase.auth.signOut();
     localStorage.removeItem('user_profile');
+    localStorage.removeItem('user_subscription_tier');
+    localStorage.removeItem('user_subscription_expires_at');
+    localStorage.removeItem('unlocked_pyq_papers');
+    localStorage.removeItem('user_payment_logs');
+    localStorage.removeItem('active_session');
+    localStorage.removeItem('active_exam_questions');
+    localStorage.removeItem('active_exam_config');
     navigate('/login');
   };
 
@@ -653,6 +673,13 @@ const AppContent = () => {
               onClick={async () => {
                 if (supabase) await supabase.auth.signOut();
                 localStorage.removeItem('user_profile');
+                localStorage.removeItem('user_subscription_tier');
+                localStorage.removeItem('user_subscription_expires_at');
+                localStorage.removeItem('unlocked_pyq_papers');
+                localStorage.removeItem('user_payment_logs');
+                localStorage.removeItem('active_session');
+                localStorage.removeItem('active_exam_questions');
+                localStorage.removeItem('active_exam_config');
                 window.location.reload();
               }}
               className="px-6 py-3 text-red-500 bg-red-50 hover:bg-red-100 transition-all font-bold text-xs uppercase tracking-widest rounded-xl"
