@@ -292,8 +292,14 @@ export const submitExamAttempt = async (attempt: any) => {
   }
   try {
     const { data, error } = await supabase.from('exam_attempts').insert(attempt).select().single();
+    if (error && error.message && error.message.includes("paid")) {
+      console.warn("Schema cache missing 'paid' column, retrying insert without 'paid' field...");
+      const attemptCopy = { ...attempt };
+      delete attemptCopy.paid;
+      return await supabase.from('exam_attempts').insert(attemptCopy).select().single();
+    }
     return { data, error };
-  } catch (e) {
+  } catch (e: any) {
     return { data: null, error: e };
   }
 };
@@ -733,7 +739,8 @@ export const saveSystemStreams = async (streams: string[]): Promise<string | nul
 };
 
 export const getPaymentApiUrl = (endpoint: string) => {
-  if (!supabase) {
+  const isDev = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isDev) {
     return `http://localhost/api/${endpoint}.php`;
   }
   return `/.netlify/functions/${endpoint}`;

@@ -49,6 +49,7 @@ const ExamPortal = () => {
         total_marks: questions.length * 4,
         accuracy: questions.length > 0 ? Math.round((results.filter(r => r.isCorrect).length / questions.length) * 100) : 0,
         config,
+        paid: config?.paid || false,
         questions: results,
         submitted_at: new Date().toISOString()
       };
@@ -121,7 +122,7 @@ const ExamPortal = () => {
     if (activeSession) {
       const session = JSON.parse(activeSession);
       examQuestions = session.questions || [];
-      examConfig = { type: session.type, duration: session.durationMinutes };
+      examConfig = { type: session.type, duration: session.durationMinutes, paid: session.paid || false };
       if (session.pdfUrl) {
         setPdfUrl(session.pdfUrl);
       }

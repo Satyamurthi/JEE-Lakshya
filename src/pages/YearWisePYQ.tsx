@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Award, Calendar, Sparkles, Lock, CheckCircle2, ChevronRight, BookOpen, Search, Filter, ShieldCheck, DollarSign, Loader2 } from 'lucide-react';
-import { initiateRazorpayPayment } from '../utils/payment';
+import { Award, Calendar, Sparkles, Lock, CheckCircle2, ChevronRight, BookOpen, Search, Filter, ShieldCheck, DollarSign, Loader2, Crown } from 'lucide-react';
+import { initiateRazorpayPayment, checkSubscriptionActive } from '../utils/payment';
 import MathText from '../components/MathText';
 import { officialJeePyqList } from '../data/officialJeePyqList';
 
@@ -43,7 +43,7 @@ const YearWisePYQ = () => {
   const navigate = useNavigate();
   const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
   const isNeet = activeStream.toLowerCase().includes('neet');
-  const [papers] = useState<PYQPaper[]>(() => generatePYQList(isNeet));
+  const [papers] = useState<PYQPaper[]>(() => generatePYQList(isNeet).map(p => ({ ...p, priceRupees: 10 })));
   const [selectedYear, setSelectedYear] = useState<number | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [unlockingId, setUnlockingId] = useState<string | null>(null);
@@ -54,6 +54,8 @@ const YearWisePYQ = () => {
 
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   const isSuperAdmin = profile.role === 'super_admin';
+  const isIndependent = profile.role === 'student' && !profile.admin_id;
+  const needsPayment = isIndependent && profile.has_used_free_test && !checkSubscriptionActive(profile);
 
   const filteredPapers = papers.filter(p => {
     const matchesYear = selectedYear === 'ALL' || p.year === selectedYear;
@@ -63,38 +65,66 @@ const YearWisePYQ = () => {
   });
 
   const handleUnlockAndStart = async (paper: PYQPaper) => {
-    // Super admin bypasses all payment locks completely
-    if (isSuperAdmin || unlockedPapers[paper.id]) {
-      startExamFlow(paper);
+    // Super admin or already unlocked or center student bypasses payment lock
+    if (isSuperAdmin || unlockedPapers[paper.id] || !isIndependent || checkSubscriptionActive(profile)) {
+      if (isIndependent && !profile.has_used_free_test) {
+        // Mark first test as used!
+        try {
+          const { supabase } = await import('../supabase');
+          if (supabase) {
+            await supabase.from('profiles').update({ has_used_free_test: true }).eq('id', profile.id);
+          }
+          const updatedProfile = { ...profile, has_used_free_test: true };
+          localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
+        } catch (err) {
+          console.error("Error setting free test status:", err);
+        }
+      }
+      startExamFlow(paper, false);
       return;
     }
 
-    setUnlockingId(paper.id);
-    try {
-      const receipt = `pyq_${paper.id}_${profile.id || 'student'}_${Date.now()}`;
-      const success = await initiateRazorpayPayment(
-        20, // ₹20 per attempt
-        profile.email || 'student@example.com',
-        profile.full_name || 'Aspirant',
-        receipt
-      );
+    if (needsPayment) {
+      setUnlockingId(paper.id);
+      try {
+        const receipt = `pyq_${paper.id}_${profile.id || 'student'}_${Date.now()}`;
+        const success = await initiateRazorpayPayment(
+          10, // ₹10 per attempt
+          profile.email || 'student@example.com',
+          profile.full_name || 'Aspirant',
+          receipt
+        );
 
-      if (success) {
-        const updated = { ...unlockedPapers, [paper.id]: true };
-        setUnlockedPapers(updated);
-        localStorage.setItem('unlocked_pyq_papers', JSON.stringify(updated));
-        alert(`🎉 Payment Verified! JEE ${paper.year} Paper unlocked for this attempt.`);
-        startExamFlow(paper);
+        if (success) {
+          const updated = { ...unlockedPapers, [paper.id]: true };
+          setUnlockedPapers(updated);
+          localStorage.setItem('unlocked_pyq_papers', JSON.stringify(updated));
+          alert(`🎉 Payment Verified! JEE ${paper.year} Paper unlocked for this attempt.`);
+          startExamFlow(paper, true);
+        }
+      } catch (err: any) {
+        console.error("Unlock error:", err);
+        alert("Payment unlock encountered an error. Please try again.");
+      } finally {
+        setUnlockingId(null);
       }
-    } catch (err: any) {
-      console.error("Unlock error:", err);
-      alert("Payment unlock encountered an error. Please try again.");
-    } finally {
-      setUnlockingId(null);
+    } else {
+      // First test is free!
+      try {
+        const { supabase } = await import('../supabase');
+        if (supabase) {
+          await supabase.from('profiles').update({ has_used_free_test: true }).eq('id', profile.id);
+        }
+        const updatedProfile = { ...profile, has_used_free_test: true };
+        localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
+      } catch (err) {
+        console.error("Error setting free test status:", err);
+      }
+      startExamFlow(paper, false);
     }
   };
 
-  const startExamFlow = async (paper: PYQPaper) => {
+  const startExamFlow = async (paper: PYQPaper, paid: boolean = false) => {
     try {
       const { cleanQuestionText } = await import('../utils/sanitizer');
       const { filterUniqueQuestions } = await import('../utils/questionTracker');
@@ -129,7 +159,8 @@ const YearWisePYQ = () => {
         type: isNeet ? `NEET UG ${paper.year} (${paper.shift})` : `JEE Main ${paper.year} (${paper.shift})`,
         questions: questions,
         startTime: Date.now(),
-        durationMinutes: paper.durationMinutes || 180
+        durationMinutes: paper.durationMinutes || 180,
+        paid: paid
       };
 
       localStorage.setItem('active_session', JSON.stringify(sessionData));
@@ -164,16 +195,42 @@ const YearWisePYQ = () => {
           </div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">Year-Wise {isNeet ? 'NEET UG' : 'JEE'} Solved Papers</h1>
           <p className="text-slate-500 font-medium max-w-2xl leading-relaxed">
-            Practice authentic official question papers covering {isNeet ? 'Physics, Chemistry, Botany, and Zoology' : 'Physics, Chemistry, and Mathematics'}. Micro-unlock any paper for ₹20 and receive step-by-step solutions and performance analytics.
+            Practice authentic official question papers covering {isNeet ? 'Physics, Chemistry, Botany, and Zoology' : 'Physics, Chemistry, and Mathematics'}. Micro-unlock any paper for ₹10 and receive step-by-step solutions and performance analytics.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 bg-gradient-to-r from-amber-500 to-yellow-600 text-white px-6 py-4 rounded-3xl shadow-xl shadow-amber-200 shrink-0">
-          <DollarSign className="w-6 h-6" />
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-widest block opacity-90">Micro Unlock Fee</span>
-            <span className="text-lg font-black tracking-tight">₹20 per Official Paper</span>
-          </div>
+        <div className="flex items-center gap-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-4 rounded-3xl shadow-xl shadow-indigo-100 shrink-0">
+          {checkSubscriptionActive(profile) ? (
+            <>
+              <Crown className="w-6 h-6 text-yellow-300 fill-yellow-300" />
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest block opacity-90">Access Plan</span>
+                <span className="text-lg font-black tracking-tight">
+                  {profile.subscription_tier === 'ultimate' ? 'Ultimate Year Pass' : 'Premium Member'}
+                </span>
+              </div>
+            </>
+          ) : isIndependent ? (
+            <>
+              <DollarSign className="w-6 h-6" />
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest block opacity-90">Micro Unlock Fee</span>
+                <span className="text-lg font-black tracking-tight cursor-pointer hover:underline" onClick={() => navigate('/pricing')}>
+                  {!profile.has_used_free_test ? "1st Test is FREE!" : "₹10 per Official Paper (Upgrade)"}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-6 h-6" />
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest block opacity-90">Access Plan</span>
+                <span className="text-lg font-black tracking-tight">
+                  Included with Coaching
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -234,13 +291,21 @@ const YearWisePYQ = () => {
                     <span className="px-3 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-purple-500" /> Free (Super Admin)
                     </span>
-                  ) : isUnlocked ? (
+                  ) : isUnlocked || checkSubscriptionActive(profile) ? (
                     <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> Unlocked
+                      <ShieldCheck className="w-3 h-3" /> Unlocked {checkSubscriptionActive(profile) && ' (Premium)'}
+                    </span>
+                  ) : !isIndependent ? (
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-emerald-500 animate-pulse" /> Free (Coaching)
+                    </span>
+                  ) : isIndependent && !profile.has_used_free_test ? (
+                    <span className="px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-yellow-300" /> Free 1st Test
                     </span>
                   ) : (
                     <span className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                      <Lock className="w-3 h-3 text-amber-600" /> ₹20 / Attempt
+                      <Lock className="w-3 h-3 text-amber-600" /> ₹10 / Attempt
                     </span>
                   )}
                 </div>
@@ -285,9 +350,17 @@ const YearWisePYQ = () => {
                   <>
                     Start Unlocked Test <ChevronRight className="w-4 h-4" />
                   </>
+                ) : !isIndependent ? (
+                  <>
+                    Start Test <ChevronRight className="w-4 h-4" />
+                  </>
+                ) : isIndependent && !profile.has_used_free_test ? (
+                  <>
+                    Unlock Free (1st Test) <ChevronRight className="w-4 h-4" />
+                  </>
                 ) : (
                   <>
-                    Unlock Attempt (₹20) <ChevronRight className="w-4 h-4" />
+                    Unlock Attempt (₹10) <ChevronRight className="w-4 h-4" />
                   </>
                 )}
               </button>

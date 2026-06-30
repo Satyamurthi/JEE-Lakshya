@@ -59,6 +59,8 @@ create table if not exists public.profiles (
   college_name text,
   college_address text,
   stream text,
+  subscription_tier text default 'free',
+  subscription_expires_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -80,6 +82,8 @@ alter table public.profiles add column if not exists mobile_number text;
 alter table public.profiles add column if not exists college_name text;
 alter table public.profiles add column if not exists college_address text;
 alter table public.profiles add column if not exists stream text;
+alter table public.profiles add column if not exists subscription_tier text default 'free';
+alter table public.profiles add column if not exists subscription_expires_at timestamp with time zone;
 
 -- Reapply constraints for multi-tenant support
 alter table public.profiles drop constraint if exists profiles_role_check;
@@ -140,6 +144,7 @@ create table if not exists public.exam_attempts (
   accuracy integer,
   config jsonb,
   questions jsonb,
+  paid boolean default false,
   submitted_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

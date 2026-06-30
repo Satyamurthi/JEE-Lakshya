@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Zap, BookOpen, Clock, AlertTriangle, CheckCircle2, Loader2, PlayCircle, Atom, Sliders, Hash, RotateCcw, Database, DollarSign, X, Sparkles } from 'lucide-react';
 import { ExamType, Subject } from '../types';
-import { initiateRazorpayPayment } from '../utils/payment';
+import { initiateRazorpayPayment, checkSubscriptionActive } from '../utils/payment';
 
 const ExamSetup = () => {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ const ExamSetup = () => {
   
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   const isIndependent = profile.role === 'student' && !profile.admin_id;
-  const needsPayment = isIndependent && profile.has_used_free_test;
+  const needsPayment = isIndependent && profile.has_used_free_test && !checkSubscriptionActive(profile);
 
   const initialCounts = (isIndependent && !profile.has_used_free_test) 
     ? (isNeet ? { mcq: 10, numerical: 0 } : { mcq: 8, numerical: 2 }) 
@@ -241,7 +241,7 @@ const ExamSetup = () => {
         </div>
       )}
       {needsPayment && !isPaid && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-900 p-6 rounded-[2rem] shadow-sm flex items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 p-6 rounded-[2rem] shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-amber-100 text-amber-700 rounded-2xl">
               <DollarSign className="w-6 h-6" />
@@ -249,17 +249,25 @@ const ExamSetup = () => {
             <div>
               <h3 className="text-sm font-black uppercase tracking-wider">Payment Required</h3>
               <p className="text-xs text-amber-700 font-bold">
-                You have already used your free mock test. Subsequent tests require a ₹10 unlock fee.
+                You have already used your free mock test. Subsequent tests require a ₹10 unlock fee or a Premium membership.
               </p>
             </div>
           </div>
-          <button
-            onClick={handleUnlockMock}
-            disabled={isProcessingPayment}
-            className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md shrink-0 disabled:opacity-50"
-          >
-            {isProcessingPayment ? "Opening..." : "Unlock Now (₹10)"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <button
+              onClick={() => navigate('/pricing')}
+              className="flex-1 md:flex-none px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md text-center"
+            >
+              🚀 Go Premium (₹299/mo)
+            </button>
+            <button
+              onClick={handleUnlockMock}
+              disabled={isProcessingPayment}
+              className="flex-1 md:flex-none px-5 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md disabled:opacity-50 text-center"
+            >
+              {isProcessingPayment ? "Opening..." : "Pay ₹10 Once"}
+            </button>
+          </div>
         </div>
       )}
       <div className="text-center space-y-4">

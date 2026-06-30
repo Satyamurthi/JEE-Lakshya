@@ -5,6 +5,7 @@ import { Award, Target, TrendingUp, BookOpen, ChevronRight, Brain, Flame, Activi
 
 import { getUserExamAttempts, getUserAllDailyAttempts } from '../supabase';
 import { calculateDailyStreak, calculateOverallAccuracy, calculatePercentile, calculateTotalXP } from '../utils/metricsHelper';
+import { checkSubscriptionActive } from '../utils/payment';
 
 const StatCard = ({ Icon, label, value, subValue, gradient, delay }: any) => (
   <div 
@@ -147,10 +148,17 @@ const Dashboard = () => {
       <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-4">
-             <span className="px-4 py-1.5 rounded-full bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                <Crown className="w-3 h-3 text-yellow-400" />
-                Premium Aspirant
-             </span>
+             {checkSubscriptionActive(profile) ? (
+               <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm cursor-pointer" onClick={() => navigate('/pricing')}>
+                  <Crown className="w-3 h-3 text-yellow-200 fill-yellow-200" />
+                  {profile.subscription_tier === 'ultimate' ? 'Ultimate Pass' : 'Premium Aspirant'}
+               </span>
+             ) : (
+               <span className="px-4 py-1.5 rounded-full bg-slate-200 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-slate-300 cursor-pointer transition-all" onClick={() => navigate('/pricing')}>
+                  <Zap className="w-3 h-3 text-slate-400" />
+                  Free Trial (Upgrade)
+               </span>
+             )}
              {profile.selected_stream && (
                <span className="px-4 py-1.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-indigo-200/50">
                   <Brain className="w-3.5 h-3.5 text-indigo-600" />
@@ -206,6 +214,36 @@ const Dashboard = () => {
             delay={0.3} 
         />
       </div>
+      
+      {/* Premium Upgrade Promotion Banner */}
+      {!checkSubscriptionActive(profile) && profile.role === 'student' && !profile.admin_id && (
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 p-8 rounded-[2.5rem] shadow-xl text-white flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+          <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-fuchsia-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+          
+          <div className="relative z-10 flex items-start gap-4">
+            <div className="p-4 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-2xl hidden sm:block shrink-0 shadow-inner">
+              <Crown className="w-8 h-8 fill-indigo-500/20 text-yellow-400" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-md border border-indigo-500/20">
+                Unlock Unlimited Potential
+              </span>
+              <h3 className="text-2xl font-black text-white tracking-tight pt-2">Upgrade to Premium Pro Passes</h3>
+              <p className="text-slate-400 text-xs font-semibold max-w-lg leading-relaxed">
+                Unlock all CBT Mock Exams, unlimited Topic Practice, and daily NTA challenges. Eliminate the ₹10 per attempt micro-transactions now.
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => navigate('/pricing')}
+            className="w-full md:w-auto px-8 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-95 shrink-0"
+          >
+            Upgrade Now (₹299/mo)
+          </button>
+        </div>
+      )}
 
       {/* Main Actions - Bento Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

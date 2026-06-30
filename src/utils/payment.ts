@@ -35,7 +35,7 @@ export const initiateRazorpayPayment = async (
         return;
       }
 
-      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T6jwrmWb1Tu6GG';
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T7i2gHREMW3YL2';
       const amountInPaise = Math.max(100, amountRupees * 100); // Minimum 100 paise (₹1)
 
       // Step 1: Attempt backend order creation
@@ -43,7 +43,11 @@ export const initiateRazorpayPayment = async (
       try {
         const orderRes = await fetch(getPaymentApiUrl('create-order'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
+          },
           body: JSON.stringify({ amount: amountInPaise, receipt })
         });
         if (orderRes.ok) {
@@ -64,6 +68,7 @@ export const initiateRazorpayPayment = async (
         name: 'JEE Nexus AI',
         description: `Official JEE Paper Micro-Unlock (₹${amountRupees})`,
         image: 'https://cdn-icons-png.flaticon.com/512/2083/2083213.png',
+        ...(orderId ? { order_id: orderId } : {}),
         handler: async function (response: RazorpayResponse) {
           console.log("Razorpay Payment Response Received:", response);
 
@@ -72,7 +77,11 @@ export const initiateRazorpayPayment = async (
             try {
               const verifyRes = await fetch(getPaymentApiUrl('verify-payment'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
+                },
                 body: JSON.stringify({
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_order_id: response.razorpay_order_id,
@@ -101,7 +110,7 @@ export const initiateRazorpayPayment = async (
         prefill: {
           name: userName || 'Student Aspirant',
           email: userEmail || 'student@example.com',
-          contact: '9999999999'
+          contact: '9812345678'
         },
         theme: {
           color: '#4f46e5'
@@ -126,3 +135,40 @@ export const initiateRazorpayPayment = async (
     }
   });
 };
+
+/**
+ * Checks if the current user profile or local storage has an active premium/ultimate subscription.
+ */
+export const checkSubscriptionActive = (profile: any): boolean => {
+  if (!profile) return false;
+
+  // 1. Bypass check for admin, super_admin, or students affiliated with a coaching center (admin_id set)
+  if (profile.role === 'admin' || profile.role === 'super_admin' || profile.admin_id) {
+    return true;
+  }
+
+  // 2. Check profile fields in database/synced user profile
+  if (profile.subscription_tier === 'premium' || profile.subscription_tier === 'ultimate') {
+    if (profile.subscription_expires_at) {
+      const expiry = new Date(profile.subscription_expires_at);
+      if (expiry > new Date()) return true;
+    } else {
+      return true;
+    }
+  }
+
+  // 3. Check local storage overrides (fallback if schema sync hasn't run)
+  const localTier = localStorage.getItem('user_subscription_tier');
+  const localExpiry = localStorage.getItem('user_subscription_expires_at');
+  if (localTier === 'premium' || localTier === 'ultimate') {
+    if (localExpiry) {
+      const expiry = new Date(localExpiry);
+      if (expiry > new Date()) return true;
+    } else {
+      return true;
+    }
+  }
+
+  return false;
+};
+

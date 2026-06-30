@@ -334,6 +334,8 @@ create table if not exists public.profiles (
   admin_id uuid references public.profiles(id) on delete set null,
   admin_max_students integer default 30,
   has_used_free_test boolean default false,
+  subscription_tier text default 'free',
+  subscription_expires_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -347,6 +349,8 @@ alter table public.profiles add column if not exists role text default 'student'
 alter table public.profiles add column if not exists admin_id uuid references public.profiles(id) on delete set null;
 alter table public.profiles add column if not exists admin_max_students integer default 30;
 alter table public.profiles add column if not exists has_used_free_test boolean default false;
+alter table public.profiles add column if not exists subscription_tier text default 'free';
+alter table public.profiles add column if not exists subscription_expires_at timestamp with time zone;
 
 -- Reapply constraints
 alter table public.profiles add constraint profiles_role_check check (role in ('student', 'admin', 'super_admin'));
@@ -452,6 +456,9 @@ alter table public.daily_attempts drop constraint if exists daily_attempts_pkey 
 alter table public.daily_attempts add column if not exists challenge_id uuid references public.daily_challenges(id) on delete cascade;
 alter table public.daily_attempts add column if not exists paid boolean default false;
 alter table public.daily_attempts add primary key (user_id, challenge_id);
+
+-- Exam attempts schema update
+alter table public.exam_attempts add column if not exists paid boolean default false;
 
 alter table public.daily_attempts enable row level security;
 drop policy if exists "Users can insert own attempts" on daily_attempts;

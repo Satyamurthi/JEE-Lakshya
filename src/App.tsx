@@ -20,6 +20,7 @@ import Daily from './pages/Daily';
 import Settings from './pages/Settings';
 import SuperAdmin from './pages/SuperAdmin';
 import YearWisePYQ from './pages/YearWisePYQ';
+import Pricing from './pages/Pricing';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -32,10 +33,44 @@ interface ErrorBoundaryState {
 
 const ProtectedRoute: FC<{ children: ReactNode }> = ({ children }) => {
   const profileRaw = localStorage.getItem('user_profile');
+  const [isAdminFrozen, setIsAdminFrozen] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+
   if (!profileRaw) return <Navigate to="/login" replace />;
   const profile = JSON.parse(profileRaw);
-  
-  if (profile.status === 'frozen') {
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkAdminStatus = async () => {
+      if (profile.role === 'student' && profile.admin_id && supabase) {
+        try {
+          const { data: admin } = await supabase
+            .from('profiles')
+            .select('status')
+            .eq('id', profile.admin_id)
+            .maybeSingle();
+          if (isMounted) {
+            if (admin && admin.status !== 'approved') {
+              setIsAdminFrozen(true);
+            } else {
+              setIsAdminFrozen(false);
+            }
+          }
+        } catch (err) {
+          console.error("Admin status check error in ProtectedRoute:", err);
+          if (isMounted) setIsAdminFrozen(false);
+        }
+      } else {
+        if (isMounted) setIsAdminFrozen(false);
+      }
+      if (isMounted) setLoading(false);
+    };
+
+    checkAdminStatus();
+    return () => { isMounted = false; };
+  }, [profile.admin_id]);
+
+  if (profile.status === 'frozen' || isAdminFrozen === true) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white">
         <div className="bg-slate-800/80 p-10 rounded-[2.5rem] border border-slate-700/80 shadow-2xl max-w-lg space-y-6 relative overflow-hidden animate-in zoom-in duration-300">
@@ -67,6 +102,14 @@ const ProtectedRoute: FC<{ children: ReactNode }> = ({ children }) => {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (profile.status !== 'approved') return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
@@ -93,6 +136,7 @@ const StudentModuleRoute: FC<{ children: ReactNode; moduleKey?: string }> = ({ c
     return profileRaw ? JSON.parse(profileRaw) : null;
   });
   const [syncing, setSyncing] = useState(true);
+  const [adminPermissions, setAdminPermissions] = useState<any>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -116,14 +160,37 @@ const StudentModuleRoute: FC<{ children: ReactNode; moduleKey?: string }> = ({ c
             setLiveProfile(merged);
           }
         } catch (e) {
-          console.warn("Profile sync warning:", e);
+          console.warn("Profile sync warning in StudentModuleRoute:", e);
         }
       }
       if (isMounted) setSyncing(false);
     };
+
     syncProfile();
     return () => { isMounted = false; };
   }, [moduleKey]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAdminPermissions = async () => {
+      if (liveProfile && liveProfile.role === 'student' && liveProfile.admin_id && supabase) {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('super_admin_permission, can_access_daily, can_access_full_exam, can_access_practice')
+            .eq('id', liveProfile.admin_id)
+            .maybeSingle();
+          if (data && isMounted) {
+            setAdminPermissions(data);
+          }
+        } catch (e) {
+          console.warn("Error fetching admin permissions in StudentModuleRoute:", e);
+        }
+      }
+    };
+    fetchAdminPermissions();
+    return () => { isMounted = false; };
+  }, [liveProfile?.admin_id]);
 
   if (!liveProfile) return <Navigate to="/login" replace />;
 
@@ -162,6 +229,35 @@ const StudentModuleRoute: FC<{ children: ReactNode; moduleKey?: string }> = ({ c
       );
     }
   }
+
+  if (liveProfile.role === 'student' && liveProfile.admin_id) {
+    const perms = adminPermissions || {};
+    const isMasterPermission = !!perms.super_admin_permission;
+    const isSpecificPermission = moduleKey ? !!perms[moduleKey] : false;
+    const isGranted = isMasterPermission || isSpecificPermission;
+
+    if (!isGranted && !syncing && adminPermissions !== null) {
+      return (
+        <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
+          <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-2xl max-w-lg space-y-6 relative overflow-hidden">
+            <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-amber-100/60">
+              <Lock className="w-10 h-10" />
+            </div>
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 bg-amber-50 px-4 py-1.5 rounded-full border border-amber-100">
+                Coaching Admin Restricted
+              </span>
+              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight pt-2">Module Access Locked</h2>
+              <p className="text-xs font-bold text-slate-500 leading-relaxed">
+                This testing module is currently locked for your coaching center. Access permissions for Daily Challenges, Full Exams, and Chapter Practice are managed by your coaching administrator's licensing package.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
   return <>{children}</>;
 };
 
@@ -619,6 +715,7 @@ const AppContent = () => {
                         <Route path="/exam-setup" element={<StudentModuleRoute moduleKey="can_access_full_exam"><ExamSetup /></StudentModuleRoute>} />
                         <Route path="/practice" element={<StudentModuleRoute moduleKey="can_access_practice"><Practice /></StudentModuleRoute>} />
                         <Route path="/pyqs" element={<YearWisePYQ />} />
+                        <Route path="/pricing" element={<Pricing />} />
                         <Route path="/analytics" element={<Analytics />} />
                         <Route path="/history" element={<History />} />
                         <Route path="/results" element={<Results />} />

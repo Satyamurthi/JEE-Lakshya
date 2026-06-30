@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, ChevronRight, Atom, Beaker, FunctionSquare, Play, Sparkles, Search, Filter, Database } from 'lucide-react';
+import { BookOpen, ChevronRight, Atom, Beaker, FunctionSquare, Play, Sparkles, Search, Filter, Database, DollarSign } from 'lucide-react';
 import { NCERT_CHAPTERS, SUBJECTS_CONFIG } from '../constants';
 import { fetchQuestionsFromDB } from '../supabase';
+import { initiateRazorpayPayment, checkSubscriptionActive } from '../utils/payment';
 
 const Practice = () => {
   const navigate = useNavigate();
@@ -18,6 +19,37 @@ const Practice = () => {
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
   const [isPreparing, setIsPreparing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [isPaid, setIsPaid] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  const isIndependent = profile.role === 'student' && !profile.admin_id;
+  const needsPayment = isIndependent && profile.has_used_free_test && !checkSubscriptionActive(profile);
+
+  const handleUnlockPractice = async () => {
+    setIsProcessingPayment(true);
+    try {
+      const receipt = `practice_${profile.id}_${Date.now()}`;
+      const success = await initiateRazorpayPayment(
+        10,
+        profile.email || 'student@example.com',
+        profile.full_name || 'Aspirant',
+        receipt
+      );
+      if (success) {
+        setIsPaid(true);
+        alert("Payment verified! Your practice session is now unlocked.");
+      } else {
+        alert("Payment verification failed or was cancelled.");
+      }
+    } catch (err: any) {
+      console.error("Razorpay error:", err);
+      alert(`Razorpay error: ${err.message || err}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
 
   useEffect(() => {
     const rawTarget = localStorage.getItem('focus_practice_target');
@@ -85,6 +117,24 @@ const Practice = () => {
   const handleStartPractice = async () => {
     if (!selectedSubject || !selectedChapter) return;
     
+    if (needsPayment && !isPaid) {
+      handleUnlockPractice();
+      return;
+    }
+
+    if (isIndependent && !profile.has_used_free_test) {
+      try {
+        const { supabase } = await import('../supabase');
+        if (supabase) {
+          await supabase.from('profiles').update({ has_used_free_test: true }).eq('id', profile.id);
+        }
+        const updatedProfile = { ...profile, has_used_free_test: true };
+        localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
+      } catch (err) {
+        console.error("Failed to mark free test as used:", err);
+      }
+    }
+
     setIsPreparing(true);
     let questions: any[] = [];
     let source = "Gemini AI";
@@ -171,7 +221,8 @@ const Practice = () => {
       chapter: selectedChapter,
       topics: selectedTopics,
       source: source,
-      duration: (mcqCount + numericalCount) * 2 // 2 minutes per question
+      duration: (mcqCount + numericalCount) * 2, // 2 minutes per question
+      paid: isIndependent && isPaid
     }));
     
     setIsPreparing(false);
@@ -186,6 +237,53 @@ const Practice = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {isIndependent && !profile.has_used_free_test && (
+        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-6 rounded-[2rem] shadow-xl shadow-indigo-100 flex items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl">
+              <Sparkles className="w-6 h-6 text-yellow-300" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black uppercase tracking-tight">Free Practice Attempt Active</h3>
+              <p className="text-xs font-medium text-indigo-100 leading-relaxed">
+                Your first practice test is free. Make it count!
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] bg-white text-indigo-600 font-black uppercase tracking-widest px-4 py-2 rounded-xl shrink-0">1 Free Attempt</span>
+        </div>
+      )}
+      {needsPayment && !isPaid && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 p-6 rounded-[2rem] shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-amber-100 text-amber-700 rounded-2xl">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-wider">Payment Required</h3>
+              <p className="text-xs text-amber-700 font-bold">
+                You have already used your free test. Subsequent practice tests require a ₹10 unlock fee or a Premium membership.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <button
+              onClick={() => navigate('/pricing')}
+              className="flex-1 md:flex-none px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md text-center"
+            >
+              🚀 Go Premium (₹299/mo)
+            </button>
+            <button
+              onClick={handleUnlockPractice}
+              disabled={isProcessingPayment}
+              className="flex-1 md:flex-none px-5 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md disabled:opacity-50 text-center"
+            >
+              {isProcessingPayment ? "Opening..." : "Pay ₹10 Once"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase tracking-[0.2em]">
@@ -431,13 +529,18 @@ const Practice = () => {
                   </div>
                   <button
                     onClick={handleStartPractice}
-                    disabled={isPreparing}
+                    disabled={isPreparing || (needsPayment && !isPaid && isProcessingPayment)}
                     className="w-full md:w-auto px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm shadow-xl shadow-slate-200 flex items-center justify-center gap-3 group transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                   >
                     {isPreparing ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         Preparing...
+                      </>
+                    ) : needsPayment && !isPaid ? (
+                      <>
+                        Unlock Practice (₹10)
+                        <DollarSign className="w-4 h-4" />
                       </>
                     ) : (
                       <>

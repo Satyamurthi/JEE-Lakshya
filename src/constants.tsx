@@ -103,6 +103,7 @@ export const MENU_ITEMS = [
   { id: 'exam-setup', label: 'Full Exam', icon: <Target className="w-5 h-5" />, path: '/exam-setup' },
   { id: 'practice', label: 'Chapter Practice', icon: <BookOpen className="w-5 h-5" />, path: '/practice' },
   { id: 'pyqs', label: 'Year-Wise PYQs (2013-2026)', icon: <Award className="w-5 h-5" />, path: '/pyqs' },
+  { id: 'pricing', label: 'Premium Plans', icon: <Crown className="w-5 h-5" />, path: '/pricing' },
   { id: 'history', label: 'History', icon: <History className="w-5 h-5" />, path: '/history' },
   { id: 'analysis', label: 'AI Analytics', icon: <Activity className="w-5 h-5" />, path: '/analytics' },
   { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" />, path: '/settings' },

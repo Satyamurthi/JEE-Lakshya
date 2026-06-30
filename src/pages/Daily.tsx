@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Zap, CheckCircle2, Lock, Play, Trophy, Clock, ChevronRight, Brain, Target, Sparkles, DollarSign, X, Loader2 } from 'lucide-react';
 import { getDailyChallenge, getUserDailyAttempt, getDailyAttemptsByChallenge, getUserAllDailyAttempts } from '../supabase';
-import { initiateRazorpayPayment } from '../utils/payment';
+import { initiateRazorpayPayment, checkSubscriptionActive } from '../utils/payment';
 import { calculateDailyStreak } from '../utils/metricsHelper';
 
 const Daily = () => {
@@ -16,7 +16,7 @@ const Daily = () => {
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   
   const isIndependent = profile.role === 'student' && !profile.admin_id;
-  const needsPayment = isIndependent && profile.has_used_free_test;
+  const needsPayment = isIndependent && profile.has_used_free_test && !checkSubscriptionActive(profile);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -387,6 +387,16 @@ const Daily = () => {
                   {isProcessingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
                   {isProcessingPayment ? "Opening Checkout..." : "Pay with Razorpay (₹10)"}
                 </button>
+                <div className="text-center pt-2 border-t border-slate-100">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">Or Get Unlimited Access</p>
+                  <button
+                    type="button"
+                    onClick={() => { setIsPaymentModalOpen(false); navigate('/pricing'); }}
+                    className="w-full py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
+                  >
+                    🚀 Upgrade to Premium Plan (₹299/mo)
+                  </button>
+                </div>
               </div>
             )}
           </div>

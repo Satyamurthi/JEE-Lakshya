@@ -120,6 +120,7 @@ create table if not exists public.exam_attempts (
   accuracy integer,
   config jsonb,
   questions jsonb,
+  paid boolean default false,
   submitted_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
