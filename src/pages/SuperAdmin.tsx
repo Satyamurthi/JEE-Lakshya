@@ -1790,8 +1790,10 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
               </div>
             </div>
           )}
+        </div>
+      )}
 
-          {activeTab === 'PREMIUM_PLANS' && (
+      {activeTab === 'PREMIUM_PLANS' && (
             <div className="space-y-8 animate-in fade-in duration-300">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -2192,8 +2194,6 @@ CREATE POLICY "Plans write policy" ON public.subscription_plans FOR ALL USING (
               )}
             </div>
           )}
-        </div>
-      )}
     </div>
   );
 };
