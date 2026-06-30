@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { ReactNode, FC } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { LogOut, Bell, Search, Menu, Brain, ChevronLeft, Sparkles, Download, WifiOff, ShieldAlert, Lock, Shield, Snowflake, Ban, Layers, Crown, Sliders, Zap } from 'lucide-react';
+import { LogOut, Bell, Search, Menu, Brain, ChevronLeft, Sparkles, Download, WifiOff, ShieldAlert, Lock, Shield, Snowflake, Ban, Layers, Crown, Sliders, Zap, X } from 'lucide-react';
 import { MENU_ITEMS, APP_NAME } from './constants';
 import { supabase } from './supabase';
 
@@ -416,20 +416,84 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [editName, setEditName] = useState(profile.full_name || '');
   const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatar_url || '');
+  const [editCollegeName, setEditCollegeName] = useState(profile.college_name || '');
+  const [editCollegeAddress, setEditCollegeAddress] = useState(profile.college_address || '');
+  const [editStream, setEditStream] = useState(profile.stream || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
+  useEffect(() => {
+    if (isEditProfileModalOpen) {
+      const latestProfile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+      setEditName(latestProfile.full_name || '');
+      setEditAvatarUrl(latestProfile.avatar_url || '');
+      setEditCollegeName(latestProfile.college_name || '');
+      setEditCollegeAddress(latestProfile.college_address || '');
+      setEditStream(latestProfile.stream || '');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+  }, [isEditProfileModalOpen]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = { ...profile, full_name: editName, avatar_url: editAvatarUrl };
-    localStorage.setItem('user_profile', JSON.stringify(updated));
-    if (supabase && profile.id) {
-      try {
-        await supabase.from('profiles').update({ full_name: editName, avatar_url: editAvatarUrl }).eq('id', profile.id);
-      } catch (err) {
-        console.warn("Profile update warning:", err);
+    setIsUpdatingProfile(true);
+
+    try {
+      if (newPassword) {
+        if (newPassword.length < 6) {
+          alert("New password must be at least 6 characters long.");
+          setIsUpdatingProfile(false);
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          alert("New passwords do not match.");
+          setIsUpdatingProfile(false);
+          return;
+        }
+
+        if (supabase) {
+          const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
+          if (authError) throw authError;
+        }
       }
+
+      const updatedProfile = { 
+        ...profile, 
+        full_name: editName, 
+        avatar_url: editAvatarUrl,
+        college_name: editCollegeName,
+        college_address: editCollegeAddress,
+        stream: editStream,
+        ...(newPassword ? { password: newPassword } : {})
+      };
+
+      if (supabase && profile.id) {
+        const { error: dbError } = await supabase
+          .from('profiles')
+          .update({ 
+            full_name: editName, 
+            avatar_url: editAvatarUrl,
+            college_name: editCollegeName,
+            college_address: editCollegeAddress,
+            stream: editStream,
+            ...(newPassword ? { password: newPassword } : {})
+          })
+          .eq('id', profile.id);
+          
+        if (dbError) throw dbError;
+      }
+
+      localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
+      alert("🎉 Account settings updated successfully!");
+      setIsEditProfileModalOpen(false);
+    } catch (err: any) {
+      console.error("Profile update failed:", err);
+      alert(`Update failed: ${err.message || 'Unknown database error'}`);
+    } finally {
+      setIsUpdatingProfile(false);
     }
-    setIsEditProfileModalOpen(false);
-    window.location.reload();
   };
 
   const notifications = [
@@ -523,49 +587,167 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
       {isEditProfileModalOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl border border-slate-200 relative overflow-hidden animate-in zoom-in duration-300">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 animate-in fade-in duration-300 no-print">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-xl p-8 md:p-10 shadow-2xl border border-slate-200 relative animate-in zoom-in duration-300 max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6 shrink-0">
               <div>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight">Edit Profile & Avatar</h3>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Update account identity</p>
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">My Account Settings</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">View & update your profile parameters</p>
               </div>
-              <button onClick={() => setIsEditProfileModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                <X className="w-5 h-5 text-slate-400" />
+              <button 
+                onClick={() => setIsEditProfileModalOpen(false)} 
+                className="p-2 hover:bg-slate-50 rounded-full transition-all text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                />
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSaveProfile} className="space-y-6 overflow-y-auto pr-2 flex-1 custom-scrollbar">
+              {/* Account Overview Cards (ReadOnly Parameters) */}
+              <div className="bg-slate-50/80 p-5 rounded-3xl border border-slate-100 space-y-4">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-mono">Immutable Account Credentials</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Email ID (Disabled)</label>
+                    <input 
+                      type="text" 
+                      disabled 
+                      value={profile.email || 'N/A'} 
+                      className="w-full p-3 bg-slate-100/50 border border-slate-200 rounded-xl font-bold text-xs text-slate-500 cursor-not-allowed outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Phone Number (Disabled)</label>
+                    <input 
+                      type="text" 
+                      disabled 
+                      value={profile.mobile_number || 'N/A'} 
+                      className="w-full p-3 bg-slate-100/50 border border-slate-200 rounded-xl font-bold text-xs text-slate-500 cursor-not-allowed outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Student System ID (Disabled)</label>
+                    <input 
+                      type="text" 
+                      disabled 
+                      value={profile.id || 'N/A'} 
+                      className="w-full p-3 bg-slate-100/50 border border-slate-200 rounded-xl font-mono text-[10px] text-slate-400 cursor-not-allowed outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Affiliated Coaching ID (Disabled)</label>
+                    <input 
+                      type="text" 
+                      disabled 
+                      value={profile.admin_id || 'Direct Independent Student'} 
+                      className="w-full p-3 bg-slate-100/50 border border-slate-200 rounded-xl font-bold text-xs text-slate-500 cursor-not-allowed outline-none"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Profile Picture URL (Optional)</label>
-                <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={editAvatarUrl}
-                  onChange={(e) => setEditAvatarUrl(e.target.value)}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                />
+              {/* Editable Fields */}
+              <div className="space-y-4">
+                <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block font-mono">Editable Student Information</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Student Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full p-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl font-bold text-xs text-slate-900 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Target Exam Stream</label>
+                    <select
+                      value={editStream}
+                      onChange={(e) => setEditStream(e.target.value)}
+                      className="w-full p-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl font-bold text-xs text-slate-900 outline-none transition-all"
+                    >
+                      <option value="JEE Main & Advanced">JEE Main & Advanced</option>
+                      <option value="NEET UG">NEET UG</option>
+                      <option value="KCET">KCET</option>
+                      <option value="UPSC">UPSC</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Avatar Image URL (Optional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://images.unsplash.com/..."
+                    value={editAvatarUrl}
+                    onChange={(e) => setEditAvatarUrl(e.target.value)}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl font-bold text-xs text-slate-900 outline-none transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">School / College Name</label>
+                    <input
+                      type="text"
+                      value={editCollegeName}
+                      onChange={(e) => setEditCollegeName(e.target.value)}
+                      className="w-full p-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl font-bold text-xs text-slate-900 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">College Location / Address</label>
+                    <input
+                      type="text"
+                      value={editCollegeAddress}
+                      onChange={(e) => setEditCollegeAddress(e.target.value)}
+                      className="w-full p-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl font-bold text-xs text-slate-900 outline-none transition-all"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="pt-2">
+              {/* Password Edit Section */}
+              <div className="bg-indigo-50/50 p-5 rounded-3xl border border-indigo-100 space-y-4">
+                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block font-mono flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5" /> Modify Account Access Password
+                </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[9px] font-bold text-indigo-700 uppercase tracking-wider block mb-1">New Password (Min 6 chars)</label>
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full p-3 bg-white border border-indigo-200 focus:border-indigo-500 rounded-xl font-bold text-xs text-slate-900 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-indigo-700 uppercase tracking-wider block mb-1">Confirm New Password</label>
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full p-3 bg-white border border-indigo-200 focus:border-indigo-500 rounded-xl font-bold text-xs text-slate-900 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 shrink-0">
                 <button
                   type="submit"
-                  className="w-full py-4 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                  disabled={isUpdatingProfile}
+                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Save Profile Changes
+                  {isUpdatingProfile ? "Saving Profile Parameters..." : "Save Account Parameters"}
                 </button>
               </div>
             </form>

@@ -1,6 +1,6 @@
 import React, { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Brain, Sparkles, Database, Mail, Lock, ChevronRight, AlertCircle } from 'lucide-react';
+import { Brain, Sparkles, Database, Mail, Lock, ChevronRight, AlertCircle, X, Loader2 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { APP_NAME } from '../constants';
 
@@ -10,6 +10,10 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   const isOffline = !isSupabaseConfigured();
 
@@ -176,6 +180,63 @@ const Login = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetting(true);
+    setForgotMessage(null);
+    try {
+      const cleanEmail = forgotEmail.toLowerCase().trim();
+      
+      let fallbackPassword = null;
+      if (supabase) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('password')
+          .eq('email', cleanEmail)
+          .maybeSingle();
+          
+        if (data && data.password) {
+          fallbackPassword = data.password;
+        }
+      }
+
+      if (supabase) {
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+          redirectTo: `${window.location.origin}/login`
+        });
+        if (error) throw error;
+        
+        setForgotMessage(`🎉 A password reset link has been dispatched to ${cleanEmail}! Please check your inbox.`);
+      } else {
+        if (fallbackPassword) {
+          setForgotMessage(`🔑 Your registered account access key is: "${fallbackPassword}"`);
+        } else {
+          setForgotMessage("❌ No account found matching this email address.");
+        }
+      }
+    } catch (err: any) {
+      console.warn("Auth reset failed, attempting fallback password lookup:", err.message);
+      try {
+        const cleanEmail = forgotEmail.toLowerCase().trim();
+        const { data } = await supabase
+          .from('profiles')
+          .select('password')
+          .eq('email', cleanEmail)
+          .maybeSingle();
+          
+        if (data && data.password) {
+          setForgotMessage(`🔑 Fallback Lookup: Your password is "${data.password}"`);
+        } else {
+          setForgotMessage(`❌ Reset error: ${err.message || 'Email lookup failed'}`);
+        }
+      } catch (_) {
+        setForgotMessage(`❌ Failed to send reset link: ${err.message}`);
+      }
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f8faff] flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Background Blobs */}
@@ -258,12 +319,72 @@ const Login = () => {
         </div>
 
           {/* Footer */}
-          <div className="mt-8 flex flex-col items-center gap-4">
+          <div className="mt-8 flex flex-col items-center gap-3">
             <p className="text-slate-400 font-bold text-xs tracking-tight">
-              New Aspirant? <Link to="/signup" className="text-indigo-600 hover:underline">Enroll Now</Link>
+              New Aspirant? <Link to="/signup" className="text-indigo-600 hover:underline font-extrabold">Enroll Now</Link>
             </p>
+            <button 
+              onClick={() => {
+                setForgotEmail('');
+                setForgotMessage(null);
+                setShowForgotPassword(true);
+              }}
+              className="text-indigo-600 hover:underline text-xs font-black uppercase tracking-wider cursor-pointer border-none bg-transparent outline-none"
+            >
+              Forgot Password?
+            </button>
           </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-10 space-y-8 shadow-2xl border border-slate-200 animate-in zoom-in duration-300 relative">
+            <button 
+              onClick={() => setShowForgotPassword(false)} 
+              className="absolute top-6 right-6 p-2 hover:bg-slate-50 rounded-full transition-all text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                <Mail className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Reset Password</h3>
+              <p className="text-slate-500 font-medium text-xs">Enter your registered email address and we'll dispatch a link or lookup your account key.</p>
+            </div>
+
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 font-mono">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isResetting}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 h-14"
+              >
+                {isResetting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Reset Link"}
+              </button>
+            </form>
+
+            {forgotMessage && (
+              <div className="p-4 rounded-2xl text-xs font-bold bg-slate-50 border border-slate-100 text-indigo-700 text-center leading-relaxed">
+                {forgotMessage}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
