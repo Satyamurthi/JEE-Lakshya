@@ -19,7 +19,10 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.JavascriptInterface
 import android.widget.ProgressBar
+import android.widget.Toast
+import android.content.Context
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONArray
@@ -137,6 +140,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Register AndroidBridge Javascript Interface for Exam Lockdown
+        webView.addJavascriptInterface(WebAppInterface(this), "AndroidBridge")
+
         // Load application
         if (savedInstanceState == null) {
             webView.loadUrl(appUrl)
@@ -244,11 +250,51 @@ class MainActivity : AppCompatActivity() {
         webView.saveState(outState)
     }
 
+    private fun isAppInLockTaskMode(): Boolean {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            activityManager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
+        } else {
+            @Suppress("DEPRECATION")
+            activityManager.isInLockTaskMode
+        }
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (isAppInLockTaskMode()) {
+            // Block hardware back key completely during exam lockdown
+            return true
+        }
         if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
             webView.goBack()
             return true
         }
         return super.onKeyDown(keyCode, event)
+    }
+}
+
+class WebAppInterface(private val activity: MainActivity) {
+    @JavascriptInterface
+    fun startLockdown() {
+        activity.runOnUiThread {
+            try {
+                activity.startLockTask()
+                Toast.makeText(activity, "🔒 Exam Mode Active: Navigation Locked", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(activity, "Integrity Warning: Screen Pinning request failed. Enable Screen Pinning in device settings.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun stopLockdown() {
+        activity.runOnUiThread {
+            try {
+                activity.stopLockTask()
+                Toast.makeText(activity, "🔓 Exam Submitted: Navigation Restored", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
     }
 }
