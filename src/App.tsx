@@ -525,7 +525,14 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
           })
           .eq('id', profile.id);
           
-        if (dbError) throw dbError;
+        if (dbError) {
+          console.warn("Database profile sync failed, using local storage:", dbError.message);
+          if (dbError.message.includes('avatar_url') || dbError.message.includes('column')) {
+            alert(`⚠️ Profile updated in this browser session. However, to save it permanently in the cloud backend, please run this SQL query in your Supabase SQL Editor:\n\nALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;`);
+          } else {
+            alert(`⚠️ Saved locally. Cloud sync failed: ${dbError.message}`);
+          }
+        }
       }
 
       localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
