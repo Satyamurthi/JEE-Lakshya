@@ -9,6 +9,69 @@ import MathText from '../components/MathText';
 import { cleanQuestionText } from '../utils/sanitizer';
 import { recordSeenQuestions } from '../utils/questionTracker';
 
+const VirtualKeypad = ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '0', '.'];
+  
+  const handleKeyClick = (key: string) => {
+    let current = String(value || '');
+    if (key === '-') {
+      if (current.startsWith('-')) {
+        onChange(current.substring(1));
+      } else {
+        onChange('-' + current);
+      }
+    } else if (key === '.') {
+      if (!current.includes('.')) {
+        onChange(current + '.');
+      }
+    } else {
+      onChange(current + key);
+    }
+  };
+
+  const handleBackspace = () => {
+    let current = String(value || '');
+    if (current.length > 0) {
+      onChange(current.slice(0, -1));
+    }
+  };
+
+  const handleClear = () => {
+    onChange('');
+  };
+
+  return (
+    <div className="bg-slate-50 p-4 rounded-3xl border border-slate-200/60 shadow-sm max-w-xs mx-auto space-y-3 font-mono mt-4">
+      <div className="grid grid-cols-3 gap-2">
+        {keys.map(k => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => handleKeyClick(k)}
+            className="p-3 bg-white active:bg-slate-200 text-slate-800 rounded-xl font-black text-md border border-slate-200 shadow-sm active:scale-95 transition-all flex items-center justify-center h-12"
+          >
+            {k}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={handleBackspace}
+          className="p-3 bg-rose-50 active:bg-rose-100 text-rose-600 rounded-xl font-black text-[10px] uppercase tracking-wider border border-rose-200 shadow-sm col-span-2 active:scale-95 transition-all flex items-center justify-center h-12"
+        >
+          Backspace
+        </button>
+        <button
+          type="button"
+          onClick={handleClear}
+          className="p-3 bg-slate-200 active:bg-slate-350 text-slate-700 rounded-xl font-black text-[10px] uppercase tracking-wider border border-slate-300 shadow-sm active:scale-95 transition-all flex items-center justify-center h-12"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const ExamPortal = () => {
   const navigate = useNavigate();
   const [questions, setQuestions] = useState<any[]>([]);
@@ -26,6 +89,85 @@ const ExamPortal = () => {
   const [sessionCheckLoading, setSessionCheckLoading] = useState(true);
 
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  const isRestricted = profile.role !== 'super_admin';
+  const [securityWarnings, setSecurityWarnings] = useState(3);
+
+  // Anti-Cheat / Integrity constraints
+  useEffect(() => {
+    if (!isRestricted || questions.length === 0) return;
+
+    // 1. Enter Fullscreen Mode automatically on exam start
+    const triggerFullscreen = async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (err) {
+        console.warn("Fullscreen request bypassed:", err);
+      }
+    };
+    triggerFullscreen();
+
+    // 2. Prevent right-click context menu and keyboard defaults
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+        return;
+      }
+      e.preventDefault();
+      return false;
+    };
+
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
+
+    // 3. Tab focus / Visibility warning checks
+    const handleVisibility = () => {
+      if (document.hidden) {
+        setSecurityWarnings((prev) => {
+          const next = prev - 1;
+          if (next <= 0) {
+            alert("🚨 SECURITY VIOLATION: Multiple tab/app switches detected. Your exam has been automatically submitted.");
+            handleSubmit();
+            return 0;
+          } else {
+            alert(`⚠️ SECURITY WARNING: You are not allowed to leave the exam window! Tab switching is blocked. Remaining warnings before auto-submission: ${next}`);
+            return next;
+          }
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // 4. Back navigation / History locks
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+      alert("⚠️ NAVIGATION LOCKED: You cannot go back or leave the active exam. Please click 'Confirm Submission' to exit.");
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    // 5. Page exit warnings
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Active exam in progress. Leaving will forfeit your attempt.";
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, [isRestricted, questions.length, handleSubmit]);
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
@@ -441,6 +583,15 @@ const ExamPortal = () => {
           </h1>
         </div>
 
+
+
+        {isRestricted && (
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+            <span className="text-[10px] font-black uppercase tracking-widest font-mono">Terminal Integrity Locked ({securityWarnings} warnings left)</span>
+          </div>
+        )}
+
         <div className="flex items-center gap-6">
           <div className={`flex items-center gap-3 px-4 py-1.5 rounded-full border ${
             timeLeft < 300 ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse' : 'bg-white/10 border-white/10 text-indigo-300'
@@ -543,13 +694,14 @@ const ExamPortal = () => {
                   <div className="max-w-xs mx-auto w-full space-y-4">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Numerical Response</p>
                     <input 
-                      type="number"
-                      step="any"
+                      type="text"
+                      readOnly={isRestricted}
                       value={answers[currentIndex] || ''}
                       onChange={(e) => handleAnswer(e.target.value)}
-                      placeholder="Enter response..."
+                      placeholder={isRestricted ? "Use keypad below..." : "Enter response..."}
                       className="w-full p-5 bg-white border-2 border-slate-200 rounded-2xl font-black text-xl text-center text-slate-900 focus:border-indigo-500 outline-none transition-all shadow-sm"
                     />
+                    <VirtualKeypad value={answers[currentIndex] || ''} onChange={(val) => handleAnswer(val)} />
                   </div>
                 )}
               </div>
@@ -600,17 +752,18 @@ const ExamPortal = () => {
                      ))}
                    </div>
                  ) : (
-                   <div className="space-y-4">
-                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Numerical Answer</p>
-                     <input 
-                       type="number"
-                       step="any"
-                       value={answers[currentIndex] || ''}
-                       onChange={(e) => handleAnswer(e.target.value)}
-                       placeholder="Enter your numerical response..."
-                       className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-2xl text-slate-900 focus:border-indigo-500 focus:bg-white outline-none transition-all"
-                     />
-                   </div>
+                    <div className="space-y-4">
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Numerical Answer</p>
+                      <input 
+                        type="text"
+                        readOnly={isRestricted}
+                        value={answers[currentIndex] || ''}
+                        onChange={(e) => handleAnswer(e.target.value)}
+                        placeholder={isRestricted ? "Use keypad below..." : "Enter your numerical response..."}
+                        className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-2xl text-slate-900 focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                      />
+                      <VirtualKeypad value={answers[currentIndex] || ''} onChange={(val) => handleAnswer(val)} />
+                    </div>
                  )}
               </div>
             </div>

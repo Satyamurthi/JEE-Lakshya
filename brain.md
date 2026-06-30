@@ -8,10 +8,10 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 LIVE / NATIVE PHOTO UPLOADER INTEGRATED
-* **Last Updated Timestamp**: 2026-06-30 23:28 IST
+* **Session Status**: 🟢 LIVE / LOCKDOWN TESTING TERMINAL INTEGRATED
+* **Last Updated Timestamp**: 2026-06-30 23:41 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Replaced account avatar URL inputs with a native, drag-and-drop styled local Image File Uploader inside the Edit Profile Modal. Implemented dynamic canvas-based client-side image resizing (to a compact 256x256 size) and JPG compression, storing the compressed photo directly in the backend `profiles.avatar_url` database column.
+* **Last Completed Task**: Engineered a robust Lockdown Exam Terminal in `src/pages/ExamPortal.tsx` restricting right-clicks, copy/paste/cut actions, and blocking physical keyboard entry. Integrated a custom responsive virtual numerical keypad uploader for numeric questions. Added popstate history blockers, tab visibility change detection alerts with a 3-warning auto-submit safety threshold, window exit reload blockades, and auto-fullscreen triggers (fully bypassed for `super_admin`).
 
 ### 🎯 Active Task Overview
 * **Goal**: Provide standard Razorpay payment configurations, pricing selector cycles, and bypass controls to unlock premium mock exam features.
