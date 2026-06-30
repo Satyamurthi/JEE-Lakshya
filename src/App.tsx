@@ -334,6 +334,7 @@ const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean
           {MENU_ITEMS.map((item) => {
             if (item.id === 'admin' && profile.role !== 'admin') return null;
             if (item.id === 'super-admin' && profile.role !== 'super_admin') return null;
+            if (item.id === 'pricing' && profile.role === 'admin') return null;
             const isActive = location.pathname === item.path;
             return (
               <button
