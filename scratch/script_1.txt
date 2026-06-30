@@ -1,0 +1,24 @@
+
+   window.MathJax = {
+				startup: {typeset: false},
+				options: {
+					enableMenu: false,
+					ignoreHtmlClass: 'tex2jax_ignore',
+					processHtmlClass: 'tex2jax_process'
+				},
+				tex: {
+					inlineMath: [['$','$'], ['$$','$$'], ['\\\\(','\\\\)']],
+					displayMath: [['$$$','$$$'], ['\\\\(','\\\\)']],
+					autoload: {
+						color: [],
+						colorv2: ['color']
+					},
+					packages: {'[+]': ['noerrors', 'mhchem']}
+				},
+				loader: {
+					load: ['input/asciimath', '[tex]/noerrors', '[tex]/boldsymbol', '[tex]/mhchem']
+				},
+				svg: {mtextInheritFont: true, minScale: 1, exFactor: 1},
+				chtml: {mtextInheritFont: true, minScale: 1, exFactor: 1}
+			}
+  

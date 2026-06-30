@@ -1,0 +1,2731 @@
+
+--- Page 1 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+FINAL JEE-MAIN EXAM, 2026 
+Held On 28 January, Wednesday 2026 
+TIME : 9 : 00 AM to 12 : 00 PM 
+ 
+MATHEMATICS 
+ 
+SECTION-A 
+ 
+1. 
+If 
+2
+( )
+3
+2
+3, (0)
+3
+
+
+
+
+g x
+x
+x
+f
+ and 
+2
+4 ( ( ))
+3
+32
+72
+
+
+
+g f x
+x
+x
+, then 
+( (2))
+f g
+ is equal to: 
+ 
+(1) 25
+6
+  
+ 
+(2) 
+25
+6
+
+ 
+ 
+(3) 7
+2
+  
+ 
+(4) 
+7
+2
+
+ 
+2. 
+The value of 
+1
+1
+(
+1)
+( 1)
+!
+
+
+
+
+
+
+
+
+
+
+
+
+k
+k
+k k
+k
+ is 
+ 
+(1) 2 / e  
+ 
+(2) 1/ e  
+ 
+(3) 
+e   
+ 
+(4) e / 2  
+3. 
+Let 
+
+y
+x  be the equation of a chord of the circle 
+1
+C  (in the closed half-plane 
+0
+
+x
+ ) of diameter 10 
+passing through the origin. Let 
+2
+C  be another circle described on the given chord as its diameter. If the 
+equation of the chord of the circle 
+2
+C , which passes through the point (2,3)  and is farthest from the 
+center of 
+2
+C , is 
+0
+
+
+
+x
+ay
+b
+, then 
+
+a
+b is equal to 
+ 
+(1) 10  
+ 
+(2) –6  
+ 
+(3) –2  
+ 
+(4) 6 
+4. 
+If 
+2
+2
+tan(A
+B)
+sin C
+1, A, B,C
+0,
+tan A
+sin  A
+2
+
+
+
+
+
+
+
+
+
+
+, then 
+ 
+(1) tan ,tan ,tan
+A
+C
+B  are in G.P. 
+ 
+(2) tan ,tan ,tan
+A
+B
+C  are in G.P. 
+ 
+(3) tan ,tan ,tan
+A
+C
+B  are in A.P. 
+ 
+(4) tan ,tan ,tan
+A
+B
+C  are in A.P. 
+5. 
+Let z  be a complex number such that |
+6| 5
+
+
+z
+ and |
+2
+6 | 5
+
+
+z
+i
+. Then the value of 
+3
+2
+3
+15
+141
+
+
+
+z
+z
+z
+ is equal to 
+ 
+(1) 42  
+ 
+(2) 37  
+ 
+(3) 50  
+ 
+(4) 61 
+6. 
+Let ABC be an equilateral triangle with orthocenter at the origin and the side BC on the line 
+2 2
+4
+
+
+x
+y
+. If the co-ordinates of the vertex A are ( , )
+, then the greatest integer less than or 
+equal to |
+2
+|
+
+
+ is  
+ 
+(1) 2 
+ 
+ 
+(2) 3 
+ 
+ 
+(3) 5 
+ 
+ 
+(4) 4 
+7. 
+Let S
+{1,2,3,4,5,6,7,8,9}
+
+. Let x  be the number of 9 -digit numbers formed using the digits of the 
+set S such that only one digit is repeated and it is repeated exactly twice. Let y  be the number of 9-
+digit numbers formed using the digits of the set S such that only two digits are repeated and each of 
+these is repeated exactly twice. Then, 
+ 
+(1) 29
+5
+
+x
+y   
+(2) 45
+7
+
+x
+y   
+(3) 21
+4
+
+x
+y  
+ 
+(4) 56
+9
+
+x
+y  
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page #
+1
+
+--- Page 2 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+8. 
+Let 
+
+3
+2
+S
+: , ,
+ N
+
+
+
+
+
+x
+ax
+bx
+c a b c
+ and 
+
+, ,
+20
+
+a b c
+ be a set of polynomials. Then the number of 
+polynomials in S , which are divisible by 
+2
+2
+
+x
+, is 
+ 
+(1) 20  
+ 
+(2) 6 
+ 
+ 
+(3) 120  
+ 
+(4) 10 
+9. 
+A bag contains 10 balls out of which k  are red and (10
+)
+k  are black, where 0
+10
+
+
+k
+. If three balls 
+are drawn at random without replacement and all of them are found to be black, then the probability 
+that the bag contains 1 red and 9 black balls is: 
+ 
+(1)  7
+11
+  
+ 
+(2) 7
+55
+  
+ 
+(3) 7
+110
+ 
+ 
+(4) 14
+55
+ 
+10. 
+If 
+,
+, where 
+
+
+, are the roots of the equation 
+2
+(
+3)
+3
+0
+
+
+
+x
+x
+
+
+ such that 1
+1
+1
+3
+
+
+
+
+, 
+then the sum of all possible values of  is 
+ 
+(1) 6 
+ 
+ 
+(2) 2 
+ 
+ 
+(3) 4 
+ 
+ 
+(4) 8 
+11. 
+If 
+2
+5
+2
+1 5cos
+( )
+C
+sin
+cos
+
+
+
+
+
+
+
+
+
+
+x
+dx
+f x
+x
+x
+, where C is the constant of integration, then 
+6
+4
+
+
+
+
+
+
+
+
+
+
+
+
+
+f
+f
+
+
+ is 
+equal to 
+ 
+(1)  1 (26
+3)
+3
+
+ 
+(2) 4 (8
+6)
+3
+
+ 
+(3) 1 (26
+3)
+3
+
+ 
+(4) 2 (4
+6)
+3
+
+ 
+12. 
+Let f  be a polynomial function such that 
+
+2
+4
+2
+1
+5
+2
+
+
+
+
+f x
+x
+x
+, for all 
+
+x
+. Then 
+3
+0
+( )
+f x dx  is 
+equal to 
+ 
+(1) 41
+3
+  
+ 
+(2) 33
+2
+  
+ 
+(3) 27
+2
+  
+ 
+(4) 5
+3
+ 
+13. 
+The area of the region 
+
+
+2
+R
+( , ):
+8,1
+,
+0
+
+
+
+
+
+x y
+xy
+y
+x
+x
+ is 
+ 
+(1)  
+
+1 49log (2) 15
+3
+
+e
+ 
+ 
+(2) 
+
+2 20log (2)
+9
+3
+
+e
+ 
+ 
+(3) 
+
+2 24log (2)
+7
+3
+
+e
+  
+ 
+(4) 
+
+1 40log (2)
+27
+3
+
+e
+ 
+14. 
+The value of 
+
+
+
+
+
+
+2
+10
+2
+2cos
+0
+log
+sec(
+) sec
+sec
+lim
+
+
+
+
+e
+x
+x
+ex
+e x
+e x
+e
+e
+is equal to 
+ 
+(1) 
+
+
+
+10
+2
+2
+1
+2
+1
+
+
+e
+e
+e
+ 
+(2) 
+
+
+
+20
+2
+2
+1
+2
+1
+
+
+e
+e
+e
+ 
+(3) 
+
+
+
+20
+2
+1
+2
+1
+
+
+e
+e
+  
+(4) 
+
+
+
+10
+2
+1
+2
+1
+
+
+e
+e
+ 
+15. 
+The mean and variance of 10 observations are 9 and 34.2 , respectively. If 8 of these observations are 
+2,3,5,10,11,13,15,21, then the mean deviation about the median of all the 10 observations is 
+ 
+(1) 5 
+ 
+ 
+(2) 4 
+ 
+ 
+(3) 6 
+ 
+ 
+(4) 7 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page #
+2
+
+--- Page 3 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+16. 
+Let A,B and C  be three 2 2
+
+ matrices with real entries such that 
+1
+(
+)
+
+
+B
+I
+A
+ and A
+C
+I
+
+
+. If 
+1
+5
+BC
+1
+2
+
+
+
+
+
+
+
+
+ and 
+1
+2
+12
+CB
+6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+x
+x
+, then 
+1
+2
+
+x
+x  is 
+ 
+(1) 2 
+ 
+ 
+(2) 0 
+ 
+ 
+(3) –2  
+ 
+(4) 4 
+17. 
+The common difference of the A.P.: 
+1
+2
+m
+,
+,
+,
+
+a a
+a  is 13 more than the common difference of the A.P.: 
+1
+2
+,
+,
+,
+
+n
+b b
+b . If 
+31
+43
+277,
+385
+
+
+b
+b
+ and 
+78
+327
+
+a
+, then 
+1a  is equal to 
+ 
+(1) 21  
+ 
+(2) 24  
+ 
+(3) 19  
+ 
+(4) 16 
+18. 
+If the distances of the point (1,2, )
+a  from the line 
+1
+1
+1
+2
+1
+
+
+
+
+x
+y
+z
+ along the lines 
+1
+1
+2
+L :
+3
+4
+
+
+
+
+
+x
+y
+z
+a
+b
+ and 
+2
+1
+2
+L :
+1
+4
+
+
+
+
+
+x
+y
+z
+a
+c
+ are equal, then 
+
+a
+b
+c  is equal to 
+ 
+(1) 7 
+ 
+ 
+(2) 5 
+ 
+ 
+(3) 6 
+ 
+ 
+(4) 4 
+19. 
+For three unit vectors , ,
+a b c  satisfying 
+2
+2
+2
+|
+|
+|
+|
+|
+|
+9
+
+
+
+
+
+
+a
+b
+b
+c
+c
+a
+ and | 2
+| 3
+
+
+
+a
+kb
+kc
+, the 
+positive value of k is 
+ 
+(1) 3 
+ 
+ 
+(2) 6 
+ 
+ 
+(3) 4 
+ 
+ 
+(4) 5 
+20. 
+Let 
+( )
+
+y
+y x  be the solution of the differential equation 
+ 
+
+
+3
+3
+2
+sin 2
+2
+cos
+,
+0.
+
+
+
+
+dy
+x
+y
+x
+x
+y x
+dx
+ 
+ 
+If (2)
+0
+
+y
+, then tan( (1))
+y
+ is equal to 
+ 
+(1)  3
+4
+  
+ 
+(2) 7
+4
+  
+ 
+(3) 
+7
+4
+
+ 
+ 
+(4) 
+3
+4
+
+ 
+SECTION-B 
+ 
+21. 
+In a G.P., if the product of the first three terms is 27 and the set of all possible values for the sum of its 
+first three terms is 
+( , )
+a b , then 
+2
+2
+
+a
+b  is equal to ____  . 
+22. 
+For some 
+0, 2
+
+
+
+
+
+
+
+
+, let the eccentricity and the length of the latus rectum of the hyperbola 
+2
+2
+2
+sec
+8
+
+
+x
+y
+
+ be 
+1e  and 1l , respectively, and let the eccentricity and the length of the latus rectum 
+of the ellipse 
+2
+2
+2
+sec
+6
+
+
+x
+y
+
+ be 
+2e  and 
+2l , respectively. If 
+
+
+2
+2
+2
+1
+2 sec
+1
+
+
+e
+e
+
+, then 
+2
+1 2
+1 2
+tan
+
+
+
+
+
+
+l l
+e e
+ is equal to 
+23. 
+If 
+1
+1
+1
+2
+1
+2
+tan
+cos
+tan
+sin
+4
+2
+3
+2
+3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+k
+
+, then the number of solutions of the equation 
+1
+1
+1
+sin (
+1)
+sin
+cos
+
+
+
+
+
+
+kx
+x
+x  is ____  
+ 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page #
+3
+
+--- Page 4 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+24. 
+
+
+20
+0
+1
+ The value of 
+| sin
+|
+ is 
+
+
+
+
+
+
+
+
+
+r
+r
+x
+x dx
+
+
+ 
+25. 
+Let PQR be a triangle such that 
+ˆ
+ˆ
+ˆ
+2
+2
+
+
+
+PQ
+i
+j
+k  and PR
+i
+j
+4k, ,
+Z
+
+
+
+
+a
+b
+a b
+. Let S be the 
+point on QR , which is equidistant from the lines PQ and PR . If | PR | 9
+
+ and PS
+i
+7j
+2k
+
+
+, then 
+the value of 3
+4
+
+a
+b  is ____  
+ 
+PHYSICS 
+ 
+SECTION-A 
+ 
+26. 
+10 kg of ice at 10 C
+
+
+ is added to 100 kg of water to lower its temperature from 25 C
+
+. Consider no 
+heat exchange to surroundings. The decrement to the temperature of water is ____  C
+
+. 
+(specific heat of ice 
+2100 J / Kg C
+
+
+
+, specific heat of water 
+4200 J / Kg C
+
+
+
+, latent heat of fusion 
+of ice 
+5
+3.36 10  J / Kg
+
+
+) 
+ 
+ 
+ 
+ 
+ 
+ 
+(1) 10  
+ 
+(2) 15  
+ 
+(3) 6.67  
+ 
+(4)11.6 
+27. 
+The electric current in the circuit is given as 
+0( / )
+
+i
+i t T . The r.m.s current for the period 
+0
+
+t
+ to 
+
+t
+T  is ____  . 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+(1) 
+o
+2
+i
+ 
+ 
+(2) oi  
+ 
+ 
+(3) 
+6
+oi
+ 
+ 
+(4)  
+3
+oi
+ 
+28. 
+In the potentiometer, when the cell in the secondary circuit is shunted with 4 resistance, the balance 
+is obtained at the length 120 cm of wire. Now when the same cell is shunted with 12 resistance, the 
+balance is shifted to a length of 180 cm . The internal resistance of cell is ____  . 
+ 
+ 
+(1) 3 
+ 
+ 
+(2) 4 
+ 
+ 
+(3) 12  
+ 
+(4) 6 
+29. 
+Two circular dises of radius each 10 cm are joined at their centres by a rod of length 30 cm and mass 
+600 gm as shown in figure. 
+If the mass of each disc is 600 gm and applied torque between two discs is 
+5
+43 10
+
+ dyne. cm , the 
+angular acceleration of the discs about the given axis AB is ____  
+2
+rad / s .  
+ 
+ 
+(1) 22  
+ 
+(2) 11  
+ 
+(3) 100  
+ 
+(4) 27  
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page #
+4
+
+--- Page 5 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+30. 
+Water drops fall from a tap on the floor, 5 m below, at regular intervals of time, the first drop strikes the 
+floor when the sixth drop begins to fall. The height at which the fourth drop will be from ground, at the 
+instant when the first drop strikes the ground is ____  m. 
+
+2
+g
+10 m / s
+
+  
+ 
+(1) 2.5  
+ 
+(2) 4.0  
+ 
+(3) 4.2  
+ 
+(4) 3.8  
+31. 
+An atom 8
+3 X  is bombarded by shower of fundamental particles and in 10 s this atom absorbed 10 
+electrons, 10 protons and 9 neutrons. The percentage growth in the surface area of the nucleons is 
+recorded by: 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+(1) 250%  
+ 
+(2) 150%  
+ 
+(3) 225%  
+ 
+(4) 900% 
+ 
+32. 
+The electric field of an electromagnetic wave travelling through a medium is given by 
+
+
+15
+7
+ˆ
+( , )
+25sin 2.0 10
+10
+
+
+
+E x t
+t
+x n  then the refractive index of the medium is ____  . 
+(All given measurement are in SI units)  
+ 
+ 
+ 
+ 
+(1) 1 .2  
+ 
+(2) 2 
+ 
+ 
+(3) 1.5  
+ 
+(4) 1.7 
+33. 
+Which of the following best represents the temperature versus heat supplied graph for water, in the 
+range of 20 C
+
+
+ to 120 C
+
+ ? 
+ 
+ 
+ 
+(1)  
+  
+  
+(2) 
+ 
+ 
+(3) 
+  
+ 
+(4) 
+ 
+34. 
+Three long straight wires carrying current are arranged mutually parallel as shown in the figure. The  
+ 
+force experienced by 15 cm length of wire Q  is ____ .  
+ 
+ 
+ 
+ 
+
+
+7
+o
+4
+10  T  m / A
+
+
+
+
+
+
+ 
+(1) 
+7
+6 10  N
+
+
+ towards P  
+ 
+(2) 
+6
+6 10  N
+
+
+ towards R  
+(3) 
+7
+6 10  N
+
+
+ towards R  
+ 
+(4)
+6
+6 10  N
+
+
+ towards P  
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page #
+5
+
+--- Page 6 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+35. 
+Assuming in forward bias condition there is a voltage drop of 0.7 V across a silicon diode, the current 
+through diode 
+1
+D  in the circuit is ____  mA . 
+(Assume all diodes in the given circuit are identical)  
+ 
+ 
+(1) 20.15  
+ 
+(2) 11.7  
+ 
+(3) 17.6  
+ 
+(4) 18.8 
+36. 
+The magnitudes of power of a biconvex lens (refractive index 1.5) and that of a plano-concave lens 
+(refractive index 
+1.7
+
+) are same. If the curvature of planoconcave lens exactly matches with the 
+curvature of back surface of the biconvex lens, then ratio of radius of curvature of front and back 
+surface of the biconvex lens is ____  
+ 
+ 
+ 
+ 
+ 
+(1) 5: 2  
+ 
+(2) 5: 12 
+ 
+(3) 12: 5 
+ 
+(4) 2: 5 
+37. 
+In the following p  - V  diagram the equation of state along the curved path is given by 
+2
+(
+2)
+4
+
+
+V
+ap  
+where a  is a constant. The total work done in the closed path is   
+ 
+ 
+ 
+(1) 
+1
+a
+ 
+ 
+(2) 
+1
+3
+a
+ 
+ 
+(3) 1
+2a
+  
+ 
+(4) 
+1
+3
+a
+ 
+38. 
+For the two cells having same EMF E  and internal resistance r , the current passing through the 
+external resistor 6 is same when both the cells are connected either in parallel or in series. The 
+value of internal resistance r  is ____  .  
+ 
+ 
+ 
+ 
+ 
+(1) 3 
+ 
+ 
+(2) 4 
+ 
+ 
+(3) 9 
+ 
+ 
+(4) 6 
+39. 
+Two wires A  and B  made of different materials of lengths 6.0 cm and 5.4 cm , respectively and area 
+of cross sections 
+5
+2
+3.0 10  m
+
+
+ and 
+5
+2
+4.5 10  m
+
+
+, respectively are stretched by the same magnitude 
+under a given load. The ratio of the Young's modulus of A to that of B is x: 3. The value of x  is___. 
+(1) 1 
+ 
+ 
+(2) 4 
+ 
+ 
+(3) 2 
+ 
+ 
+(4) 5 
+40. 
+A block of mass 5 kg is moving on an inclined plane which makes an angle of 30 with the horizontal. 
+Friction coefficient between the block and inclined plane surface is 
+3
+2 . The force to be applied on the 
+block so that the block will move down without acceleration is ____  N. 
+
+
+2
+10 m / s
+.
+g 
+   
+ 
+ 
+ 
+ 
+ 
+ 
+(1) 25  
+ 
+(2) 12.5  
+ 
+(3) 7.5  
+ 
+(1) 15 
+ 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page #
+6
+
+--- Page 7 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+41. 
+Given below are two statements: 
+Statement I : A plane wave after passing through prism remains as plane wave but passing through 
+small pin hole may become spherical wave. 
+Statement II: The curvature of a spherical wave emerging from a slit will increase for increasing slit 
+width. 
+In the light of the above statements, choose the correct answer from the options given below 
+ 
+(1) Both Statement I and Statement II are false  
+(2) Both Statement I and Statement II are true 
+(3) Statement I is true but Statement II is false 
+ 
+(4) Statement I is false but Statement II is true 
+42. 
+When both jaws of vernier callipers touch each other, zero mark of the vernier scale is right to zero 
+mark of main scale, 
+th 
+4
+ mark on vernier scale coincides with certain mark on the main scale. While 
+measuring the length of a cylinder, observer observes 15 divisions on main scale and 
+th 
+5
+ division of 
+vernier scale coincides with a main scale division. Measured length of cylinder is ____  mm. 
+(Least count of Vernier calliper 
+0.1 mm
+
+) 
+ 
+ 
+ 
+ 
+(1) 15.4  
+ 
+(2) 15.1  
+ 
+(3) 15.5  
+ 
+(4) 15.9 
+43. 
+The magnetic field at the centre of a current carrying circular loop of radius R  is 16  T
+
+. The magnetic 
+field at a distance 
+3
+
+x
+R  on its axis from the centre is ____  T
+
+. 
+ 
+(1) 2 2  
+ 
+(2) 4 
+ 
+ 
+(3) 2 
+ 
+ 
+(4) 8 
+44. 
+Two point charges of 1 nC and 2 nC are placed at the two corners of equilateral triangle of side 3 cm . 
+The work done in bringing a charge of 3 nC from infinity to the third corner of the triangle is ____  J
+. 
+9
+2
+2
+0
+1
+9 10  N  m / C
+4
+
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+(1) 2.7  
+ 
+(2) 5.4  
+ 
+(3) 3.3  
+ 
+(4) 27 
+45. 
+A particle of mass m  falls from rest through a resistive medium having resistive force, 
+
+F
+kv , where 
+v  is the velocity of the particle and k  is a constant. Which of the following graphs represents velocity 
+( )v  versus time ( )t  ?  
+ 
+ 
+ 
+ 
+ 
+ 
+(1) 
+  
+ 
+ 
+(2)  
+ 
+ 
+(3) 
+  
+ 
+ 
+(4) 
+ 
+ 
+ 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page #
+7
+
+--- Page 8 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+SECTION-B 
+46. 
+The displacement of a particle, executing simple harmonic motion with time period T, is expressed as 
+( )
+sin
+
+x t
+A
+t
+, where A is the amplitude. The maximum value of potential energy of this oscillator is 
+found at 
+/ 2
+
+t
+T
+. The value of  is ____  .  
+ 
+ 
+ 
+47. 
+The ratio of de Broglie wavelength of a deutron with kinetic energy E to that of an alpha particle with 
+kinetic energy 2E, is n: 1. The value of n  is ____  . 
+ (Assume mass of proton = mass of neutron) : 
+ 
+ 
+ 
+ 
+48. 
+A solid sphere of radius 10 cm is rotating about an axis which is at a distance 15 cm from its centre. 
+The radius of gyration about this axis is 
+ cm
+n
+. The value of n  is 
+ 
+49. 
+A convex lens of refractive index 1.5 and focal length 
+18 cm
+
+f
+ is immersed in water. The difference 
+in focal lengths of the given lens when it is in water and in air is 
+f
+
+. The value of  is ____  . 
+(refractive index of water = 4/3)  
+ 
+ 
+ 
+ 
+50. 
+The equivalent resistance between the points A and B in the following circuit is 
+5
+x . The value of x  is 
+____  .  
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+CHEMISTRY 
+ 
+SECTION-A 
+ 
+51. 
+3
+20.0dm  of an ideal gas ' X ' at 600 K and 0.5 MPa undergoes isothermal reversible expansion until 
+pressure of the gas is 0.2 MPa . Which of the following option is correct? 
+(Given: log2
+0.3010
+
+ and log5
+0.6989
+
+) 
+(1) w
+9.1 kJ, U
+0, H
+0,q
+9.1 kJ
+
+
+
+
+
+
+ 
+(2) w
+9.1 J, U
+9.1 J, H
+0;q
+0
+
+
+
+
+
+
+ 
+(3) w
+4.1 kJ, U
+0, H
+0;q
+4.1 kJ
+
+
+
+
+
+
+ (4) w
+3.9 kJ, U
+0, H
+0;q
+3.9 kJ
+
+
+
+
+
+
+ 
+52. 
+ CORRECT order of stability for the following is 
+2
+3
+2
+CH
+CH ,CH
+CH ,CH
+C
+
+
+
+
+
+
+ 
+(1) 
+3
+2
+2
+CH
+CH
+CH
+CH
+CH
+C
+
+
+
+
+
+
+
+
+ 
+(2) 
+2
+3
+2
+CH
+CH
+CH
+C
+CH
+CH
+
+
+
+
+
+
+
+
+ 
+(3) 
+2
+3
+2
+CH
+C
+CH
+CH
+CH
+CH
+
+
+
+
+
+
+
+
+ 
+(4) 
+3
+2
+2
+CH
+C
+CH
+CH
+CH
+CH
+
+
+
+
+
+
+
+
+ 
+53. 
+At T(K),2  moles of liquid A and 3 moles of liquid B are mixed. The vapour pressure of ideal solution 
+formed is 320 mm Hg . At this stage, one mole of A and one mole of B are added to the solution. The 
+vapour pressure is now measured as 328.6 mm Hg . The vapour pressure (in mm Hg ) of A and B are 
+respectively: 
+(1)  300,200 
+ 
+(2) 600,400 
+ 
+(3) 400,300 
+ 
+(4) 500, 200 
+ 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page #
+8
+
+--- Page 9 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+54. 
+ Consider the following reaction sequence 
+ 
+ 
+Compound (y)  develops characteristic colour with neutral FeCl3 solution. Identify the INCORRECT 
+statement from the following for the above sequence. 
+(1) Both compounds x and y will dissolve in NaOH . 
+(2) Compound y will dissolve in NaHCO3 and evolve a gas. 
+(3) Compound x is more acidic than compound y. 
+(4) Both compounds x and y will burn with sooty flame. 
+55. 
+Method used for separation of mixture of products ( B and C ) obtained in the following reaction is  
+ 
+ 
+ 
+(1) simple distillation 
+ 
+ 
+(2) sublimation 
+(3) steam distillation 
+ 
+ 
+(4) fractional distillation 
+56. 
+Consider a weak base ' B ' of 
+b
+pK
+5.699
+
+. ' x ' mL of 0.02 M HCl and ' y ' mL of 0.02 M weak base 'B' 
+are mixed to make 100 mL of a buffer of pH 9 at 25 C
+
+. The values of ' x  ' and ' y  ' respectively are : 
+[Given: log 2
+0.3010,log3
+0.4771,log5
+0.699
+
+
+
+] 
+(1) 
+ 
+ 
+ 
+(2) 
+ 
+(3) 
+ 
+ 
+ 
+(4) 
+ 
+57. 
+ An organic compound undergoes first order decomposition. The time taken for decomposition to 
+th 
+1
+8
+
+
+
+
+
+
+ 
+and 
+th 
+1
+10
+
+
+
+
+
+
+ of its initial concentration are 1/8
+t
+ and 1/10
+t
+ respectively. 
+What is the value of 
+1/8
+1/10
+t
+10
+t
+
+ ? (log 2
+0.3)
+
+ 
+(1) 9 
+ 
+ 
+(2) 0.9  
+ 
+(3) 3 
+ 
+ 
+(4) 30 
+ 
+ 
+ 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page #
+9
+
+--- Page 10 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+58. 
+ Given below are two statements for the following reaction sequence.  
+ 
+ 
+ 
+Statement I: Compound ' Z ' will give yellow precipitate with NaOI . 
+Statement II: Compound 'Q' has two different types of 'H' atoms (aromatic : aliphatic) in the ratio  
+1 : 3. 
+In the light of the above statements, choose the correct answer from the options given below: 
+(1) Statement I is true but Statement II is false 
+(2) Both Statement I and Statement II are true 
+(3) Statement I is false but Statement II is true 
+(4) Both Statement I and Statement II are false 
+59. 
+Given below are the four isomeric compounds (P,Q, R, S) 
+ 
+ 
+ 
+Identify correct statements from below. 
+A. Q,R  and S will give precipitate with 2,4-DNP. 
+B. P  and Q  will give positive Bayer's test. 
+C. Q and R will give sooty flame. 
+D. R and S will give yellow precipitate with 
+2I / NaOH . 
+E. Q alone will deposit silver with Tollen's reagent 
+Choose the correct option. 
+(1) A, C and E only 
+ 
+ 
+(2) A and E only 
+(3) C and E only 
+ 
+ 
+(4) A, B, D and E only 
+60. 
+Given below are two statements: 
+Statement I: The number of species among 
+4
+4
+4
+BF ,SiF ,XeF
+
+ and 
+4
+SF , that have unequal E
+F
+
+ bond 
+lengths is two. Here, E is the central atom. 
+Statement II: Among 
+2
+2
+2
+2
+O ,O ,F
+
+
+ and 
+2
+2
+O ,O
+
+has the highest bond order. 
+In the light of the above statements, choose the correct answer from the options given below 
+(1) Both Statement I and Statement II are false  
+(2) Both Statement I and Statement II are true 
+(3) Statement I is true but Statement II is false 
+ 
+(4) Statement I is false but Statement II is true 
+ 
+ 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page # 10
+
+--- Page 11 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+61. 
+Regarding the hydrides of group 15 elements 
+3
+EH (E
+N,P,As,Sb)
+
+, select the correct statement from 
+the following: 
+A. The stability of hydrides decreases down the group. 
+B. The basicity of hydrides decreases down the group. 
+C. The reducing character increases down the group. 
+D. The boiling point increases down the group. 
+Choose the correct answer from the options given below: 
+(1) A, B & C only 
+(2) A & D only 
+ 
+(3) A, B, C & D  
+(4) B & C only 
+62. 
+Given below are two statements: 
+Statement I: Griss-Ilosvay test is used for the detection of nitrite ion, which involves the use of 
+sulphanilic acid and -naphthylamine reagent. 
+Statement II: In the above test, sulphanilic acid is diazotized by the acidified nitrite ion, which on further 
+coupling with -naphthylamine forms an azo-dye. 
+ 
+In the light of the above statements, choose the correct answer from the options given below 
+(1) Statement I is false but Statement II is true 
+(2) Both Statement I and Statement II are true 
+(3) Statement I is true but Statement II is false 
+(4) Both Statement I and Statement II are false 
+63. 
+ Consider the following reactions giving major product. Identify the correct reaction. 
+ 
+(1) 
+ 
+ 
+(2) 
+ 
+ 
+(3) 
+ 
+ 
+(4) 
+ 
+64. 
+In the given pentapeptide, find out an essential amino acid (Y) and the sequence present in the 
+pentapeptide: 
+ 
+ 
+Choose the correct answer from the options given below:  
+(1) 
+ 
+(2) 
+ 
+(3) 
+ 
+(4) 
+ 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page # 11
+
+--- Page 12 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+65. 
+ 
+2
+(PhCOO)
+2
+HBr
+Ph
+CH
+CH
+ Product 
+
+
+
+ 
+ 
+Consider the above reaction 
+A. The reaction proceeds through a more stable radical intermediate. 
+B. The role of peroxide is to generate H (Hydrogen radical). 
+C. During this reaction, benzene is formed as a byproduct. 
+D. 1-Bromo-2-phenylethane is formed as the minor product. 
+E. The same reaction in absence of peroxide proceeds via carbocation intermediate. 
+Identify the correct statements. Choose the correct answer from the options given below: 
+(1) A & E Only  
+ 
+ 
+(2) A, B & D Only 
+(3) C, D & E Only 
+ 
+ 
+(4) A, C & E Only 
+66. 
+The wave numbers of three spectral lines of H atom are considered. Identify the set of spectral lines 
+belonging to Balmer series. ( R  Rydberg constant) 
+(1) 5R 3R 21R
+,
+,
+36 16
+100
+ 
+ 
+ 
+(2) 5R 8R 15R
+,
+,
+36
+9
+16
+ 
+(3) 7R 3R 16R
+,
+,
+144 16
+255
+ 
+ 
+ 
+(4) 3R 3R 7R
+,
+,
+4
+16 144
+ 
+67. 
+ 
+ 
+Which of the following point in Figure 2 most accurately represents the nodal surface as shown in 
+Figure 1.  
+(1) B 
+ 
+ 
+(2) D 
+ 
+ 
+(3) C 
+ 
+ 
+(4) A  
+68. 
+Given below are two statements: 
+Statement I: The number of pairs, from the following, in which both the ions are coloured in aqueous 
+solution is 3 . 
+3
+3
+2
+2
+2
+2
+2
+4
+Sc ,Ti
+, Mn
+,Cr
+, Cu
+,Zn
+ and Ni ,Ti
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+Statement II: 
+4
+Th  is the strongest reducing agent among 
+4
+4
+3
+Th ,Ce ,Gd
+
+
+ and 
+2
+Eu . 
+In the light of the above statements, choose the correct answer from the options given below 
+(1) Statement I is true but Statement II is false 
+(2) Statement I is false but Statement II is true 
+(3) Both Statement I and Statement II are false 
+(4) Both Statement I and Statement II are true  
+69. 
+In period 4 of the periodic table, the elements with highest and lowest atomic radii are respectively. 
+(1) Na & Cl 
+ 
+(2) K&Se  
+ 
+(3) K&Br  
+ 
+(4) Rb& Br  
+ 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page # 12
+
+--- Page 13 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+70. 
+ The correct statement among the following is: 
+(1) 
+
+2
+4
+Ni(CN)
+ and 
+
+2
+4
+NiCl
+ are diamagnetic and 
+4
+Ni(CO)  is paramagnetic. 
+(2)
+4
+Ni(CO)  and 
+
+2
+4
+NiCl
+ are diamagnetic and 
+
+2
+4
+Ni(CN)
+ is paramagnetic. 
+(3)
+4
+Ni(CO)  and 
+
+2
+4
+Ni(CN)
+ are diamagnetic and 
+
+2
+4
+NiCl
+ is paramagnetic. 
+(4) 
+4
+Ni(CO)  is diamagnetic and 
+
+2
+4
+NiCl
+ and 
+
+2
+4
+Ni(CN)
+ are paramagnetic. 
+SECTION-B 
+71. 
+500 mL of 1.2 M KI solution is mixed with 500 mL of 
+4
+0.2MKMnO  solution in basic medium. The 
+liberated iodine was titrated with standard 
+2
+2
+3
+0.1 MNa  S O  solution in the presence of starch indicator 
+till the blue color disappeared. The volume (in L ) of 
+2
+2
+3
+Na  S O  consumed is ____  . (Nearest integer) 
+72. 
+Consider the following redox reaction taking place in acidic medium 
+4
+3
+2
+3
+BH (
+)
+ClO (
+)
+H BO (
+)
+Cl (
+)
+
+
+
+
+
+
+
+aq
+aq
+aq
+aq  
+If the Nernst equation for the above balanced reaction is 
+cell
+cell
+RT
+E
+E
+ln Q,
+nF
+
+
+
+ 
+then the value of n  is ____  .(Nearest integer) 
+73. 
+ X is the number of geometrical isomers exhibited by 
+
+
+
+3
+2
+Pt NH
+H O BrCl
+
+
+
+. 
+Y is the number of optically inactive isomer(s) exhibited by 
+
+3
+2
+2
+CrCl (ox)
+ 
+Z is the number of geometrical isomers exhibited by 
+
+
+
+3
+2
+3
+3
+Co NH
+NO
+
+
+
+. 
+The value of X
+Y
+Z
+
+
+ is ____  . 
+74. 
+ 0.53 g of an organic compound (x)  when heated with excess of nitric acid (concentrated) and then 
+with silver nitrate gave 0.75 g of silver bromide precipitate. 1.0 g of (x)  gave 1.32 g of 
+2
+CO  gas on 
+combustion. The percentage of hydrogen in the compound (x)  is ____  %. [Nearest Integer] 
+[Given: Molar mass in 
+1
+gmol H:1,C:12,Br :80,Ag:108,O:16
+
+; Compound (x)  : 
+x
+y
+z
+C H Br  
+75. 
+Consider the dissociation equilibrium of the following weak acid 
+HA
+H (aq)
+A (aq)
+
+
+
+ 
+If the pKa of the acid is 4 , then the pH of 10 mM HA solution is ____  .(Nearest integer) 
+[Given: The degree of dissociation can be neglected with respect to unity] 
+ 
+ 
+ 
+ 
+ 
+ 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page # 13
+
+--- Page 14 ---
+ 
+ 
+ 
+JEE-Main 28-01-2026 (Morning Session) 
+ANSWER KEY 
+ 
+1. 
+(3) 
+2. 
+(2) 
+3. 
+(3) 
+4. 
+(1) 
+5. 
+(3) 
+6. 
+(4) 
+7. 
+(3) 
+8. 
+(4) 
+9. 
+(4) 
+10. 
+(1) 
+11. 
+(2) 
+12. 
+(2) 
+13. 
+(3) 
+14. 
+(3) 
+15. 
+(1) 
+16. 
+(2) 
+17. 
+(3) 
+18. 
+(1) 
+19. 
+(4) 
+20. 
+(2) 
+21. 
+90 
+22. 
+8 
+23. 
+1 
+24. 
+210 
+25. 
+37 
+26. 
+(1) 
+27. 
+(4) 
+28. 
+(2) 
+29. 
+(2) 
+30. 
+(3) 
+31. 
+(3) 
+32. 
+(3) 
+33. 
+(2) 
+34. 
+(2) 
+35. 
+(4) 
+36. 
+(1) 
+37. 
+(4) 
+38. 
+(4) 
+39. 
+(4) 
+40. 
+(2) 
+41. 
+(3) 
+42. 
+(2) 
+43. 
+(3) 
+44. 
+(1) 
+45. 
+(2) 
+46. 
+2 
+47. 
+2 
+48. 
+265 
+49. 
+3 
+50. 
+21 
+51. 
+(1) 
+52. 
+(3) 
+53. 
+(4) 
+54. 
+(3) 
+55. 
+(4) 
+56. 
+(3) 
+57. 
+(1) 
+58. 
+(2) 
+59. 
+(1) 
+60. 
+(1) 
+61. 
+(1) 
+62. 
+(2) 
+63. 
+(4) 
+64. 
+(3) 
+65. 
+(4) 
+66. 
+(1) 
+67. 
+(1) 
+68. 
+(3) 
+69. 
+(3) 
+70. 
+(3) 
+71. 
+3 
+72. 
+24 
+73. 
+6 
+74. 
+ 4 
+75. 
+3 
+ 
+ 
+52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ; 
+www.competishun.com
+Page # 14

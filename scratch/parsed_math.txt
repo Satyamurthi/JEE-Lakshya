@@ -1,0 +1,73 @@
+
+--- Q2 (Page 1) ---
+[244]   k ( k  1) 
+[248] 
+[252] (  1) k  1
+[256] 2. The value of   is
+[264]  k ! 
+[268] k  1
+[288] (1) 2 / e (2) 1/ e (3) e (4) e / 2
+
+--- Q4 (Page 1) ---
+[404] (1) 10 (2) –6 (3) –2 (4) 6
+[420] tan(A  B) sin 2 C   
+[428]   1, A, B,C  0,
+[432] 4. If  , then
+[440] tan A sin 2 A  2 
+[460] tan A ,tan C ,tan B tan A ,tan B ,tan C
+[464] (1) are in G.P. (2) are in G.P.
+[484] (3) tan A ,tan C ,tan B are in A.P. (4) tan A ,tan B ,tan C are in A.P.
+
+--- Q5 (Page 1) ---
+[504] 5. Let z be a complex number such that | z  6|  5 and | z  2 6 i |  5 . Then the value of
+[528] z 3  3 z 2  15 z  141 is equal to
+[548] (1) 42 (2) 37 (3) 50 (4) 61
+
+--- Q8 (Page 2) ---
+[48]  
+[52] S  x 3  ax 2  bx  c : a , b , c  N a , b , c  20
+[56] 8. Let and be a set of polynomials. Then the number of
+[80] x 2  2
+[84] polynomials in S , which are divisible by , is
+[100] (1) 20 (2) 6 (3) 120 (4) 10
+
+--- Q9 (Page 2) ---
+[116] k (10 k ) 0  k  10
+[120] 9. A bag contains 10 balls out of which are red and are black, where . If three balls
+[140] are drawn at random without replacement and all of them are found to be black, then the probability
+[156] that the bag contains 1 red and 9 black balls is:
+[176] 7 7 7 14
+[184] (1) (2) (3) (4)
+[192] 11 55 110 55
+
+--- Q10 (Page 2) ---
+[212] 1 1 1
+[216] ,   ,  2      
+[220] 10. If , where are the roots of the equation x ( 3) x 3 0 such that ,
+[228]   3
+[248] 
+[252] then the sum of all possible values of is
+[268] (1) 6 (2) 2 (3) 4 (4) 8
+
+--- Q11 (Page 2) ---
+[288]  1  5cos 2 x       
+[292] 
+[296] dx  f ( x )  C f  f
+[300] 11. If   , where C is the constant of integration, then     is
+[304] 5 2
+[308]  sin x cos x   6   4 
+[328] equal to
+[348] 1 4 1 2
+[352]    
+[356] (1) (26 3) (2) (8 6) (3) (26 3) (4) (4 6)
+[364] 3 3 3 3
+
+--- Q12 (Page 2) ---
+[384]  
+[388] f 3
+[392] 12. Let f be a polynomial function such that f x 2  1  x 4  5 x 2  2 , for all x  . Then ( x ) dx is
+[404] 0
+[416] equal to
+[436] 41 33 27 5
+[444] (1) (2) (3) (4)
+[452] 3 2 2 3

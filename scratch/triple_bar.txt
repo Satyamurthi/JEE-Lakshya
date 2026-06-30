@@ -1,0 +1,266 @@
+ID: pyq_jee_main_2013_25_apr-q-48
+Statement: The Gibbs energy for the decomposition of  at  is as follows :
+ The potential difference needed for the electrolytic reduction
+of aluminium oxide at  should be at least :
+JEE Main 2013 (25 Apr Online)
+CaO + H 2O → Ca(OH) 2 SrO + H 2O → Sr(OH) 2
+BaO + H 2O → Ba(OH) 2 MgO + H 2O → Mg(OH) 2
+Δ fH ∘ N2O 82 kJ mol −1 N ≡ N, N = N, O = O N = O
+946, 418, 498 607 kJ mol−1 N2O
+−88 kJ −66 kJ
+−62 kJ −44 kJ
+Kp
+Kc CO(g) +1
+2O2(g)⇌ CO2(g)
+1
+√ RT (RT)1/2
+RT 1
+pH 5 g 7.5 g
+500 mL (K a = 1.75 × 10−5, pKa = 4.76)
+pH = 4.70 pH < 4.70
+pH pH 4.76 < pH < 5.0
+I− < F − < HS − < NH −
+2 HS − < NH −
+2 < F − < I −
+F − < I − < NH −
+2 < HS − NH −
+2 < HS − < I − < F −
+B > A > C > D D > C > B > A
+A > B > C > D B > C > A > D
+361 pm
+157 pm 128 pm
+108 pm 181 pm
+Al2O 3 500 C
+2
+3Al2O 3 → 4
+3Al + O 2, ΔrG= +940 kJ mol−1
+500∘C
+Join the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN
+--- Page 9 ---
+Options: ['Option 1', 'Option 2', 'Option 3', 'Option 4']
+
+ID: pyq_jee_main_2019_12_apr_shift_2-q-58
+Statement: Benzene diazonium chloride on reaction with aniline in the presence of dilute hydrochloric acid gives:
+JEE Main 2019 (12 Apr Shift 2)
+(A)
+(R) π−
+(A) (R) (R) (A).
+(A) (R)
+(A) (R) (R) (A).
+(A) (R)
+CH 2= CH2 CH ≡ CH
+CH 3−C ≡ C−CH 3 CH 3−C ≡ CH
+(HC ≡ C−CH 2Br)
+K2CO 3
+Join the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN
+--- Page 11 ---
+Options: ['Option 1', 'Option 2', 'Option 3', 'Option 4']
+
+ID: pyq_jee_main_2019_12_jan_shift_1-q-42
+Statement: The correct order for acid strength of compounds  and  is as follows:
+Options: ['Option 1', 'Option 2', 'Option 3', 'JEE Main 2019 (12 Jan Shift 1)\nA+2B\nK\n⇌ 2C+D B 1.5\nA A B (K)\n1 4\n1\n4 16\nA\xa0(s) ⇌ B\xa0(g)+C\xa0(g); KP 1 = x atm2\nD\xa0(s) ⇌ C\xa0(g)+E\xa0(g); KP 2= y atm2\n√x+y\xa0atm x2+y2\xa0atm\n(x+y)\xa0atm 2(√x+y)\xa0atm\n50 mL 0 .5 M 25 mL\nNaOH 50 mL\n2g 4g\n1g 8g\n( CaCO3) 10 −3M CaSO 4\n( CaSO4 = 136g mol−1)\n90 50\n10 100\nX X H2O2 O2\nNa Mg\nLi Rb\nCH ≡ CH, CH3−C ≡ CH CH 2= CH2\nCH3−C ≡ CH > CH ≡ CH > CH2= CH2 HC ≡ CH > CH3−C ≡ CH > CH2= CH2\nCH ≡ CH > CH2= CH2> CH 3−C ≡ CH CH 2−C ≡ CH > CH2= CH2> HC ≡ CH\nJoin the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN']
+
+ID: pyq_jee_main_2020_03_sep_shift_1-q-32
+Statement: The Kjeldahl method of Nitrogen estimation fails for which of the following reaction products?
+Options: ['(c) and (d)', '(a) and (d)', '(a), (c) and (d)', '(b) and (c)\nJEE Main 2020 (03 Sep Shift 1)\n109 102\n108 119\nH 2O 373\xa0K H 2S\n300\xa0K 373\xa0K\n373\xa0K 300\xa0K 373\xa0K\nNO, NO+ , NO2+ NO − ,\nNO + NO\nNO 2+ NO −\n100 mL of 0 .1 MCH3COOH and 100 mL of 0 .1 MNaOH\n100 mL of 0 .1 MHCl \xa0 and 200 mL of 0 .1 MNaCl\n100 mLof0 .1MCH 3COOHand200 mLof0 .1MNaOH\n100 mL of 0 .1 MHCl \xa0 and 200 mL of 0 .1 MCH3COONa\nH 3C − C ≡ C − H\nJoin the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN']
+
+ID: pyq_jee_main_2020_06_sep_shift_2-q-25
+Statement: The output characteristics of a transistor is shown in the figure. When   is  and , then
+value of  is 
+JEE Main 2020 (06 Sep Shift 2)
+2R R
+2
+3R
+2
+R
+3
+m P = 1, 0072 u mn = 1, 0087 u me= 0 .000548 u mv = 0¯
+m d = 2 .0141 u p = n ≡ e ≡ v ≡¯d ≡¯
+n + n → p → n + e + + v¯
+n + p → d + γ e+ + e− → γ
+5. 50  mm 5. 55  mm 5. 34  mm 5. 65  mm
+5. 5375  mm 0. 07395  mm
+(5 .5375 ±0 .0739) mm (5 .5375 ±0 .0740) mm
+(5 .538 ±0 .074) mm (5 .54 ±0 .07) mm
+8  cm x  cm
+x
+LR 400 W 250 V,  50  Hz
+0. 8 C L
+R C ( n
+3π) μF n
+λ
+λ K
+λ
+6
+nK
+12 n n
+V CE 10V I C = 4 .0 mA
+βac
+Join the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN
+--- Page 5 ---
+Options: []
+
+ID: pyq_jee_main_2020_08_jan_shift_2-q-36
+Statement: Which of the following compounds is likely to show both Frenkel and Schottky defects in its crystalline form?
+Options: ['Option 1', 'Option 2', 'Option 3', 'JEE Main 2020 (08 Jan Shift 2)\nC 6H 5NH 2 CH 3CH 2−C ≡ N\nC 6H 5NO 2\n1\nT\nEb> Ea> Ed> Ec Ea> Ec> Ed> Eb\nEc> Ea> Ed> Eb Eb> Ed> Ec> Ea\nX\nX\n(i)O3\n(ii)Zn\nH 2O\nA\n[Ag(NH3)2]+\nB−→−→ X\nAgBr CsCl\nKBr ZnS\nJoin the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN']
+
+ID: pyq_jee_main_2021_16_mar_shift_2-q-42
+Statement: Arrange the following metal complex/ compounds in the increasing order of spin only magnetic moment.
+Presume all the three, high spin system.
+(Atomic numbers  and .)
+(a) 
+(b)  and
+(c)
+Options: ['Option 1', 'Option 2', 'Option 3', 'JEE Main 2021 (16 Mar Shift 2)\nHC ≡ C−CH 2−CH 3 CH 3−C ≡ C−CH 3\nAl3+\nNa+\nAl2O 3→ Al ZnO → Zn\nFe2O 3→ Fe Cu2O → Cu\nFex2 Fey3 x y\nx = F,Cl,Br,I y = F,Cl,Br x = F,Cl,Br y = F,Cl,Br,I\nx = Cl,Br,I y = F,Cl,Br,I x = F,Cl,Br,I y = F,Cl,Br,I\nCe = 58,\xa0Gd = 64 Eu = 63\n(NH4)2[Ce(NO3)6]\nGd(NO3)3\nEu(NO3)3\n(b) < (a) < (c) (c) < (a) < (b)\n(a) < (b) < (c) (a) < (c) < (b)\nJoin the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN']
+
+ID: pyq_jee_main_2021_24_feb_shift_2-q-59
+Statement: Among the following allotropic forms of sulphur, the number of allotropic forms, which will show
+paramagnetism is _______.
+(A) -sulphur
+(B) -sulphur
+(C) -form
+JEE Main 2021 (24 Feb Shift 2)
+O 2
+4 CO 2 C xH y. y
+1.86 g 10%
+g ×10−2.
+4.75 g 50°C 740 mm Hg L.
+R = 0.0826 L atm K−1 mol−1
+log K 25°C x×10−1.
+x
+3HC ≡ CH(g)⇌ C6H 6(l)
+ΔfG°(HC ≡ CH) = −2.04×105 J mol−1; ΔfG°(C6H 6) = −1.24×105 J mol−1; R = 8.314 J K−1 mol−1
+PbI2 8.0×10−9. 0.1
+x×10−6 mol/L. x
+√2 = 1.41
+C 6H 6 5.5°C. 10 g C4H 10 200 g C6H 6
+∘C. C 6H 6 5.12°C/m.
+MnO −
+4 /Mn 2+ x×10−4 V H +
+1 M 10 −4M 25°C. MnO −
+4 Mn 2+
+H + x
+2.303RT
+F = 0.059
+3.33 h 25°C. 9 h, f. log10(1
+f) ×10−2.
+10 = 2.303, ln 2 = 0.693
+α
+β
+S 2
+Join the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN
+--- Page 10 ---
+Options: []
+
+ID: pyq_jee_main_2021_25_feb_shift_1-q-61
+Statement: The integer 
+ for which the inequality  is valid for every  in  is:
+Options: ['Option 1', 'Option 2', 'Option 3', 'JEE Main 2021 (25 Feb Shift 1)\nRf A\xa0is\xa0_____×10−1\nCH ≡ CH \xa01)\xa0Red\xa0hot\xa0Fe\xa0tube,\xa0873\xa0K\n\xa02)\xa0CO,HCl,AlCl3\n> \xa0Product\xa0\nsp2\n1 A2\xa0B3 60% 1\xa0atm\nK K b (H2O) = 0.52\xa0K\xa0kg\xa0mol−1\naA+bB → cC+dD, log\xa0k 1\n\xa0T\n10−4\xa0s−1 K.\n10−5\xa0s−1 500\xa0K\nBF 3\nSiCl4\nPCl5\nSF 6\nk, x2−2(3k−1)x+8k2−7 > 0 x R\n4 2\n3 0\nJoin the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN']
+
+ID: pyq_jee_main_2021_26_aug_shift_2-q-49
+Statement: The Major Product in the above reaction is :
+JEE Main 2021 (26 Aug Shift 2)
+1, 2
+CH 3COOCH 2CH 3 → CH 3CH 2OH CH 3MgBr /H 3O +
+CH 3COOCH 3 → CH 3CHO H 2SO 4 /H2O
+CH 3C ≡ N → CH 3CHO DIBAL − H/H 2O
+SnCl2, HCl /H2O
+(a) − (ii),  (b) − (iii),  (c) − (iv),  (d) − (i) (a) − (ii),  (b) − (iv),  (c) − (iii),  (d) − (i)
+(a) − (iii),  (b) − (ii),  (c) − (i),  (d) − (iv) (a) − (iv),  (b) − (ii),  (c) − (iii),  (d) − (i)
+Join the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN
+--- Page 10 ---
+Options: ['Option 1', 'Option 2', 'Option 3', 'Option 4']
+
+ID: pyq_jee_main_2022_26_jul_shift_1-q-50
+Statement: Which of the following is reducing sugar?
+JEE Main 2022 (26 Jul Shift 1)
+(PhMgBr)
+CH 3–C ≡ N Ph − C ≡ N
+Join the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN
+--- Page 11 ---
+Options: ['Option 1', 'Option 2', 'Option 3', 'Option 4']
+
+ID: pyq_jee_main_2023_01_feb_shift_1-q-35
+Statement: But-2-yne is reacted separately with one mole of Hydrogen as shown below:
+B
+¯
+Na
+  ⎯ ⎯ ⎯ ⎯  liq  NH3
+CH3 - C ≡
++H2
+C - CH3
+Pd / C
+  ⎯ ⎯  ∆ A
+¯
+Identify the incorrect statements from the options given below:
+A. A is more soluble than B.
+B. The boiling point & melting point of A  are higher and lower than B respectively.
+C. A is more polar than B because dipole moment of A is zero.
+D. Br2 adds easily to B than A.
+Options: ['B and C only', 'B, C and D only', 'A, C and D only', 'A and B only']
+
+ID: pyq_jee_main_2023_06_apr_shift_1-q-42
+Statement: Match List I with List II
+List I
+Oxide
+List II
+Type of bond
+A N2O4 I 1  N  =  O  bond
+B NO2 II 1  N  –  O  – N  bond
+C N2O5 III 1  N  –  N  bond
+D N2O IV 1  N  =  N  /  N  ≡  N  bond
+Choose the correct answer from the options given below :
+Options: ['A - III,  B - I,  C - II,  D - IV', 'A - II,  B - IV,  C - III,  D - I', 'A - III,  B - I,  C - IV,  D - II', 'A - II,  B - I,  C - III,  D - IV']
+
+ID: pyq_jee_main_2024_30_jan_shift_1-q-41
+Statement: Diamagnetic Lanthanoid ions are:
+Options: ['and', 'and', 'and', 'and \nJEE Main 2024 (30 Jan Shift 1)\nA\nA B C A B.\nA = CH 3 − C ≡ C − Na+ , B = CH 3 − CH 2 − CH 2 − Br\nA = CH 3 − CH = CH 2, \xa0B = CH 3 − CH 2 − CH 2 − Br\nA = CH 3 − CH 2 − CH 3, \xa0B = CH 3 − C ≡ CH\nA = CH 3 − C ≡ C − Na+ , B = CH 3 − CH 2 − CH 3\nA B\nA − CrO 3\xa0\xa0\xa0B − CrO3 A− \xa0 CrO 3\xa0\xa0\xa0B − CrO2 Cl2\nA − CrO 2 Cl2 \xa0\xa0\xa0B − CrO2 Cl2 A − CrO 2 Cl2 \xa0\xa0\xa0B − CrO3\nNd3+ Eu 3+ La3+ Ce 4+\nNd3+ Ce 4+ Lu 3+ Eu 3+\nJoin the Most Relevant Test Series for JEE Main with Most Detailed & Advanced Analysis here: https://links.mathongo.com/mWN']
+
+ID: pyq_jee_main_2025_22_jan_shift_1-q-74
+Statement: Some  gas was kept in a sealed container at a pressure of 1 atm and at 273 K . This entire amount of 
+gas was later passed through an aqueous solution of . The excess unreacted  was later
+neutralized with 0.1 M of 40 mL HCl . If the volume of the sealed container of  was , then  is ________
+ (nearest integer). [Given : The entire amount of  reacted with exactly half the initial amount of
+ present in the aqueous solution.]
+2025 (22 Jan Shift 1)
+JEE Main 2025 January
+Δ o
+[Fe(en)3]Cl3 K 4[Fe(CN)6]
+[Fe(NH 3)6]Br2 K 3[Fe(SCN)6]
+10−4M  NaCl 10−4M  
+10−3M  NaCl 10−2M  NaCl
+)≡ (
+[NiCl4]2− [Ni(CO)4]
+[NiCl4]2− :NiII [Ni(CO)4] :NiII [NiCl4]2− NiII [Ni(CO)4] :Ni(0)
+[NiCl4]2− :NiII [Ni(CO)4] :Ni(0) [NiCl4]2− :Ni(0) [Ni(CO)4] :Ni(0)
+SO2,BeCl2,CO2, N−3,NO2, F2O,XeF2,NO+2,I−3,O3
+A →  B
+191.48 kJ  mol−1 1020 50% B
+[R = 8.314 J  K −1 mol−1]
+(A) gmol−1
+CO2 CO2
+Ca(OH)2 Ca(OH)2
+CO2 x x
+cm 3 CO2( g)
+Ca(OH)2
+--- Page 13 ---
+Options: ['Option A', 'Option B', 'Option C', 'Option D']
+
+ID: pyq_jee_main_2026_02_apr_shift_1-q-66
+Statement: For the given molecule, " ", the preferred site for the attack of the electrophile is :
+Options: ['Predominantly at "r"', '"r" and "u"', '"p" and "s"', '02 April (Morning Shift)\nAnswer Keys\nJEE Main 2026\nMathonGo\n#PaperPhodnaHai\nwww.mathongo.com\nSN1\n−CONH2,> C =O,−CHO,−NH2,−C ≡C−\n−CONH2,−COOCH3,−CHO,−NH2,−OH\n−CONH2,−CHO,> C =O,−NH2,−C ≡C−\n−CONH2,−CHO,−CN,−NH2,−C ≡C−\nx']
+
+ID: pyq_jee_main_2026_02_apr_shift_1-q-68
+Statement: Consider the three aromatic molecules (P, Q and R) whose structures have been given below :
+The correct order regarding the reactivity of these compounds with  under optimum but slightly
+acidic medium is :
+Options: ['02 April (Morning Shift)\nAnswer Keys\nJEE Main 2026\nMathonGo\n#PaperPhodnaHai\nwww.mathongo.com\nCHCl3+KOH,Δ\nFeCl3\nPh−N ≡NCl(−)\n(+)\nP> Q> R R > P> Q\nR > Q> P P> R > Q', 'Option 2', 'Option 3', 'MathonGo Answer Key :']
+
+ID: pyq_jee_main_2026_05_apr_shift_2-q-67
+Statement: Given below are two statements :
+Statement I: Heating benzamide with bromine in an ethanolic solution of sodium hydroxide will give benzylamine.
+Statement II: Nitration of aniline with  at  produces -nitroaniline in higher amount than -
+nitroaniline (pH adjusted).
+In the light of the above statements, choose the correct answer from the options given below :
+Options: ['Both Statement I and Statement II are true', 'Both Statement I and Statement II are false', 'Statement I is true but Statement II is false', '05 April (Evening Shift)\nAnswer Keys\nJEE Main 2026\nMathonGo\n#PaperPhodnaHai\nwww.mathongo.com\nCH3−CH2−C ≡N P\xa0(M ajorproduct)(i)\xa0OH−/H2O/Δ\n−→(ii)\xa0H3O+\n(iii)\xa0Cl2/Red P\n−→(iv)\xa0H2O\nCH3−CH=O H2N −NH−C(=O)−NH2\nCH3−CH=N −N(H)−C(=O)−NH2\nPh−CH(O−H)(O−CH3) Ph−CH=O\nHNO3/H2SO4 288\xa0K m o']
+

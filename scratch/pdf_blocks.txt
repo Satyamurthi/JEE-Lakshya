@@ -1,0 +1,589 @@
+
+--- PAGE 1 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[178.0, 53.6] FINAL JEE-MAIN EXAM, 2026
+[50.4, 81.1] Held On 28 January, Wednesday 2026  TIME : 9 : 00 AM to 12 : 00 PM
+[257.8, 124.5] MATHEMATICS
+[267.4, 160.7] SECTION-A
+[50.4, 179.4] 1.  If  2 ( ) 3 2 3, (0) 3     g x x x f  and  2 4 ( ( )) 3 32 72    g f x x x , then  ( (2)) f g  is equal to:
+[50.4, 207.6] (1) 25
+[119.4, 207.6] (2)  25
+[211.3, 207.6] 6      (3) 7
+[329.5, 207.6] (4)  7 2 
+[107.2, 224.4] 6
+[320.3, 224.4] 2
+[146.0, 243.9]         
+[149.9, 244.3] 
+[160.3, 245.3] ( 1) ( 1) !
+[201.1, 245.3] k k
+[184.8, 251.1] 
+[50.4, 251.9] 2.  The value of  1
+[180.7, 251.9] k
+[245.3, 254.4] is
+[214.1, 262.1] k
+[151.3, 267.8] 
+[147.3, 268.5] k
+[154.8, 268.5] 1
+[50.4, 286.6] (1) 2 / e     (2) 1/ e     (3)  e      (4) e / 2
+[50.4, 307.1] 3.  Let   y x  be the equation of a chord of the circle  1 C  (in the closed half-plane  0  x  ) of diameter 10
+[86.4, 332.0] passing through the origin. Let  2 C  be another circle described on the given chord as its diameter. If the
+[86.4, 355.8] equation of the chord of the circle  2 C , which passes through the point (2,3)  and is farthest from the
+[86.4, 378.2] center of  2 C , is  0    x ay b , then   a b is equal to
+[50.4, 402.3] (1) 10     (2) –6     (3) –2     (4) 6
+[97.8, 420.6] 2 tan(A B) sin C 1, A, B,C 0, tan A sin  A 2         
+[270.6, 420.6]  , then
+[175.8, 421.1] 2
+[50.4, 431.2] 4.  If
+[50.4, 460.5] (1) tan ,tan ,tan A C B  are in G.P.    (2) tan ,tan ,tan A B C  are in G.P.
+[50.4, 482.2] (3) tan ,tan ,tan A C B  are in A.P.    (4) tan ,tan ,tan A B C  are in A.P.
+[50.4, 502.5] 5.  Let z  be a complex number such that | 6| 5   z  and | 2 6 | 5   z i . Then the value of
+[88.8, 526.3] 3 2 3 15 141    z z z  is equal to
+[50.4, 547.3] (1) 42     (2) 37     (3) 50     (4) 61
+[50.4, 564.4] 6.  Let ABC be an equilateral triangle with orthocenter at the origin and the side BC on the line
+[88.8, 583.5] 2 2 4   x y . If the co-ordinates of the vertex A are ( , ) , then the greatest integer less than or
+[86.4, 608.2] equal to | 2 |    is
+[50.4, 631.3] (1) 2      (2) 3      (3) 5      (4) 4
+[50.4, 647.3] 7.  Let S {1,2,3,4,5,6,7,8,9}  . Let x  be the number of 9 -digit numbers formed using the digits of the
+[86.4, 668.8] set S such that only one digit is repeated and it is repeated exactly twice. Let y  be the number of 9-
+[86.4, 690.4] digit numbers formed using the digits of the set S such that only two digits are repeated and each of
+[86.4, 707.7] these is repeated exactly twice. Then,
+[50.4, 723.7] (1) 29 5  x y    (2) 45 7  x y    (3) 21 4  x y     (4) 56 9  x y
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.2] www.competishun.com Page # 1
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 2 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 46.9] 8.  Let  
+[105.0, 49.3] 3 2 S : , ,  N      x ax bx c a b c  and   , , 20  a b c  be a set of polynomials. Then the number of
+[86.4, 79.1] polynomials in S , which are divisible by  2 2  x , is
+[50.4, 100.1] (1) 20     (2) 6      (3) 120     (4) 10
+[50.4, 116.1] 9.  A bag contains 10 balls out of which k  are red and (10 ) k  are black, where 0 10   k . If three balls
+[86.4, 139.1] are drawn at random without replacement and all of them are found to be black, then the probability
+[86.4, 156.4] that the bag contains 1 red and 9 black balls is:
+[50.4, 174.2] (1)  7
+[119.2, 174.2] (2) 7
+[226.5, 174.2] (3) 7
+[339.4, 174.2] (4) 14
+[105.7, 191.1] 11
+[319.0, 191.1] 110
+[211.9, 191.1] 55
+[427.9, 191.1] 55
+[50.4, 210.8] 10.  If  , , where    , are the roots of the equation  2 ( 3) 3 0    x x    such that 1 1 1 3    
+[542.1, 220.0] ,
+[86.4, 247.9] then the sum of all possible values of  is
+[50.4, 268.8] (1) 6      (2) 2      (3) 4      (4) 8
+[98.6, 287.5] 5 2 1 5cos ( ) C sin cos          
+[242.6, 288.3] , where C is the constant of integration, then  6 4              f f    is
+[153.3, 288.6] 2
+[133.5, 289.5] x dx f x x x
+[50.4, 298.8] 11.  If
+[86.4, 329.9] equal to
+[50.4, 347.5] (1)  1 (26 3) 3
+[141.7, 347.5]    (2) 4 (8 6) 3
+[240.5, 347.5]    (3) 1 (26 3) 3
+[355.0, 347.5]    (4) 2 (4 6) 3
+[457.2, 353.7] 
+[50.4, 385.1] 12.  Let f  be a polynomial function such that   2 4 2 1 5 2     f x x x , for all   x . Then
+[492.7, 387.2] 3
+[486.7, 388.7] 0 ( ) f x dx  is
+[86.4, 417.6] equal to
+[50.4, 435.5] (1) 41
+[118.5, 435.5] (2) 33
+[226.5, 435.5] (3) 27
+[335.5, 435.5] (4) 5
+[323.5, 452.3] 2
+[428.1, 452.3] 3
+[106.8, 452.4] 3
+[214.9, 452.4] 2
+[50.4, 467.9] 13.  The area of the region    2 R ( , ): 8,1 , 0      x y xy y x x  is
+[50.4, 499.9] (1)    1 49log (2) 15 3  e     (2)   2 20log (2) 9 3  e
+[50.4, 536.6] (3)   2 24log (2) 7 3  e      (4)   1 40log (2) 27 3  e
+[50.4, 568.6] 14.  The value of        2 10
+[225.9, 576.1]  
+[145.9, 577.4] log sec( ) sec sec lim
+[209.6, 577.4] ex e x e x
+[180.1, 584.9] e
+[345.3, 590.6] is equal to
+[242.8, 596.7] 
+[147.2, 597.1] x x
+[157.7, 597.1] 2 2cos 0
+[230.4, 598.1] e e
+[150.6, 599.3] 
+[50.4, 614.3] (1)    
+[159.4, 614.3] (2)    
+[267.4, 614.3] (3)    
+[364.5, 614.3] (4)    
+[131.6, 619.8] 
+[240.0, 619.8] 
+[342.7, 619.8] 
+[450.3, 619.8] 
+[121.4, 620.3] 10
+[229.8, 620.3] 20
+[332.4, 620.3] 20
+[440.0, 620.3] 10
+[116.4, 621.2] e
+[139.0, 621.2] 1
+[224.0, 621.2] e
+[247.4, 621.2] 1
+[326.7, 621.2] e
+[350.0, 621.2] 1
+[435.1, 621.2] e
+[457.6, 621.2] 1
+[139.3, 640.7] 
+[247.3, 640.7] 
+[344.7, 640.7] 
+[452.7, 640.7] 
+[116.1, 641.1] 2 2
+[224.1, 641.1] 2 2
+[337.9, 641.1] 2
+[445.9, 641.1] 2
+[104.3, 642.1] 2 1
+[110.3, 642.1] e e
+[212.3, 642.1] 2 1
+[218.3, 642.1] e e
+[320.3, 642.1] 2 1
+[332.2, 642.1] e
+[428.3, 642.1] 2 1
+[440.2, 642.1] e
+[50.4, 667.3] 15.  The mean and variance of 10 observations are 9 and 34.2 , respectively. If 8 of these observations are
+[86.4, 684.7] 2,3,5,10,11,13,15,21, then the mean deviation about the median of all the 10 observations is
+[50.4, 702.0] (1) 5      (2) 4      (3) 6      (4) 7
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.2] www.competishun.com Page # 2
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 3 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 51.0] 16.  Let A,B and C  be three 2 2   matrices with real entries such that  1 ( )   B I A  and A C I   . If
+[88.3, 75.3] 1 5 BC 1 2        
+[188.3, 76.0] 12 CB 6              
+[211.6, 76.5] x x
+[216.1, 84.1] 1
+[264.6, 84.1] , then  1 2  x x  is
+[164.4, 87.1] and
+[216.8, 102.1] 2
+[50.4, 118.1] (1) 2      (2) 0      (3) –2     (4) 4
+[50.4, 135.0] 17.  The common difference of the A.P.:  1 2 m , , ,  a a a  is 13 more than the common difference of the A.P.:
+[87.9, 158.8] 1 2 , , ,  n b b b . If  31 43 277, 385   b b  and  78 327  a , then  1a  is equal to
+[50.4, 182.9] (1) 21     (2) 24     (3) 19     (4) 16
+[50.4, 199.3] 18.  If the distances of the point (1,2, ) a  from the line  1 1 1 2 1     x y z  along the lines
+[88.3, 236.1] 1 2 L : 3 4      x y z a b
+[229.5, 236.1] 1 2 L : 1 4      x y z a c
+[347.7, 243.7] are equal, then   a b c  is equal to
+[205.5, 246.6] and  2
+[95.3, 252.5] 1
+[50.4, 273.6] (1) 7      (2) 5      (3) 6      (4) 4
+[50.4, 292.6] 19.  For three unit vectors , , a b c  satisfying  2 2 2 | | | | | | 9       a b b c c a  and | 2 | 3    a kb kc , the
+[86.4, 315.6] positive value of k is
+[50.4, 332.9] (1) 3      (2) 6      (3) 4      (4) 5
+[50.4, 348.9] 20.  Let  ( )  y y x  be the solution of the differential equation
+[50.4, 372.5]   3 3 2 sin 2 2 cos , 0.     dy x y x x y x dx
+[50.4, 407.4] If (2) 0  y , then tan( (1)) y  is equal to
+[50.4, 430.9] (1)  3
+[116.2, 430.9] (2) 7
+[221.4, 430.9] (3)  7 4      (4)  3 4 
+[107.0, 447.8] 4
+[212.3, 447.8] 4
+[267.4, 467.1] SECTION-B
+[50.4, 503.3] 21.  In a G.P., if the product of the first three terms is 27 and the set of all possible values for the sum of its
+[86.4, 521.2] first three terms is  ( , ) a b , then  2 2  a b  is equal to ____  .
+[137.9, 544.5]   , let the eccentricity and the length of the latus rectum of the hyperbola
+[50.4, 545.4] 22.  For some  0, 2      
+[88.8, 584.8] 2 2 2 sec 8   x y   be  1e  and 1l , respectively, and let the eccentricity and the length of the latus rectum
+[86.4, 605.2] of the ellipse  2 2 2 sec 6   x y   be  2e  and  2l , respectively. If    2 2 2 1 2 sec 1   e e  , then
+[87.9, 637.9] tan      
+[94.9, 640.0] l l e e  is equal to
+[99.1, 646.7] 2 1 2
+[99.1, 664.6] 1 2
+[100.0, 681.4]                              k  , then the number of solutions of the equation
+[50.4, 682.9] 23.  If  1 1 1 2 1 2 tan cos tan sin 4 2 3 2 3
+[87.9, 722.4] 1 1 1 sin ( 1) sin cos       kx x x  is ____
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.2] www.competishun.com Page # 3
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 4 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 48.3] 24.   
+[155.3, 51.5]        
+[158.3, 53.9] 20
+[205.9, 57.1] r
+[184.1, 60.3] x x dx  
+[88.5, 61.7] 0 1  The value of  | sin |  is
+[160.3, 76.8] 
+[156.8, 77.6] r
+[50.4, 95.0] 25.  Let PQR be a triangle such that  ˆ ˆ ˆ 2 2    PQ i j k  and PR i j 4k, , Z     a b a b . Let S be the
+[86.4, 122.7] point on QR , which is equidistant from the lines PQ and PR . If | PR | 9   and PS i 7j 2k   , then
+[86.4, 144.6] the value of 3 4  a b  is ____
+[273.5, 171.7] PHYSICS
+[267.4, 203.4] SECTION-A
+[50.4, 235.6] 26.  10 kg of ice at 10 C    is added to 100 kg of water to lower its temperature from 25 C  . Consider no
+[86.4, 257.2] heat exchange to surroundings. The decrement to the temperature of water is ____  C  .
+[86.4, 281.0] (specific heat of ice  2100 J / Kg C    , specific heat of water  4200 J / Kg C    , latent heat of fusion
+[86.4, 305.1] of ice  5 3.36 10  J / Kg   )
+[86.4, 328.2] (1) 10     (2) 15     (3) 6.67     (4)11.6
+[50.4, 345.0] 27.  The electric current in the circuit is given as  0( / )  i i t T . The r.m.s current for the period  0  t  to
+[87.9, 367.8]  t T  is ____  .
+[107.7, 391.2] i     (2) oi       (3)
+[323.6, 391.2] oi     (4)
+[434.0, 391.2] oi
+[86.4, 398.8] (1)  o
+[112.5, 409.2] 2
+[328.3, 409.2] 6
+[438.6, 409.2] 3
+[50.4, 428.3] 28.  In the potentiometer, when the cell in the secondary circuit is shunted with 4 resistance, the balance
+[86.4, 447.2] is obtained at the length 120 cm of wire. Now when the same cell is shunted with 12 resistance, the
+[86.4, 466.1] balance is shifted to a length of 180 cm . The internal resistance of cell is ____  .
+[86.4, 489.2] (1) 3      (2) 4      (3) 12     (4) 6
+[50.4, 506.2] 29.  Two circular dises of radius each 10 cm are joined at their centres by a rod of length 30 cm and mass
+[86.4, 523.6] 600 gm as shown in figure.
+[86.4, 541.6] If the mass of each disc is 600 gm and applied torque between two discs is  5 43 10   dyne. cm , the
+[86.4, 563.7] angular acceleration of the discs about the given axis AB is ____   2 rad / s .
+[86.4, 725.4] (1) 22     (2) 11     (3) 100     (4) 27
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.2] www.competishun.com Page # 4
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 5 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 50.5] 30.  Water drops fall from a tap on the floor, 5 m below, at regular intervals of time, the first drop strikes the
+[86.4, 67.9] floor when the sixth drop begins to fall. The height at which the fourth drop will be from ground, at the
+[86.4, 81.4] instant when the first drop strikes the ground is ____  m.   2 g 10 m / s 
+[86.4, 112.9] (1) 2.5     (2) 4.0     (3) 4.2     (4) 3.8
+[50.4, 131.3] 31.  An atom 8
+[131.2, 132.2] 3 X  is bombarded by shower of fundamental particles and in 10 s this atom absorbed 10
+[86.4, 154.9] electrons, 10 protons and 9 neutrons. The percentage growth in the surface area of the nucleons is
+[86.4, 172.1] recorded by:
+[50.4, 189.5] (1) 250%     (2) 150%     (3) 225%     (4) 900%
+[50.4, 208.9] 32.  The electric field of an electromagnetic wave travelling through a medium is given by
+[88.7, 222.6]   15 7 ˆ ( , ) 25sin 2.0 10 10    E x t t x n  then the refractive index of the medium is ____  .
+[86.4, 254.0] (All given measurement are in SI units)
+[86.4, 271.3] (1) 1 .2     (2) 2      (3) 1.5     (4) 1.7
+[50.4, 288.5] 33.  Which of the following best represents the temperature versus heat supplied graph for water, in the
+[86.4, 306.3] range of 20 C    to 120 C   ?
+[50.4, 407.2] (1)         (2)
+[50.4, 505.6] (3)       (4)
+[50.4, 522.7] 34.  Three long straight wires carrying current are arranged mutually parallel as shown in the figure. The
+[50.4, 540.1] force experienced by 15 cm length of wire Q  is ____ .
+[50.4, 668.3]   7 o 4 10  T  m / A      
+[86.4, 700.2] (1)  7 6 10  N    towards P     (2)  6 6 10  N    towards R
+[86.4, 721.9] (3)  7 6 10  N    towards R     (4) 6 6 10  N    towards P
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.2] www.competishun.com Page # 5
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 6 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 50.5] 35.  Assuming in forward bias condition there is a voltage drop of 0.7 V across a silicon diode, the current
+[86.4, 68.9] through diode  1 D  in the circuit is ____  mA .
+[86.4, 91.7] (Assume all diodes in the given circuit are identical)
+[86.4, 200.8] (1) 20.15     (2) 11.7     (3) 17.6     (4) 18.8
+[50.4, 217.9] 36.  The magnitudes of power of a biconvex lens (refractive index 1.5) and that of a plano-concave lens
+[86.4, 234.1] (refractive index  1.7  ) are same. If the curvature of planoconcave lens exactly matches with the
+[86.4, 255.0] curvature of back surface of the biconvex lens, then ratio of radius of curvature of front and back
+[86.4, 270.6] surface of the biconvex lens is ____
+[86.4, 292.4] (1) 5: 2     (2) 5: 12    (3) 12: 5    (4) 2: 5
+[50.4, 310.3] 37.  In the following p  - V  diagram the equation of state along the curved path is given by  2 ( 2) 4   V ap
+[86.4, 331.7] where a  is a constant. The total work done in the closed path is
+[50.4, 435.9] (1)  1 a
+[121.5, 435.9] (2)  1 3 a
+[235.5, 435.9] (3) 1
+[335.5, 435.9] (4)  1 3 a
+[320.3, 452.8] 2a
+[50.4, 472.1] 38.  For the two cells having same EMF E  and internal resistance r , the current passing through the
+[86.4, 489.8] external resistor 6 is same when both the cells are connected either in parallel or in series. The
+[86.4, 509.5] value of internal resistance r  is ____  .
+[50.4, 532.5] (1) 3      (2) 4      (3) 9      (4) 6
+[50.4, 549.7] 39.  Two wires A  and B  made of different materials of lengths 6.0 cm and 5.4 cm , respectively and area
+[86.4, 569.0] of cross sections  5 2 3.0 10  m    and  5 2 4.5 10  m   , respectively are stretched by the same magnitude
+[86.4, 588.6] under a given load. The ratio of the Young's modulus of A to that of B is x: 3. The value of x  is___.
+[86.4, 608.5] (1) 1      (2) 4      (3) 2      (4) 5
+[50.4, 626.1] 40.  A block of mass 5 kg is moving on an inclined plane which makes an angle of 30 with the horizontal.
+[86.4, 650.8] Friction coefficient between the block and inclined plane surface is  3 2 . The force to be applied on the
+[86.4, 680.6] block so that the block will move down without acceleration is ____  N.
+[88.0, 698.5]   2 10 m / s . g 
+[86.4, 729.2] (1) 25     (2) 12.5     (3) 7.5     (1) 15
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.2] www.competishun.com Page # 6
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 7 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 50.5] 41.  Given below are two statements:
+[86.4, 67.8] Statement I : A plane wave after passing through prism remains as plane wave but passing through
+[86.4, 85.1] small pin hole may become spherical wave.
+[86.4, 102.2] Statement II: The curvature of a spherical wave emerging from a slit will increase for increasing slit
+[86.4, 119.6] width.
+[86.4, 136.9] In the light of the above statements, choose the correct answer from the options given below
+[86.4, 154.1] (1) Both Statement I and Statement II are false
+[86.4, 171.4] (2) Both Statement I and Statement II are true
+[86.4, 188.6] (3) Statement I is true but Statement II is false
+[86.4, 205.9] (4) Statement I is false but Statement II is true
+[50.4, 223.0] 42.  When both jaws of vernier callipers touch each other, zero mark of the vernier scale is right to zero
+[86.4, 241.4] mark of main scale,  th  4  mark on vernier scale coincides with certain mark on the main scale. While
+[86.4, 262.5] measuring the length of a cylinder, observer observes 15 divisions on main scale and  th  5  division of
+[86.4, 281.4] vernier scale coincides with a main scale division. Measured length of cylinder is ____  mm.
+[86.4, 301.9] (Least count of Vernier calliper  0.1 mm  )
+[86.4, 322.8] (1) 15.4     (2) 15.1     (3) 15.5     (4) 15.9
+[50.4, 338.9] 43.  The magnetic field at the centre of a current carrying circular loop of radius R  is 16  T  . The magnetic
+[86.4, 363.5] field at a distance  3  x R  on its axis from the centre is ____  T  .
+[86.4, 389.5] (1) 2 2     (2) 4      (3) 2      (4) 8
+[50.4, 409.2] 44.  Two point charges of 1 nC and 2 nC are placed at the two corners of equilateral triangle of side 3 cm .
+[86.4, 425.4] The work done in bringing a charge of 3 nC from infinity to the third corner of the triangle is ____  J .
+[89.3, 448.9] 1 9 10  N  m / C 4   
+[150.3, 455.5] 9 2 2
+[106.8, 473.2] 0
+[86.4, 488.1] (1) 2.7     (2) 5.4     (3) 3.3     (4) 27
+[50.4, 504.1] 45.  A particle of mass m  falls from rest through a resistive medium having resistive force,   F kv , where
+[88.1, 524.9] v  is the velocity of the particle and k  is a constant. Which of the following graphs represents velocity
+[88.1, 544.8] ( )v  versus time ( )t  ?
+[50.4, 635.0] (1)         (2)
+[50.4, 722.7] (3)         (4)
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.2] www.competishun.com Page # 7
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 8 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[267.4, 50.5] SECTION-B
+[50.4, 69.5] 46.  The displacement of a particle, executing simple harmonic motion with time period T, is expressed as
+[88.8, 85.7] ( ) sin  x t A t , where A is the amplitude. The maximum value of potential energy of this oscillator is
+[86.4, 107.4] found at  / 2  t T . The value of  is ____  .
+[50.4, 130.2] 47.  The ratio of de Broglie wavelength of a deutron with kinetic energy E to that of an alpha particle with
+[86.4, 145.8] kinetic energy 2E, is n: 1. The value of n  is ____  .
+[86.4, 167.8] (Assume mass of proton = mass of neutron) :
+[50.4, 184.9] 48.  A solid sphere of radius 10 cm is rotating about an axis which is at a distance 15 cm from its centre.
+[86.4, 205.1] The radius of gyration about this axis is   cm n . The value of n  is
+[50.4, 224.7] 49.  A convex lens of refractive index 1.5 and focal length  18 cm  f  is immersed in water. The difference
+[86.4, 246.2] in focal lengths of the given lens when it is in water and in air is  f  . The value of  is ____  .
+[86.4, 269.5] (refractive index of water = 4/3)
+[442.8, 287.1] 5 x . The value of x  is
+[50.4, 294.4] 50.  The equivalent resistance between the points A and B in the following circuit is
+[88.6, 318.9] ____  .
+[265.5, 412.7] CHEMISTRY
+[267.4, 463.8] SECTION-A
+[50.4, 488.4] 51.  3 20.0dm  of an ideal gas ' X ' at 600 K and 0.5 MPa undergoes isothermal reversible expansion until
+[86.4, 509.0] pressure of the gas is 0.2 MPa . Which of the following option is correct?
+[86.4, 525.0] (Given: log2 0.3010   and log5 0.6989  )
+[86.4, 546.7] (1) w 9.1 kJ, U 0, H 0,q 9.1 kJ         (2) w 9.1 J, U 9.1 J, H 0;q 0      
+[86.4, 568.4] (3) w 4.1 kJ, U 0, H 0;q 4.1 kJ        (4) w 3.9 kJ, U 0, H 0;q 3.9 kJ      
+[50.4, 591.8] 52.   CORRECT order of stability for the following is  2 3 2 CH CH ,CH CH ,CH C      
+[86.4, 616.6] (1)  3 2 2 CH CH CH CH CH C           (2)  2 3 2 CH CH CH C CH CH        
+[86.4, 641.4] (3)  2 3 2 CH C CH CH CH CH           (4)  3 2 2 CH C CH CH CH CH        
+[50.4, 666.2] 53.  At T(K),2  moles of liquid A and 3 moles of liquid B are mixed. The vapour pressure of ideal solution
+[86.4, 686.5] formed is 320 mm Hg . At this stage, one mole of A and one mole of B are added to the solution. The
+[86.4, 703.8] vapour pressure is now measured as 328.6 mm Hg . The vapour pressure (in mm Hg ) of A and B are
+[86.4, 721.0] respectively:
+[86.4, 738.2] (1)  300,200    (2) 600,400    (3) 400,300    (4) 500, 200
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.2] www.competishun.com Page # 8
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 9 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 50.5] 54.   Consider the following reaction sequence
+[86.4, 136.8] Compound (y)  develops characteristic colour with neutral FeCl3 solution. Identify the INCORRECT
+[86.4, 158.5] statement from the following for the above sequence.
+[86.4, 175.7] (1) Both compounds x and y will dissolve in NaOH .
+[86.4, 193.0] (2) Compound y will dissolve in NaHCO3 and evolve a gas.
+[86.4, 210.2] (3) Compound x is more acidic than compound y.
+[86.4, 227.5] (4) Both compounds x and y will burn with sooty flame.
+[50.4, 244.6] 55.  Method used for separation of mixture of products ( B and C ) obtained in the following reaction is
+[50.4, 309.6] (1) simple distillation      (2) sublimation
+[86.4, 326.9] (3) steam distillation      (4) fractional distillation
+[50.4, 343.8] 56.  Consider a weak base ' B ' of  b pK 5.699  . ' x ' mL of 0.02 M HCl and ' y ' mL of 0.02 M weak base 'B'
+[86.4, 368.2] are mixed to make 100 mL of a buffer of pH 9 at 25 C  . The values of ' x  ' and ' y  ' respectively are :
+[86.4, 391.2] [Given: log 2 0.3010,log3 0.4771,log5 0.699    ]
+[86.4, 438.6] (1)
+[86.4, 482.2] (2)
+[86.4, 524.0] (3)
+[86.4, 569.2] (4)
+[518.5, 587.5] th  1 8      
+[50.4, 597.1] 57.   An organic compound undergoes first order decomposition. The time taken for decomposition to
+[107.5, 626.2] th  1 10      
+[86.4, 635.8] and
+[138.9, 635.8] of its initial concentration are 1/8 t  and 1/10 t  respectively.
+[180.0, 665.0] t 10 t   ? (log 2 0.3) 
+[86.4, 670.3] What is the value of  1/8
+[182.7, 685.0] 1/10
+[86.4, 699.7] (1) 9      (2) 0.9     (3) 3      (4) 30
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.2] www.competishun.com Page # 9
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 10 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 50.5] 58.   Given below are two statements for the following reaction sequence.
+[50.4, 139.2] Statement I: Compound ' Z ' will give yellow precipitate with NaOI .
+[86.4, 157.9] Statement II: Compound 'Q' has two different types of 'H' atoms (aromatic : aliphatic) in the ratio
+[86.4, 175.3] 1 : 3.
+[86.4, 192.6] In the light of the above statements, choose the correct answer from the options given below:
+[86.4, 209.8] (1) Statement I is true but Statement II is false
+[86.4, 227.0] (2) Both Statement I and Statement II are true
+[86.4, 244.3] (3) Statement I is false but Statement II is true
+[86.4, 261.6] (4) Both Statement I and Statement II are false
+[50.4, 278.7] 59.  Given below are the four isomeric compounds (P,Q, R, S)
+[50.4, 370.6] Identify correct statements from below.
+[86.4, 388.0] A. Q,R  and S will give precipitate with 2,4-DNP.
+[86.4, 409.7] B. P  and Q  will give positive Bayer's test.
+[86.4, 431.4] C. Q and R will give sooty flame.
+[86.4, 449.6] D. R and S will give yellow precipitate with  2I / NaOH .
+[86.4, 472.4] E. Q alone will deposit silver with Tollen's reagent
+[86.4, 489.7] Choose the correct option.
+[86.4, 506.9] (1) A, C and E only      (2) A and E only
+[86.4, 524.1] (3) C and E only      (4) A, B, D and E only
+[50.4, 541.3] 60.  Given below are two statements:
+[86.4, 559.0] Statement I: The number of species among  4 4 4 BF ,SiF ,XeF   and  4 SF , that have unequal E F   bond
+[86.4, 583.4] lengths is two. Here, E is the central atom.
+[86.4, 601.0] Statement II: Among  2 2 2 2 O ,O ,F    and  2 2 O ,O  has the highest bond order.
+[86.4, 625.4] In the light of the above statements, choose the correct answer from the options given below
+[86.4, 642.7] (1) Both Statement I and Statement II are false
+[86.4, 660.0] (2) Both Statement I and Statement II are true
+[86.4, 677.1] (3) Statement I is true but Statement II is false
+[86.4, 694.4] (4) Statement I is false but Statement II is true
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.0] www.competishun.com Page # 10
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 11 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 50.4] 61.  Regarding the hydrides of group 15 elements  3 EH (E N,P,As,Sb)  , select the correct statement from
+[86.4, 70.3] the following:
+[86.4, 86.4] A. The stability of hydrides decreases down the group.
+[86.4, 102.6] B. The basicity of hydrides decreases down the group.
+[86.4, 118.7] C. The reducing character increases down the group.
+[86.4, 134.8] D. The boiling point increases down the group.
+[86.4, 150.8] Choose the correct answer from the options given below:
+[86.4, 166.9] (1) A, B & C only  (2) A & D only    (3) A, B, C & D   (4) B & C only
+[50.4, 182.9] 62.  Given below are two statements:
+[86.4, 199.1] Statement I: Griss-Ilosvay test is used for the detection of nitrite ion, which involves the use of
+[86.4, 212.1] sulphanilic acid and -naphthylamine reagent.
+[86.4, 232.1] Statement II: In the above test, sulphanilic acid is diazotized by the acidified nitrite ion, which on further
+[86.4, 245.1] coupling with -naphthylamine forms an azo-dye.
+[50.4, 265.3] In the light of the above statements, choose the correct answer from the options given below
+[86.4, 281.4] (1) Statement I is false but Statement II is true  (2) Both Statement I and Statement II are true
+[86.4, 297.5] (3) Statement I is true but Statement II is false  (4) Both Statement I and Statement II are false
+[50.4, 313.5] 63.   Consider the following reactions giving major product. Identify the correct reaction.
+[50.4, 334.1] (1)
+[50.4, 390.4] (2)
+[50.4, 429.3] (3)
+[50.4, 488.8] (4)
+[50.4, 504.8] 64.  In the given pentapeptide, find out an essential amino acid (Y) and the sequence present in the
+[86.4, 521.1] pentapeptide:
+[50.4, 585.5] Choose the correct answer from the options given below:
+[86.4, 623.8] (1)
+[86.4, 664.2] (2)
+[86.4, 703.3] (3)
+[86.4, 745.2] (4)
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.0] www.competishun.com Page # 11
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 12 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 51.4] 65.    2 (PhCOO) 2 HBr Ph CH CH  Product    
+[50.4, 75.3] Consider the above reaction
+[86.4, 92.6] A. The reaction proceeds through a more stable radical intermediate.
+[86.4, 110.2] B. The role of peroxide is to generate H (Hydrogen radical).
+[86.4, 130.8] C. During this reaction, benzene is formed as a byproduct.
+[86.4, 148.0] D. 1-Bromo-2-phenylethane is formed as the minor product.
+[86.4, 165.2] E. The same reaction in absence of peroxide proceeds via carbocation intermediate.
+[86.4, 182.5] Identify the correct statements. Choose the correct answer from the options given below:
+[86.4, 199.8] (1) A & E Only       (2) A, B & D Only
+[86.4, 217.0] (3) C, D & E Only      (4) A, C & E Only
+[50.4, 234.1] 66.  The wave numbers of three spectral lines of H atom are considered. Identify the set of spectral lines
+[86.4, 250.3] belonging to Balmer series. ( R  Rydberg constant)
+[86.4, 270.9] (1) 5R 3R 21R , , 36 16 100
+[171.4, 270.9] (2) 5R 8R 15R , , 36 9 16
+[86.4, 307.7] (3) 7R 3R 16R , , 144 16 255
+[173.4, 307.7] (4) 3R 3R 7R , , 4 16 144
+[50.4, 343.8] 67.
+[86.4, 464.0] Which of the following point in Figure 2 most accurately represents the nodal surface as shown in
+[86.4, 481.3] Figure 1.
+[86.4, 498.5] (1) B      (2) D      (3) C      (4) A
+[50.4, 515.7] 68.  Given below are two statements:
+[86.4, 533.0] Statement I: The number of pairs, from the following, in which both the ions are coloured in aqueous
+[86.4, 550.3] solution is 3 .
+[88.5, 568.6] 3 3 2 2 2 2 2 4 Sc ,Ti , Mn ,Cr , Cu ,Zn  and Ni ,Ti                    
+[86.4, 595.5] Statement II:  4 Th  is the strongest reducing agent among  4 4 3 Th ,Ce ,Gd    and  2 Eu .
+[86.4, 619.0] In the light of the above statements, choose the correct answer from the options given below
+[86.4, 636.3] (1) Statement I is true but Statement II is false
+[86.4, 653.5] (2) Statement I is false but Statement II is true
+[86.4, 670.8] (3) Both Statement I and Statement II are false
+[86.4, 688.0] (4) Both Statement I and Statement II are true
+[50.4, 705.2] 69.  In period 4 of the periodic table, the elements with highest and lowest atomic radii are respectively.
+[86.4, 722.5] (1) Na & Cl    (2) K&Se     (3) K&Br     (4) Rb& Br
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.0] www.competishun.com Page # 12
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 13 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[50.4, 50.5] 70.   The correct statement among the following is:
+[86.4, 67.4] (1)  
+[158.2, 67.4]  and  
+[229.3, 68.4]  are diamagnetic and  4 Ni(CO)  is paramagnetic.
+[107.5, 69.2] 2 4 Ni(CN)
+[192.7, 69.2] 2 4 NiCl
+[208.5, 95.1]  are diamagnetic and  
+[86.4, 95.1] (2) 4 Ni(CO)  and  
+[367.9, 96.1]  is paramagnetic.
+[317.1, 96.9] 2 4 Ni(CN)
+[171.9, 96.9] 2 4 NiCl
+[86.4, 122.8] (3) 4 Ni(CO)  and  
+[222.7, 122.8]  are diamagnetic and  
+[367.8, 123.8]  is paramagnetic.
+[171.9, 124.6] 2 4 Ni(CN)
+[331.2, 124.6] 2 4 NiCl
+[278.0, 150.5]  and  
+[86.4, 150.5] (4)  4 Ni(CO)  is diamagnetic and  
+[363.4, 151.5]  are paramagnetic.
+[312.7, 152.3] 2 4 Ni(CN)
+[241.4, 152.4] 2 4 NiCl
+[267.4, 178.8] SECTION-B
+[50.4, 198.9] 71.  500 mL of 1.2 M KI solution is mixed with 500 mL of  4 0.2MKMnO  solution in basic medium. The
+[86.4, 222.7] liberated iodine was titrated with standard  2 2 3 0.1 MNa  S O  solution in the presence of starch indicator
+[86.4, 246.4] till the blue color disappeared. The volume (in L ) of  2 2 3 Na  S O  consumed is ____  . (Nearest integer)
+[50.4, 269.0] 72.  Consider the following redox reaction taking place in acidic medium
+[88.3, 286.8] 4 3 2 3 BH ( ) ClO ( ) H BO ( ) Cl ( )        aq aq aq aq
+[86.4, 311.2] If the Nernst equation for the above balanced reaction is
+[88.3, 328.9] RT E E ln Q, nF
+[110.1, 334.7]   
+[96.1, 344.0] cell cell
+[86.4, 363.4] then the value of n  is ____  .(Nearest integer)
+[50.4, 384.0] 73.   X is the number of geometrical isomers exhibited by     3 2 Pt NH H O BrCl    .
+[86.4, 412.5] Y is the number of optically inactive isomer(s) exhibited by  
+[413.8, 413.5] 
+[351.8, 414.3] 3 2 2 CrCl (ox)
+[86.4, 439.5] Z is the number of geometrical isomers exhibited by     3 2 3 3 Co NH NO    .
+[86.4, 467.3] The value of X Y Z    is ____  .
+[50.4, 490.3] 74.   0.53 g of an organic compound (x)  when heated with excess of nitric acid (concentrated) and then
+[86.4, 513.1] with silver nitrate gave 0.75 g of silver bromide precipitate. 1.0 g of (x)  gave 1.32 g of  2 CO  gas on
+[86.4, 535.8] combustion. The percentage of hydrogen in the compound (x)  is ____  %. [Nearest Integer]
+[86.4, 558.7] [Given: Molar mass in  1 gmol H:1,C:12,Br :80,Ag:108,O:16  ; Compound (x)  :  x y z C H Br 
+[50.4, 585.2] 75.  Consider the dissociation equilibrium of the following weak acid
+[88.3, 602.8] HA H (aq) A (aq)   
+[86.4, 624.8] If the pKa of the acid is 4 , then the pH of 10 mM HA solution is ____  .(Nearest integer)
+[86.4, 646.4] [Given: The degree of dissociation can be neglected with respect to unity]
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.0] www.competishun.com Page # 13
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
+
+--- PAGE 14 ---
+[50.2, 30.2] JEE-Main 28-01-2026 (Morning Session)
+[260.5, 50.5] ANSWER KEY
+[50.4, 86.8] 1.  (3)  2.  (2)  3.  (3)  4.  (1)  5.  (3)  6.  (4)  7.  (3)
+[50.4, 104.0] 8.  (4)  9.  (4)  10.  (1)  11.  (2)  12.  (2)  13.  (3)  14.  (3)
+[50.4, 121.2] 15.  (1)  16.  (2)  17.  (3)  18.  (1)  19.  (4)  20.  (2)  21.  90
+[50.4, 138.5] 22.  8  23.  1  24.  210  25.  37  26.  (1)  27.  (4)  28.  (2)
+[50.4, 155.8] 29.  (2)  30.  (3)  31.  (3)  32.  (3)  33.  (2)  34.  (2)  35.  (4)
+[50.4, 173.0] 36.  (1)  37.  (4)  38.  (4)  39.  (4)  40.  (2)  41.  (3)  42.  (2)
+[50.4, 190.2] 43.  (3)  44.  (1)  45.  (2)  46.  2  47.  2  48.  265  49.  3
+[50.4, 207.5] 50.  21  51.  (1)  52.  (3)  53.  (4)  54.  (3)  55.  (4)  56.  (3)
+[50.4, 224.8] 57.  (1)  58.  (2)  59.  (1)  60.  (1)  61.  (1)  62.  (2)  63.  (4)
+[50.4, 241.9] 64.  (3)  65.  (4)  66.  (1)  67.  (1)  68.  (3)  69.  (3)  70.  (3)
+[50.4, 259.2] 71.  3  72.  24  73.  6  74.   4  75.  3
+[190.1, 772.8] 52/6, OPPO. METRO MAS HOSPITAL, SHIPRA PATH, MANSAROVAR, JAIPUR - 302020 (RAJ.)
+[293.1, 786.0] www.competishun.com Page # 14
+[210.6, 787.0] 8888–0000–21, 7410900901, 7410900906, 7410900907, 7410900908 ;
