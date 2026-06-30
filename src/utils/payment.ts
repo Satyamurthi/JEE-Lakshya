@@ -38,6 +38,16 @@ export const initiateRazorpayPayment = async (
       const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T7i2gHREMW3YL2';
       const amountInPaise = Math.max(100, amountRupees * 100); // Minimum 100 paise (₹1)
 
+      // Ensure receipt is under Razorpay's 40-character limit
+      let sanitizedReceipt = receipt;
+      if (sanitizedReceipt.length > 40) {
+        const parts = sanitizedReceipt.split('_');
+        const prefix = parts[0] || 'rcpt';
+        const timePart = Date.now().toString().slice(-8);
+        const randomPart = Math.random().toString(36).substring(2, 6);
+        sanitizedReceipt = `${prefix}_${timePart}_${randomPart}`.substring(0, 40);
+      }
+
       // Step 1: Attempt backend order creation
       let orderId: string | undefined;
       try {
@@ -48,7 +58,7 @@ export const initiateRazorpayPayment = async (
             'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
           },
-          body: JSON.stringify({ amount: amountInPaise, receipt })
+          body: JSON.stringify({ amount: amountInPaise, receipt: sanitizedReceipt })
         });
         
         if (!orderRes.ok) {
