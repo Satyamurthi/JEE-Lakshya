@@ -925,3 +925,39 @@ export const getAllQuestionsFromDB = async (subjectFilter?: string, maxRecords: 
   return allData;
 };
 
+export const getSubscriptionPlans = async (): Promise<any[]> => {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase.from('subscription_plans').select('*').order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.warn("Could not fetch subscription plans from database, falling back:", e);
+    return [];
+  }
+};
+
+export const saveSubscriptionPlan = async (plan: any): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('subscription_plans').upsert(plan);
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error("Failed to save subscription plan:", e);
+    return false;
+  }
+};
+
+export const deleteSubscriptionPlan = async (planId: string): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('subscription_plans').delete().eq('id', planId);
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error("Failed to delete subscription plan:", e);
+    return false;
+  }
+};
+

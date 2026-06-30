@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Crown, Check, Sparkles, ShieldCheck, Zap, CreditCard, ArrowRight, Lock, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { initiateRazorpayPayment } from '../utils/payment';
-import { supabase } from '../supabase';
+import { supabase, getSubscriptionPlans } from '../supabase';
 
 interface PlanFeature {
   text: string;
@@ -22,7 +22,68 @@ interface Plan {
   glowColor: string;
 }
 
+const STATIC_PLANS: Plan[] = [
+  {
+    id: 'basic',
+    name: 'Free Trial Pass',
+    priceMonthly: 0,
+    priceYearly: 0,
+    description: 'Test the waters of JEE/NEET study terminals',
+    color: 'from-slate-700 to-slate-800',
+    glowColor: 'rgba(100, 116, 139, 0.1)',
+    features: [
+      { text: '1st NTA mock test completely free', included: true },
+      { text: 'Subsequent tests at ₹10 per attempt', included: true },
+      { text: 'Standard mock question database', included: true },
+      { text: 'Step-by-step math solver explanations', included: true },
+      { text: 'AI question synthesis', included: false },
+      { text: 'Offline compiled test downloads', included: false },
+      { text: '24/7 dedicated AI Tutor assistance', included: false },
+    ]
+  },
+  {
+    id: 'premium',
+    name: 'Premium Pro Pass',
+    priceMonthly: 199,
+    priceYearly: 1188,
+    badge: 'Most Popular',
+    highlighted: true,
+    description: 'Unlock unlimited access to daily challenges and practice tests',
+    color: 'from-indigo-600 to-violet-600',
+    glowColor: 'rgba(79, 70, 229, 0.25)',
+    features: [
+      { text: 'Unlimited Daily Challenge papers', included: true },
+      { text: 'Unlimited Chapter Practice tests', included: true },
+      { text: 'Unlimited Full NTA CBT Mock exams', included: true },
+      { text: 'Real-time countdown testing portal', included: true },
+      { text: 'Google Gemini AI dynamic updates', included: true },
+      { text: 'Custom AI remedial test generator', included: true },
+      { text: '24/7 dedicated AI Tutor assistance', included: true },
+    ]
+  },
+  {
+    id: 'ultimate',
+    name: 'Ultimate Year Pass',
+    priceMonthly: 599,
+    priceYearly: 999,
+    badge: 'Best Value - Save 85%',
+    description: 'Exhaustive all-access ticket for JEE / NEET top-tier ranking',
+    color: 'from-amber-500 via-orange-600 to-red-600',
+    glowColor: 'rgba(245, 158, 11, 0.25)',
+    features: [
+      { text: 'Everything in Premium Pro Pass', included: true },
+      { text: 'Exclusive Year-Wise PYQ CBTs (2013-2026)', included: true },
+      { text: 'NEET high-frequency matching modules', included: true },
+      { text: 'Unlimited PDF mock paper downloads', included: true },
+      { text: 'PWA Service Worker offline test caching', included: true },
+      { text: '24/7 priority AI Tutor access', included: true },
+      { text: 'Personalized performance profiling', included: true },
+    ]
+  }
+];
+
 const Pricing = () => {
+  const [plans, setPlans] = useState<Plan[]>(STATIC_PLANS);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState<any | null>(null);
@@ -30,6 +91,33 @@ const Pricing = () => {
 
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   const isIndependent = profile.role === 'student' && !profile.admin_id;
+
+  // Fetch dynamic plans on mount
+  useEffect(() => {
+    const fetchDbPlans = async () => {
+      try {
+        const dbPlans = await getSubscriptionPlans();
+        if (dbPlans && dbPlans.length > 0) {
+          const mapped = dbPlans.map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            priceMonthly: Number(d.price_monthly ?? d.priceMonthly ?? 0),
+            priceYearly: Number(d.price_yearly ?? d.priceYearly ?? 0),
+            description: d.description || '',
+            badge: d.badge || undefined,
+            highlighted: !!d.highlighted,
+            color: d.color || 'from-indigo-600 to-violet-600',
+            glowColor: d.glow_color || d.glowColor || 'rgba(79, 70, 229, 0.25)',
+            features: Array.isArray(d.features) ? d.features : []
+          }));
+          setPlans(mapped);
+        }
+      } catch (e) {
+        console.warn("Could not load database plans:", e);
+      }
+    };
+    fetchDbPlans();
+  }, []);
 
   // Retrieve local transactions if any
   useEffect(() => {
@@ -43,65 +131,6 @@ const Pricing = () => {
     }
   }, []);
 
-  const plans: Plan[] = [
-    {
-      id: 'basic',
-      name: 'Free Trial Pass',
-      priceMonthly: 0,
-      priceYearly: 0,
-      description: 'Test the waters of JEE/NEET study terminals',
-      color: 'from-slate-700 to-slate-800',
-      glowColor: 'rgba(100, 116, 139, 0.1)',
-      features: [
-        { text: '1st NTA mock test completely free', included: true },
-        { text: 'Subsequent tests at ₹10 per attempt', included: true },
-        { text: 'Standard mock question database', included: true },
-        { text: 'Step-by-step math solver explanations', included: true },
-        { text: 'AI question synthesis', included: false },
-        { text: 'Offline compiled test downloads', included: false },
-        { text: '24/7 dedicated AI Tutor assistance', included: false },
-      ]
-    },
-    {
-      id: 'premium',
-      name: 'Premium Pro Pass',
-      priceMonthly: 199,
-      priceYearly: 1188, // ₹99/mo billed yearly
-      badge: 'Most Popular',
-      highlighted: true,
-      description: 'Unlock unlimited access to daily challenges and practice tests',
-      color: 'from-indigo-600 to-violet-600',
-      glowColor: 'rgba(79, 70, 229, 0.25)',
-      features: [
-        { text: 'Unlimited Daily Challenge papers', included: true },
-        { text: 'Unlimited Chapter Practice tests', included: true },
-        { text: 'Unlimited Full NTA CBT Mock exams', included: true },
-        { text: 'Real-time countdown testing portal', included: true },
-        { text: 'Google Gemini AI dynamic updates', included: true },
-        { text: 'Offline compiled test downloads', included: false },
-        { text: '24/7 dedicated AI Tutor assistance', included: false },
-      ]
-    },
-    {
-      id: 'ultimate',
-      name: 'Ultimate Year Pass',
-      priceMonthly: 599,
-      priceYearly: 999, // Super cheap yearly discount
-      badge: 'Best Value - Save 85%',
-      description: 'Exhaustive all-access ticket for JEE / NEET top-tier ranking',
-      color: 'from-amber-500 via-orange-600 to-red-600',
-      glowColor: 'rgba(245, 158, 11, 0.25)',
-      features: [
-        { text: 'Everything in Premium Pro Pass', included: true },
-        { text: 'Exclusive Year-Wise PYQ CBTs (2013-2026)', included: true },
-        { text: 'NEET high-frequency matching modules', included: true },
-        { text: 'Unlimited PDF mock paper downloads', included: true },
-        { text: 'PWA Service Worker offline test caching', included: true },
-        { text: '24/7 priority AI Tutor access', included: true },
-        { text: 'Personalized performance profiling', included: true },
-      ]
-    }
-  ];
 
   const handleSubscribe = async (plan: Plan) => {
     if (plan.id === 'basic') {
