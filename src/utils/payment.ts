@@ -35,7 +35,7 @@ export const initiateRazorpayPayment = async (
         return;
       }
 
-      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_T7ivdfyBiKsv73';
+      const razorpayKey = (import.meta as any).env.VITE_RAZORPAY_KEY_ID || 'rzp_live_T7ivdfyBiKsv73';
       const amountInPaise = Math.max(100, amountRupees * 100); // Minimum 100 paise (₹1)
 
       // Ensure receipt is under Razorpay's 40-character limit
@@ -56,8 +56,8 @@ export const initiateRazorpayPayment = async (
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
+            'apikey': (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '',
+            'Authorization': `Bearer ${(import.meta as any).env.VITE_SUPABASE_ANON_KEY || ''}`
           },
           body: JSON.stringify({ amount: amountInPaise, receipt: sanitizedReceipt })
         });
@@ -116,8 +116,8 @@ export const initiateRazorpayPayment = async (
                 method: 'POST',
                 headers: { 
                   'Content-Type': 'application/json',
-                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
+                  'apikey': (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '',
+                  'Authorization': `Bearer ${(import.meta as any).env.VITE_SUPABASE_ANON_KEY || ''}`
                 },
                 body: JSON.stringify({
                   razorpay_payment_id: response.razorpay_payment_id,
