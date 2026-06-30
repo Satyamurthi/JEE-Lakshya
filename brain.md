@@ -8,10 +8,10 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 LIVE / DYNAMIC BYPASS CONTROL & SECURE LOCKS COMPLETED
-* **Last Updated Timestamp**: 2026-06-30 23:08 IST
+* **Session Status**: 🟢 LIVE / NATIVE PHOTO UPLOADER INTEGRATED
+* **Last Updated Timestamp**: 2026-06-30 23:28 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Integrated Bypass Control form for manual free plan grants, credentials viewer with plaintext passwords, and CSV credentials exporter inside the Super Admin panel. Added signup pre-validation to block duplicate email enrollments. Engineered a secure device/session locking check and lock screen in `src/pages/ExamPortal.tsx` to prevent students from taking exams on two devices concurrently.
+* **Last Completed Task**: Replaced account avatar URL inputs with a native, drag-and-drop styled local Image File Uploader inside the Edit Profile Modal. Implemented dynamic canvas-based client-side image resizing (to a compact 256x256 size) and JPG compression, storing the compressed photo directly in the backend `profiles.avatar_url` database column.
 
 ### 🎯 Active Task Overview
 * **Goal**: Provide standard Razorpay payment configurations, pricing selector cycles, and bypass controls to unlock premium mock exam features.

@@ -409,6 +409,49 @@ const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean
   );
 };
 
+const resizeAndConvertToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 256;
+        const MAX_HEIGHT = 256;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          resolve(dataUrl);
+        } else {
+          resolve(event.target?.result as string);
+        }
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -678,15 +721,47 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Avatar Image URL (Optional)</label>
-                  <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/..."
-                    value={editAvatarUrl}
-                    onChange={(e) => setEditAvatarUrl(e.target.value)}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl font-bold text-xs text-slate-900 outline-none transition-all"
-                  />
+                <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex items-center gap-5">
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-950 flex items-center justify-center text-white font-black text-xl shadow-md overflow-hidden relative shrink-0 border border-slate-200">
+                    {editAvatarUrl ? (
+                      <img src={editAvatarUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      (editName || 'U').substring(0, 1).toUpperCase()
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-mono">Profile Photo (JPG/PNG)</label>
+                    <div className="flex items-center gap-2">
+                      <label className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all shadow-sm">
+                        Upload Image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                const base64 = await resizeAndConvertToBase64(file);
+                                setEditAvatarUrl(base64);
+                              } catch (err) {
+                                alert("Failed to process uploaded image.");
+                              }
+                            }
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                      {editAvatarUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setEditAvatarUrl('')}
+                          className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
