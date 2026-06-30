@@ -55,7 +55,7 @@ const YearWisePYQ = () => {
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   const isSuperAdmin = profile.role === 'super_admin';
   const isIndependent = profile.role === 'student' && !profile.admin_id;
-  const needsPayment = isIndependent && profile.has_used_free_test && !checkSubscriptionActive(profile);
+  const needsPayment = false;
 
   const filteredPapers = papers.filter(p => {
     const matchesYear = selectedYear === 'ALL' || p.year === selectedYear;
@@ -195,7 +195,7 @@ const YearWisePYQ = () => {
           </div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">Year-Wise {isNeet ? 'NEET UG' : 'JEE'} Solved Papers</h1>
           <p className="text-slate-500 font-medium max-w-2xl leading-relaxed">
-            Practice authentic official question papers covering {isNeet ? 'Physics, Chemistry, Botany, and Zoology' : 'Physics, Chemistry, and Mathematics'}. Micro-unlock any paper for ₹10 and receive step-by-step solutions and performance analytics.
+            Practice authentic official question papers covering {isNeet ? 'Physics, Chemistry, Botany, and Zoology' : 'Physics, Chemistry, and Mathematics'} for free. Official solved papers are available for practice without any charge.
           </p>
         </div>
 
@@ -212,11 +212,11 @@ const YearWisePYQ = () => {
             </>
           ) : isIndependent ? (
             <>
-              <DollarSign className="w-6 h-6" />
+              <Sparkles className="w-6 h-6 text-yellow-300" />
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest block opacity-90">Micro Unlock Fee</span>
-                <span className="text-lg font-black tracking-tight cursor-pointer hover:underline" onClick={() => navigate('/pricing')}>
-                  {!profile.has_used_free_test ? "1st Test is FREE!" : "₹10 per Official Paper (Upgrade)"}
+                <span className="text-[10px] font-black uppercase tracking-widest block opacity-90">Access Plan</span>
+                <span className="text-lg font-black tracking-tight">
+                  100% Free Archive Access
                 </span>
               </div>
             </>
@@ -287,27 +287,9 @@ const YearWisePYQ = () => {
                   <span className="px-3.5 py-1 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-wider">
                     {isNeet ? 'NEET UG' : 'JEE Main'} {paper.year}
                   </span>
-                  {isSuperAdmin ? (
-                    <span className="px-3 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-purple-500" /> Free (Super Admin)
-                    </span>
-                  ) : isUnlocked || checkSubscriptionActive(profile) ? (
-                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> Unlocked {checkSubscriptionActive(profile) && ' (Premium)'}
-                    </span>
-                  ) : !isIndependent ? (
-                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-emerald-500 animate-pulse" /> Free (Coaching)
-                    </span>
-                  ) : isIndependent && !profile.has_used_free_test ? (
-                    <span className="px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-yellow-300" /> Free 1st Test
-                    </span>
-                  ) : (
-                    <span className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                      <Lock className="w-3 h-3 text-amber-600" /> ₹10 / Attempt
-                    </span>
-                  )}
+                  <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-emerald-500 fill-emerald-100" /> Free Archive
+                  </span>
                 </div>
 
                 <div>
@@ -332,35 +314,13 @@ const YearWisePYQ = () => {
               <button
                 onClick={() => handleUnlockAndStart(paper)}
                 disabled={isProcessing}
-                className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-md ${
-                  isSuperAdmin
-                    ? 'bg-purple-600 text-white hover:bg-purple-700 shadow-purple-100'
-                    : isUnlocked 
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100' 
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100'
-                }`}
+                className="w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-md bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
               >
                 {isProcessing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
-                ) : isSuperAdmin ? (
-                  <>
-                    Launch Free Test <ChevronRight className="w-4 h-4" />
-                  </>
-                ) : isUnlocked ? (
-                  <>
-                    Start Unlocked Test <ChevronRight className="w-4 h-4" />
-                  </>
-                ) : !isIndependent ? (
-                  <>
-                    Start Test <ChevronRight className="w-4 h-4" />
-                  </>
-                ) : isIndependent && !profile.has_used_free_test ? (
-                  <>
-                    Unlock Free (1st Test) <ChevronRight className="w-4 h-4" />
-                  </>
                 ) : (
                   <>
-                    Unlock Attempt (₹10) <ChevronRight className="w-4 h-4" />
+                    Start Exam <ChevronRight className="w-4 h-4" />
                   </>
                 )}
               </button>

@@ -21,11 +21,9 @@ const ExamSetup = () => {
   
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   const isIndependent = profile.role === 'student' && !profile.admin_id;
-  const needsPayment = isIndependent && profile.has_used_free_test && !checkSubscriptionActive(profile);
+  const needsPayment = isIndependent && !checkSubscriptionActive(profile);
 
-  const initialCounts = (isIndependent && !profile.has_used_free_test) 
-    ? (isNeet ? { mcq: 10, numerical: 0 } : { mcq: 8, numerical: 2 }) 
-    : (isNeet ? { mcq: 45, numerical: 0 } : { mcq: 25, numerical: 5 });
+  const initialCounts = isNeet ? { mcq: 45, numerical: 0 } : { mcq: 25, numerical: 5 };
   const [questionCounts, setQuestionCounts] = useState(initialCounts);
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
   const [preparationLogs, setPreparationLogs] = useState<string[]>([]);
@@ -177,18 +175,7 @@ const ExamSetup = () => {
   };
 
   const launchExam = async () => {
-    if (isIndependent && !profile.has_used_free_test) {
-      try {
-        const { supabase } = await import('../supabase');
-        if (supabase) {
-          await supabase.from('profiles').update({ has_used_free_test: true }).eq('id', profile.id);
-          const updatedProfile = { ...profile, has_used_free_test: true };
-          localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
-        }
-      } catch (err) {
-        console.error("Error setting free test status:", err);
-      }
-    }
+
 
     let finalQuestions = preparedQuestions;
     try {
@@ -224,22 +211,7 @@ const ExamSetup = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 pb-12">
-      {isIndependent && !profile.has_used_free_test && (
-        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-6 rounded-[2rem] shadow-xl shadow-indigo-100 flex items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl">
-              <Sparkles className="w-6 h-6 text-yellow-300" />
-            </div>
-            <div>
-              <h3 className="text-lg font-black uppercase tracking-tight">Free Mock Test Active</h3>
-              <p className="text-xs font-medium text-indigo-100 leading-relaxed">
-                Your first mock test is free and locked to exactly **10 questions** (8 MCQs, 2 Numericals). Make it count!
-              </p>
-            </div>
-          </div>
-          <span className="text-[10px] bg-white text-indigo-600 font-black uppercase tracking-widest px-4 py-2 rounded-xl shrink-0">1 Free Attempt</span>
-        </div>
-      )}
+
       {needsPayment && !isPaid && (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 p-6 rounded-[2rem] shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex items-center gap-4">

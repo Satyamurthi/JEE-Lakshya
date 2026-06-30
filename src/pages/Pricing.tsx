@@ -23,7 +23,7 @@ interface Plan {
 }
 
 const Pricing = () => {
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('yearly');
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState<any | null>(null);
   const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
@@ -65,8 +65,8 @@ const Pricing = () => {
     {
       id: 'premium',
       name: 'Premium Pro Pass',
-      priceMonthly: 299,
-      priceYearly: 2388, // ₹199/mo billed yearly
+      priceMonthly: 199,
+      priceYearly: 1188, // ₹99/mo billed yearly
       badge: 'Most Popular',
       highlighted: true,
       description: 'Unlock unlimited access to daily challenges and practice tests',
@@ -350,7 +350,7 @@ const Pricing = () => {
           const displayPrice = plan.id === 'ultimate' && billingPeriod === 'yearly' 
             ? '999' 
             : plan.id === 'premium' && billingPeriod === 'yearly'
-            ? '199'
+            ? '99'
             : price;
           
           const labelSuffix = plan.priceMonthly === 0 ? '' : billingPeriod === 'yearly' ? '/mo' : '/mo';
@@ -359,7 +359,7 @@ const Pricing = () => {
             : plan.id === 'ultimate' && billingPeriod === 'yearly'
             ? 'Billed ₹999 annually'
             : plan.id === 'premium' && billingPeriod === 'yearly'
-            ? 'Billed ₹2,388 annually (₹199/mo)'
+            ? 'Billed ₹1,188 annually (₹99/mo)'
             : `Billed ₹${price} monthly`;
 
           return (

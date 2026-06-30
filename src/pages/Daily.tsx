@@ -16,7 +16,7 @@ const Daily = () => {
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   
   const isIndependent = profile.role === 'student' && !profile.admin_id;
-  const needsPayment = isIndependent && profile.has_used_free_test && !checkSubscriptionActive(profile);
+  const needsPayment = isIndependent && !checkSubscriptionActive(profile);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -112,18 +112,7 @@ const Daily = () => {
       return;
     }
 
-    if (isIndependent && !profile.has_used_free_test) {
-      try {
-        const { supabase } = await import('../supabase');
-        if (supabase) {
-          await supabase.from('profiles').update({ has_used_free_test: true }).eq('id', profile.id);
-        }
-        const updatedProfile = { ...profile, has_used_free_test: true };
-        localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
-      } catch (err) {
-        console.error("Error setting free test status:", err);
-      }
-    }
+
 
     // Store challenge questions in local storage for the exam portal
     localStorage.setItem('active_exam_questions', JSON.stringify(challenge.questions));

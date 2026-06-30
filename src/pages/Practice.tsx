@@ -25,7 +25,7 @@ const Practice = () => {
 
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   const isIndependent = profile.role === 'student' && !profile.admin_id;
-  const needsPayment = isIndependent && profile.has_used_free_test && !checkSubscriptionActive(profile);
+  const needsPayment = isIndependent && !checkSubscriptionActive(profile);
 
   const handleUnlockPractice = async () => {
     setIsProcessingPayment(true);
@@ -237,22 +237,7 @@ const Practice = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {isIndependent && !profile.has_used_free_test && (
-        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-6 rounded-[2rem] shadow-xl shadow-indigo-100 flex items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl">
-              <Sparkles className="w-6 h-6 text-yellow-300" />
-            </div>
-            <div>
-              <h3 className="text-lg font-black uppercase tracking-tight">Free Practice Attempt Active</h3>
-              <p className="text-xs font-medium text-indigo-100 leading-relaxed">
-                Your first practice test is free. Make it count!
-              </p>
-            </div>
-          </div>
-          <span className="text-[10px] bg-white text-indigo-600 font-black uppercase tracking-widest px-4 py-2 rounded-xl shrink-0">1 Free Attempt</span>
-        </div>
-      )}
+
       {needsPayment && !isPaid && (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 p-6 rounded-[2rem] shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex items-center gap-4">
@@ -262,7 +247,7 @@ const Practice = () => {
             <div>
               <h3 className="text-sm font-black uppercase tracking-wider">Payment Required</h3>
               <p className="text-xs text-amber-700 font-bold">
-                You have already used your free test. Subsequent practice tests require a ₹10 unlock fee or a Premium membership.
+                Chapter practice tests require a ₹10 unlock fee or a Premium membership.
               </p>
             </div>
           </div>
