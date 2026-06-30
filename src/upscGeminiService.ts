@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Subject, ExamType, Question, QuestionType } from "./types";
+import { generateDynamicQuestions } from "./utils/fallbackGenerator";
 
 const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -178,46 +179,5 @@ export const getDeepAnalysis = async (result: any) => {
 };
 
 export const generateFallbackQuestions = (subject: Subject, mcqCount: number = 8, numericalCount: number = 2): Question[] => {
-  const generateId = () => Math.random().toString(36).substring(2, 15);
-  
-  const sampleBank: Record<string, { mcq: any[] }> = {
-    History: {
-      mcq: [
-        { statement: "Consider the following statements regarding the Cabinet Mission Plan of 1946:\n1. It recommended a loose federal structure for India.\n2. It rejected the demand for a separate Pakistan.\nWhich of the statements given above is/are correct?", options: ["1 only", "2 only", "Both 1 and 2", "Neither 1 nor 2"], correctAnswer: "C", concept: "Modern History", solution: "Both statements are correct." }
-      ]
-    },
-    Geography: {
-      mcq: [
-        { statement: "Which of the following rivers flows through a rift valley in India?", options: ["Narmada", "Godavari", "Krishna", "Cauvery"], correctAnswer: "A", concept: "Indian Rivers", solution: "Narmada flows between the Vindhya and Satpura ranges in a rift valley." }
-      ]
-    },
-    Polity: {
-      mcq: [
-        { statement: "The Ninth Schedule was introduced in the Constitution of India during the prime ministership of:", options: ["Jawaharlal Nehru", "Lal Bahadur Shastri", "Indira Gandhi", "Morarji Desai"], correctAnswer: "A", concept: "Constitutional Schedules", solution: "The Ninth Schedule was added by the First Amendment in 1951 under Jawaharlal Nehru." }
-      ]
-    }
-  };
-
-  const bank = sampleBank[subject as any] || sampleBank.Polity;
-  const result: Question[] = [];
-  
-  for (let i = 0; i < mcqCount; i++) {
-    const template = bank.mcq[i % bank.mcq.length];
-    result.push({
-      id: `practice-upsc-${subject}-mcq-${generateId()}`,
-      subject: subject,
-      chapter: template.concept,
-      type: QuestionType.MCQ,
-      difficulty: 'Hard',
-      statement: template.statement,
-      options: { A: template.options[0], B: template.options[1], C: template.options[2], D: template.options[3] } as any,
-      correctAnswer: template.correctAnswer,
-      solution: template.solution,
-      explanation: template.solution,
-      concept: template.concept,
-      markingScheme: { positive: 2, negative: 1 }
-    });
-  }
-
-  return result;
+  return generateDynamicQuestions(subject, mcqCount, numericalCount, "UPSC") as any;
 };

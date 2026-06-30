@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Subject, ExamType, Question, QuestionType } from "./types";
+import { generateDynamicQuestions } from "./utils/fallbackGenerator";
 
 const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -179,46 +180,5 @@ export const getDeepAnalysis = async (result: any) => {
 };
 
 export const generateFallbackQuestions = (subject: Subject, mcqCount: number = 8, numericalCount: number = 2): Question[] => {
-  const generateId = () => Math.random().toString(36).substring(2, 15);
-  
-  const sampleBank: Record<string, { mcq: any[] }> = {
-    Physics: {
-      mcq: [
-        { statement: "A body projected vertically upwards with velocity $u$ reaches a maximum height $H$. Its speed at height $H/2$ is:", options: ["$u/\\sqrt{2}$", "$u/2$", "$u/4$", "$u\\sqrt{2}$"], correctAnswer: "A", concept: "Kinematics", solution: "v = u/\\sqrt{2}" }
-      ]
-    },
-    Chemistry: {
-      mcq: [
-        { statement: "Calculate the oxidation state of Chromium in Potassium Dichromate ($\\text{K}_2\\text{Cr}_2\\text{O}_7$):", options: ["+4", "+5", "+6", "+7"], correctAnswer: "C", concept: "Redox Reactions", solution: "x = +6." }
-      ]
-    },
-    Mathematics: {
-      mcq: [
-        { statement: "The number of non-empty subsets of a set containing $5$ distinct elements is:", options: ["$31$", "$32$", "$30$", "$64$"], correctAnswer: "A", concept: "Sets", solution: "32 - 1 = 31." }
-      ]
-    }
-  };
-
-  const bank = sampleBank[subject] || sampleBank.Physics;
-  const result: Question[] = [];
-  
-  for (let i = 0; i < mcqCount; i++) {
-    const template = bank.mcq[i % bank.mcq.length];
-    result.push({
-      id: `practice-kcet-${subject}-mcq-${generateId()}`,
-      subject: subject,
-      chapter: template.concept,
-      type: QuestionType.MCQ,
-      difficulty: 'Medium',
-      statement: template.statement,
-      options: { A: template.options[0], B: template.options[1], C: template.options[2], D: template.options[3] } as any,
-      correctAnswer: template.correctAnswer,
-      solution: template.solution,
-      explanation: template.solution,
-      concept: template.concept,
-      markingScheme: { positive: 1, negative: 0 }
-    });
-  }
-
-  return result;
+  return generateDynamicQuestions(subject, mcqCount, numericalCount, "KCET") as any;
 };

@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Subject, ExamType, Question, QuestionType } from "./types";
+import { generateDynamicQuestions } from "./utils/fallbackGenerator";
 
 const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -276,78 +277,5 @@ export const getDeepAnalysis = async (result: any) => {
 };
 
 export const generateFallbackQuestions = (subject: Subject, mcqCount: number = 8, numericalCount: number = 2): Question[] => {
-  const generateId = () => Math.random().toString(36).substring(2, 15);
-  
-  const sampleBank: Record<string, { mcq: any[], numerical: any[] }> = {
-    Physics: {
-      mcq: [
-        { statement: "A body projected vertically upwards with velocity $u$ reaches a maximum height $H$. Its speed at height $H/2$ is:", options: ["$u/\\sqrt{2}$", "$u/2$", "$u/4$", "$u\\sqrt{2}$"], correctAnswer: "A", concept: "Kinematics", solution: "Using kinematics, $v = u/\\sqrt{2}$." }
-      ],
-      numerical: []
-    },
-    Chemistry: {
-      mcq: [
-        { statement: "Calculate the oxidation state of Chromium in Potassium Dichromate ($\\text{K}_2\\text{Cr}_2\\text{O}_7$):", options: ["+4", "+5", "+6", "+7"], correctAnswer: "C", concept: "Redox Reactions", solution: "2(+1) + 2(x) + 7(-2) = 0 => x = +6." }
-      ],
-      numerical: []
-    },
-    Biology: {
-      mcq: [
-        { statement: "Which of the following cell organelles is responsible for cellular respiration and ATP generation?", options: ["Chloroplast", "Mitochondria", "Lysosome", "Ribosome"], correctAnswer: "B", concept: "Cell Structure", solution: "Mitochondria are the powerhouses of the cell where ATP is synthesized during aerobic respiration." }
-      ],
-      numerical: []
-    },
-    Botany: {
-      mcq: [
-        { statement: "Which pigment acts as the primary reaction center in Photosystem I (PSI) during plant photosynthesis?", options: ["Chlorophyll a P-700", "Chlorophyll a P-680", "Chlorophyll b", "Carotenoids"], correctAnswer: "A", concept: "Photosynthesis in Higher Plants", solution: "P-700 is the reaction center of Photosystem I with peak absorption at 700 nm." },
-        { statement: "If a double-stranded plant DNA contains 20% Cytosine, what is the expected percentage of Adenine?", options: ["20%", "30%", "40%", "60%"], correctAnswer: "B", concept: "Molecular Basis of Inheritance", solution: "By Chargaff's rule, G=C=20% (total 40%). Remaining 60% is A+T. Since A=T, Adenine is 30%." }
-      ],
-      numerical: []
-    },
-    Zoology: {
-      mcq: [
-        { statement: "Which hormone surge triggers ovulation and induces the development of the corpus luteum in human females?", options: ["Luteinizing Hormone (LH)", "Follicle Stimulating Hormone (FSH)", "Estrogen", "Progesterone"], correctAnswer: "A", concept: "Human Reproduction", solution: "An LH surge induces rupture of the Graafian follicle and ovulation, forming the corpus luteum." },
-        { statement: "Under forward bias condition in a semiconductor diode, the width of the depletion region:", options: ["Increases", "Decreases", "Remains constant", "First increases then decreases"], correctAnswer: "B", concept: "Semiconductor Electronics", solution: "Forward biasing opposes the internal barrier potential, narrowing the depletion width." }
-      ],
-      numerical: []
-    }
-  };
-
-  const bank = sampleBank[subject] || sampleBank.Botany || sampleBank.Biology;
-  const result: Question[] = [];
-  const shuffledMCQ = [...bank.mcq].sort(() => 0.5 - Math.random());
-
-  const normalizeQuestionOptions = (opts: any) => {
-    if (Array.isArray(opts)) {
-      const identifiers = ["A", "B", "C", "D"];
-      const obj: any = {};
-      opts.forEach((opt, idx) => {
-        if (idx < identifiers.length) {
-          obj[identifiers[idx]] = opt;
-        }
-      });
-      return obj;
-    }
-    return opts || {};
-  };
-
-  for (let i = 0; i < mcqCount; i++) {
-    const template = shuffledMCQ[i % shuffledMCQ.length];
-    result.push({
-      id: `practice-neet-${subject}-mcq-${generateId()}`,
-      subject: subject,
-      chapter: template.concept,
-      type: QuestionType.MCQ,
-      difficulty: 'Medium',
-      statement: template.statement,
-      options: normalizeQuestionOptions(template.options) as any,
-      correctAnswer: template.correctAnswer,
-      solution: template.solution,
-      explanation: template.solution,
-      concept: template.concept,
-      markingScheme: { positive: 4, negative: 1 }
-    });
-  }
-
-  return result;
+  return generateDynamicQuestions(subject, mcqCount, numericalCount, "NEET") as any;
 };

@@ -8,10 +8,10 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 LIVE / STRICT SUBSCRIPTION GATING COMPLETED
-* **Last Updated Timestamp**: 2026-06-30 13:30 IST
+* **Session Status**: 🟢 LIVE / DYNAMIC FALLBACK EXAM QUESTION UNIQUE GENERATION COMPLETED
+* **Last Updated Timestamp**: 2026-06-30 17:35 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
-* **Last Completed Task**: Resolved login caching leak (commit `bfcc5a0`) by clearing all stale localStorage overrides (stale subscription tier, expiry times, unlocked PYQ items) during login and logout, synced override variables in StudentModuleRoute to match Supabase database values dynamically, and updated `checkSubscriptionActive` to strictly check expiration dates (preventing lifetime fallbacks).
+* **Last Completed Task**: Implemented Automated Item Generation (AIG) for offline fallback mock exams in `src/utils/fallbackGenerator.ts`. Added a deterministic seeded random generator to construct mathematically consistent question parameters, values, and options dynamically (shuffling distractors and updating solutions) based on unique question indexes. Replaced static template loops in `geminiService.ts`, `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts` to ensure 100% unique, non-repeating question feeds even when the pool is exhausted.
 
 ### 🎯 Active Task Overview
 * **Goal**: Provide standard Razorpay payment configurations, pricing selector cycles, and bypass controls to unlock premium mock exam features.
