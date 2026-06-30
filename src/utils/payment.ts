@@ -35,7 +35,7 @@ export const initiateRazorpayPayment = async (
         return;
       }
 
-      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T7i2gHREMW3YL2';
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_T7ivdfyBiKsv73';
       const amountInPaise = Math.max(100, amountRupees * 100); // Minimum 100 paise (₹1)
 
       // Ensure receipt is under Razorpay's 40-character limit
