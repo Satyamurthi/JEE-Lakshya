@@ -183,6 +183,49 @@ create policy "Users can view own attempts" on daily_attempts for select using (
 create policy "Admins view all attempts" on daily_attempts for select using ( 
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
+
+-- SUBSCRIPTION PLANS
+create table if not exists public.subscription_plans (
+  id text primary key,
+  name text not null,
+  price_monthly numeric not null,
+  price_yearly numeric not null,
+  description text,
+  badge text,
+  highlighted boolean default false,
+  color text,
+  glow_color text,
+  features jsonb not null default '[]'::jsonb,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+alter table public.subscription_plans enable row level security;
+create policy "Plans read policy" on subscription_plans for select using (true);
+create policy "Plans write policy" on subscription_plans for all using (
+  exists (select 1 from profiles where id = auth.uid() and role = 'super_admin')
+);
+
+-- DEFAULT PLANS SEED DATA
+insert into public.subscription_plans (id, name, price_monthly, price_yearly, description, color, glow_color, highlighted, badge, features)
+values 
+  ('basic', 'Free Trial Pass', 0, 0, 'Test the waters of JEE/NEET study terminals', 'from-slate-700 to-slate-800', 'rgba(100, 116, 139, 0.1)', false, null, '[
+    {"text": "1st NTA mock test completely free", "included": true},
+    {"text": "Subsequent tests at ₹10 per attempt", "included": true},
+    {"text": "Standard mock question database", "included": true},
+    {"text": "Step-by-step math solver explanations", "included": true},
+    {"text": "AI question synthesis", "included": false},
+    {"text": "Offline compiled test downloads", "included": false},
+    {"text": "24/7 dedicated AI Tutor assistance", "included": false}
+  ]'::jsonb),
+  ('premium', 'Premium Pro Pass', 199, 1188, 'Unlock unlimited access to daily challenges and practice tests', 'from-indigo-600 to-violet-600', 'rgba(79, 70, 229, 0.25)', true, 'Most Popular', '[
+    {"text": "Unlimited Daily Challenge papers", "included": true},
+    {"text": "Unlimited Chapter Practice tests", "included": true},
+    {"text": "Unlimited Full NTA CBT Mock exams", "included": true},
+    {"text": "Real-time countdown testing portal", "included": true},
+    {"text": "Google Gemini AI dynamic updates", "included": true},
+    {"text": "Custom AI remedial test generator", "included": true},
+    {"text": "24/7 dedicated AI Tutor assistance", "included": true}
+  ]'::jsonb)
+on conflict (id) do nothing;
 ```
 
 3.  **Authentication Settings**:
