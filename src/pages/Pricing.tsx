@@ -462,7 +462,10 @@ const Pricing = () => {
                   <button
                     onClick={() => handleSubscribe(plan)}
                     disabled={isProcessing !== null || !isIndependent}
-                    className={`w-full py-4 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 bg-gradient-to-r ${plan.color}`}
+                    className={`w-full py-4 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 bg-gradient-to-r ${plan.color}`}
+                    style={{ 
+                      boxShadow: plan.glowColor ? `0 10px 25px -4px ${plan.glowColor}` : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                    }}
                   >
                     {isProcessing === plan.id ? (
                       <>
