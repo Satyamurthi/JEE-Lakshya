@@ -101,6 +101,7 @@ const ExamPortal = () => {
   }
 
   const isRestricted = profile.role !== 'super_admin';
+  const [isInitialGateActive, setIsInitialGateActive] = useState(isRestricted && !document.fullscreenElement);
 
   const handleResumeExam = async () => {
     try {
@@ -228,18 +229,6 @@ const ExamPortal = () => {
   useEffect(() => {
     if (!isRestricted || questions.length === 0) return;
 
-    // Enter Fullscreen Mode automatically on exam start
-    const triggerFullscreen = async () => {
-      try {
-        if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
-        }
-      } catch (err) {
-        console.warn("Fullscreen request bypassed:", err);
-      }
-    };
-    triggerFullscreen();
-
     // Android App Bridge Start lockdown (Locks app screen on custom WebView wrappers)
     if ((window as any).AndroidBridge && typeof (window as any).AndroidBridge.startLockdown === 'function') {
       try {
@@ -284,6 +273,9 @@ const ExamPortal = () => {
 
     // Violation trigger function
     const triggerViolation = (type: 'fullscreen' | 'focus' | 'tab') => {
+      // Ignore checks if initial gate is still active
+      if (isInitialGateActive) return;
+
       const isAlreadyViolated = document.getElementById('security-lockout-overlay') !== null;
       if (isAlreadyViolated) return;
 
@@ -354,7 +346,7 @@ const ExamPortal = () => {
         document.exitFullscreen().catch(() => {});
       }
     };
-  }, [isRestricted, questions.length, handleSubmit]);
+  }, [isRestricted, questions.length, isInitialGateActive, handleSubmit]);
 
   
 
@@ -624,6 +616,58 @@ const ExamPortal = () => {
       <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 text-center z-[300] gap-4">
         <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
         <p className="text-slate-400 font-black text-xs uppercase tracking-widest animate-pulse">Initializing Exam Sheets...</p>
+      </div>
+    );
+  }
+
+  if (isInitialGateActive) {
+    return (
+      <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center p-6 z-[300] text-center select-none">
+        <div className="bg-slate-900 border border-indigo-500/20 rounded-[2.5rem] w-full max-w-md p-10 space-y-8 shadow-2xl shadow-indigo-950/20 animate-in zoom-in duration-300">
+          <div className="text-center space-y-4">
+            <div className="w-20 h-20 bg-indigo-500/10 text-indigo-400 rounded-3xl border border-indigo-500/20 flex items-center justify-center mx-auto shadow-lg animate-pulse">
+              <Lock className="w-10 h-10" />
+            </div>
+            <h3 className="text-2xl font-black text-white tracking-tight uppercase">Terminal Lock Required</h3>
+            <p className="text-indigo-400 font-extrabold uppercase tracking-widest text-[10px] bg-indigo-500/10 py-1.5 px-4 rounded-full inline-block border border-indigo-500/20">
+              Exam Integrity Verification
+            </p>
+            <p className="pt-2 text-slate-300 text-xs font-medium leading-relaxed">
+              To start this competitive mock examination, your browser terminal must be locked in Fullscreen Mode. This prevents switching tabs or opening other applications during the test.
+            </p>
+          </div>
+
+          <div className="bg-slate-950/40 p-6 rounded-3xl border border-white/5 text-left space-y-2">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Lockdown Parameters</p>
+            <ul className="text-[10px] text-slate-400 font-bold space-y-1.5 list-disc list-inside">
+              <li>Automatic Fullscreen Mode is enforced.</li>
+              <li>Tab/Application switches will trigger violations.</li>
+              <li>Exiting fullscreen or losing focus reduces integrity attempts.</li>
+              <li>3 security warnings will result in auto-submission.</li>
+            </ul>
+          </div>
+
+          <button 
+            onClick={async () => {
+              try {
+                if (!document.fullscreenElement) {
+                  await document.documentElement.requestFullscreen();
+                }
+              } catch (err) {
+                console.warn("Could not request fullscreen on start:", err);
+              } finally {
+                // Clear initial gate after browser transition
+                setTimeout(() => {
+                  setIsInitialGateActive(false);
+                }, 300);
+              }
+            }}
+            className="w-full py-5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-900/40 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
+          >
+            <Lock className="w-4 h-4" />
+            Secure Terminal & Start Exam
+          </button>
+        </div>
       </div>
     );
   }
