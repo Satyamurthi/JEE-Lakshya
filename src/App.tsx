@@ -291,7 +291,7 @@ const getDisplayBrand = (profile: any) => {
 const Sidebar = ({ isOpen, toggle, installPrompt, onInstall }: { isOpen: boolean, toggle: () => void, installPrompt: any, onInstall: () => void }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  const profile = getSafeProfile();
 
   const handleLogout = async () => {
     if (supabase) await supabase.auth.signOut();
@@ -453,7 +453,7 @@ const resizeAndConvertToBase64 = (file: File): Promise<string> => {
 };
 
 const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
-  const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  const profile = getSafeProfile();
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
@@ -468,7 +468,7 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
 
   useEffect(() => {
     if (isEditProfileModalOpen) {
-      const latestProfile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+      const latestProfile = getSafeProfile();
       setEditName(latestProfile.full_name || '');
       setEditAvatarUrl(latestProfile.avatar_url || '');
       setEditCollegeName(latestProfile.college_name || '');
@@ -840,6 +840,18 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
   );
 };
 
+
+const getSafeProfile = (): any => {
+  try {
+    const raw = localStorage.getItem('user_profile');
+    if (!raw || raw === 'undefined') return {};
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("Safe profile parse failed:", e);
+    return {};
+  }
+};
+
 const BackgroundBlobs = () => (
   <div className="no-print fixed inset-0 overflow-hidden pointer-events-none -z-10 select-none">
     <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-indigo-200/40 rounded-full mix-blend-multiply filter blur-[120px] opacity-40 animate-blob"></div>
@@ -883,7 +895,7 @@ const AppContent = () => {
     }
   };
 
-  const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  const profile = getSafeProfile();
   const isSuperAdmin = profile.role === 'super_admin';
   const hasSelectedStream = !!sessionStorage.getItem('super_admin_stream_selected');
   const showStreamSelect = isSuperAdmin && !hasSelectedStream && !isAuth;

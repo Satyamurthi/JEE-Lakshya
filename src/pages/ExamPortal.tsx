@@ -88,7 +88,13 @@ const ExamPortal = () => {
   const [isSessionBlocked, setIsSessionBlocked] = useState(false);
   const [sessionCheckLoading, setSessionCheckLoading] = useState(true);
 
-  const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  let profile: any = {};
+  try {
+    const raw = localStorage.getItem('user_profile');
+    if (raw && raw !== 'undefined') profile = JSON.parse(raw);
+  } catch (e) {
+    console.error("Safe profile parse failed in ExamPortal:", e);
+  }
   const isRestricted = profile.role !== 'super_admin';
   const [securityWarnings, setSecurityWarnings] = useState(3);
 
@@ -536,7 +542,23 @@ const ExamPortal = () => {
 
 
 
-  if (questions.length === 0) return null;
+  if (sessionCheckLoading) {
+    return (
+      <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center z-[300] gap-4">
+        <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+        <p className="text-slate-400 font-black text-xs uppercase tracking-widest animate-pulse">Securing Testing Terminal...</p>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 text-center z-[300] gap-4">
+        <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+        <p className="text-slate-400 font-black text-xs uppercase tracking-widest animate-pulse">Initializing Exam Sheets...</p>
+      </div>
+    );
+  }
 
   // Dynamically extract and order subjects from exam questions
   const detectedSubjects = Array.from(new Set(questions.map(q => q.subject).filter(Boolean)));
@@ -551,16 +573,7 @@ const ExamPortal = () => {
     subjects.push(...defaultOrder);
   }
 
-  const currentSubject = currentQuestion.subject || subjects[0];
-
-  if (sessionCheckLoading) {
-    return (
-      <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center z-[300] gap-4">
-        <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-        <p className="text-slate-400 font-black text-xs uppercase tracking-widest animate-pulse">Securing Testing Terminal...</p>
-      </div>
-    );
-  }
+  const currentSubject = currentQuestion?.subject || subjects[0];
 
   if (isSessionBlocked) {
     return (
@@ -742,13 +755,13 @@ const ExamPortal = () => {
               <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-slate-200 space-y-10">
                  <div className="prose prose-slate max-w-none">
                     <MathText className="text-xl font-bold text-slate-800 leading-relaxed">
-                      {currentQuestion.statement}
+                      {currentQuestion?.statement}
                     </MathText>
                  </div>
 
-                 {currentQuestion.type === 'MCQ' ? (
+                 {currentQuestion?.type === 'MCQ' ? (
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     {Object.entries(currentQuestion.options || {}).map(([key, val]: [string, any]) => (
+                     {Object.entries(currentQuestion?.options || {}).map(([key, val]: [string, any]) => (
                        <button
                          key={key}
                          onClick={() => handleAnswer(key)}
