@@ -50,14 +50,31 @@ export const initiateRazorpayPayment = async (
           },
           body: JSON.stringify({ amount: amountInPaise, receipt })
         });
-        if (orderRes.ok) {
-          const orderData = await orderRes.json();
-          if (orderData.order_id) {
-            orderId = orderData.order_id;
-          }
+        
+        if (!orderRes.ok) {
+          let errMsg = 'Failed to create order on server';
+          try {
+            const errData = await orderRes.json();
+            if (errData.error) errMsg = errData.error;
+          } catch (_) {}
+          alert(`Order creation failed: ${errMsg}. Please check if Razorpay environment variables (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET) are configured in your Netlify/hosting dashboard.`);
+          resolve(false);
+          return;
         }
-      } catch (e) {
-        console.warn("Backend order creation endpoint bypassed/unavailable, initializing Razorpay client modal:", e);
+
+        const orderData = await orderRes.json();
+        if (orderData.order_id) {
+          orderId = orderData.order_id;
+        } else {
+          alert("Payment gateway returned an invalid order ID. Please try again.");
+          resolve(false);
+          return;
+        }
+      } catch (e: any) {
+        console.warn("Backend order creation failed:", e);
+        alert(`Could not connect to payment server: ${e.message || e}. Please ensure the server is running.`);
+        resolve(false);
+        return;
       }
 
       // Step 2: Open Razorpay Standard Checkout Modal
