@@ -953,15 +953,13 @@ export const getSubscriptionPlans = async (): Promise<any[]> => {
 };
 
 export const saveSubscriptionPlan = async (plan: any): Promise<boolean> => {
-  if (!supabase) return false;
-  try {
-    const { error } = await supabase.from('subscription_plans').upsert(plan);
-    if (error) throw error;
-    return true;
-  } catch (e) {
-    console.error("Failed to save subscription plan:", e);
-    return false;
+  if (!supabase) throw new Error("Supabase client is not initialized.");
+  const { error } = await supabase.from('subscription_plans').upsert(plan);
+  if (error) {
+    console.error("Failed to save subscription plan:", error);
+    throw error;
   }
+  return true;
 };
 
 export const deleteSubscriptionPlan = async (planId: string): Promise<boolean> => {

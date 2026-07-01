@@ -46,3 +46,13 @@ This file records the chronological history of tasks, major changes, and feature
     4.  Created a backup branch `original-code` from the repository's original main on GitHub.
     5.  Committed and pushed the latest codebase as the `main` branch to both `JEE-Lakshya` and `JEE-Nexus` GitHub repositories.
     6.  *Reversion*: Discovered that MS Word blocks raw HTML output with a `.docx` extension as unreadable/corrupt (due to strict OOXML validation). Reverted format back to `.doc` and MIME type back to `application/msword;charset=utf-8` to ensure clean, instant file opening in MS Word while keeping LaTeX/math layout formulas completely intact. Pushed final changes to GitHub.
+
+---
+
+## Session 5: Equation Rendering in Document Exports
+*   **Request**: Render math equations beautifully inside downloaded Word documents instead of showing raw LaTeX strings (e.g. `$\text{K}_6\text{MnO}_4$`, `$sp^3$`).
+*   **Work Done**:
+    1.  Refactored the `renderMathInText` utility inside [MathText.tsx](file:///d:/JEE/src/components/MathText.tsx) to be an exported helper function. This parses LaTeX tags (`$`, `$$`, `\(`, `\[`) and compiles them into visual HTML container elements alongside raw MathML `<math>` nodes.
+    2.  Imported `renderMathInText` inside [SuperAdmin.tsx](file:///d:/JEE/src/pages/SuperAdmin.tsx) and applied it dynamically to all question statements, optional selections, and question solution explanations during document generation.
+    3.  Appended an embedded CSS layout config rule: `span.katex-html { display: none !important; }` inside the document styles. This prevents Microsoft Word from rendering raw HTML font characters, allowing Word to natively compile the MathML nodes into pure, interactive mathematical equation boxes.
+    4.  Committed and pushed final updates to the `main` branch on both GitHub remotes.
