@@ -13,7 +13,7 @@ import {
   getQuestionsCountFromDB, seedMassiveQuestionsToDB, getAllQuestionsFromDB, getActualTotalRevenue,
   getSubscriptionPlans, saveSubscriptionPlan, deleteSubscriptionPlan, grantFreePremiumAccess
 } from '../supabase';
-import MathText from '../components/MathText';
+import MathText, { renderMathInText } from '../components/MathText';
 import YearWisePYQ from './YearWisePYQ';
 
 interface AdminUser {
@@ -682,6 +682,9 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
 .options-table td { padding: 4pt 8pt; vertical-align: top; font-size: 10.5pt; width: 50%; }
 .ans-box { font-weight: bold; color: #15803d; background-color: #f0fdf4; padding: 4pt 8pt; border: 1pt solid #bbf7d0; font-size: 10pt; margin-top: 6pt; margin-bottom: 4pt; display: inline-block; }
 .sol-box { font-size: 10pt; color: #334155; background-color: #f8fafc; padding: 6pt 10pt; border-left: 2.5pt solid #6366f1; margin-top: 6pt; }
+/* Hide KaTeX HTML rendering and let Word render raw MathML nodes as native equations */
+.katex-html { display: none !important; }
+.katex-mathml { display: inline !important; }
 </style>
 </head>
 <body>
@@ -697,10 +700,11 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
         qList.forEach((q, idx) => {
           const yearVal = q.year || q.exam_session || q.pyq_info;
           const pyqRef = yearVal ? `[${yearVal} Q${idx + 1}]` : `[JEE Main PYQ Archive - Q${idx + 1}]`;
-          const stmt = q.statement || q.question || '';
+          const rawStmt = q.statement || q.question || '';
+          const renderedStmt = renderMathInText(rawStmt);
 
           docHtml += `<div class="question-block">\n`;
-          docHtml += `<div class="q-statement"><strong>Q${qIndex}.</strong> <span class="pyq-tag">${pyqRef}</span> ${stmt}</div>\n`;
+          docHtml += `<div class="q-statement"><strong>Q${qIndex}.</strong> <span class="pyq-tag">${pyqRef}</span> ${renderedStmt}</div>\n`;
 
           // Format Options cleanly
           if (q.options) {
@@ -709,14 +713,16 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
               const keys = Object.keys(q.options);
               keys.forEach((k, i) => {
                 if (i > 0 && i % 2 === 0) docHtml += `</tr><tr>`;
-                docHtml += `<td><strong>(${k})</strong> ${q.options[k]}</td>`;
+                const renderedOpt = renderMathInText(q.options[k] || '');
+                docHtml += `<td><strong>(${k})</strong> ${renderedOpt}</td>`;
               });
             } else if (Array.isArray(q.options)) {
               const labels = ['A', 'B', 'C', 'D'];
               q.options.forEach((val: string, i: number) => {
                 if (i > 0 && i % 2 === 0) docHtml += `</tr><tr>`;
                 const lbl = labels[i] || String(i + 1);
-                docHtml += `<td><strong>(${lbl})</strong> ${val}</td>`;
+                const renderedOpt = renderMathInText(val || '');
+                docHtml += `<td><strong>(${lbl})</strong> ${renderedOpt}</td>`;
               });
             }
             docHtml += `</tr></table>\n`;
@@ -729,7 +735,8 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
 
           const sol = q.solution || q.explanation;
           if (sol) {
-            docHtml += `<div class="sol-box"><strong>Solution & Explanation:</strong> ${sol}</div>\n`;
+            const renderedSol = renderMathInText(sol);
+            docHtml += `<div class="sol-box"><strong>Solution & Explanation:</strong> ${renderedSol}</div>\n`;
           }
 
           docHtml += `</div>\n<hr style="border: none; border-top: 1px dashed #cbd5e1; margin: 12pt 0;"/>\n`;

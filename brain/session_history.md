@@ -45,3 +45,4 @@ This file records the chronological history of tasks, major changes, and feature
     3.  Updated the Super Admin button label and loader state to show `Chapter Doc (.docx)`.
     4.  Created a backup branch `original-code` from the repository's original main on GitHub.
     5.  Committed and pushed the latest codebase as the `main` branch to both `JEE-Lakshya` and `JEE-Nexus` GitHub repositories.
+    6.  *Reversion*: Discovered that MS Word blocks raw HTML output with a `.docx` extension as unreadable/corrupt (due to strict OOXML validation). Reverted format back to `.doc` and MIME type back to `application/msword;charset=utf-8` to ensure clean, instant file opening in MS Word while keeping LaTeX/math layout formulas completely intact. Pushed final changes to GitHub.
