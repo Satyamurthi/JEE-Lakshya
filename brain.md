@@ -6,13 +6,16 @@
 
 > **AGENT PROTOCOL**: Update this section before ending any turn or when work is paused. When the user says **"continue"** or **"continue at next meet"**, immediately read this section and resume execution from the **Next Immediate Action**.
 
-* **Session Status**: 🟢 LIVE / WEB-LEVEL LOCKDOWN & EXAM PORTAL BLANK SCREEN FIX COMPLETED
-* **Last Updated Timestamp**: 2026-07-01 00:45 IST
+* **Session Status**: 🟢 LIVE / WEB-LEVEL LOCKDOWN & ACTIVE SESSION SYNCHRONIZATION COMPLETED
+* **Last Updated Timestamp**: 2026-07-01 10:12 IST
 * **Current Active Stream Context**: Multi-Tenant JEE Main/Advanced (`JEE-Nexus`) & NEET UG (`JEE-Lakshya`)
 * **Last Completed Task**: 
   - Fixed the temporal dead zone reference error (`isRestricted` used before initialization) causing a blank screen in [ExamPortal.tsx](file:///d:/JEE/src/pages/ExamPortal.tsx).
   - Integrated full browser-level lockdown mode in the web app: auto-fullscreen on exam start, blocking of context menus, copy/cut/paste, and text selection.
   - Added listeners for tab visibility, window focus (Alt-Tab/app switching), and fullscreen exits, freezing the screen with a custom lockout overlay warning, auto-submitting on 3 warnings, and providing a "Resume & Re-Lock Terminal" restoration button.
+  - Blocked Android split-screen at the OS level by setting `android:resizeableActivity="false"` in the Manifest.
+  - Patched web fullscreen bypasses by strictly requiring successful fullscreen request completion to unlock start/resume gates.
+  - Integrated concurrent active session sync: added "Start Here (Override)" button to lockouts, and a 10-second database checker to auto-terminate stolen sessions on remote devices.
 
 ### 🎯 Active Task Overview
 * **Goal**: Git multi-remote alignment and Supabase live schema verification.
@@ -23,6 +26,8 @@
 - [x] **Step 3**: Create custom security lockout blocker overlay UI with warnings-left indicators.
 - [x] **Step 4**: Test registration, checkout/premium bypass, and exam launch flows in local browser.
 - [x] **Step 5**: Update `brain.md` session status and chronological history.
+- [x] **Step 6**: Block Android split-screen and patch web fullscreen bypass routes.
+- [x] **Step 7**: Implement concurrent session override controls and remote auto-exit checkers.
 
 ### 📌 Next Immediate Action (If User Says "Continue")
 * **Continuation Point**: Git repository push and Supabase sync verified. Ready for next feature tasks.
