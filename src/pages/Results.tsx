@@ -361,7 +361,7 @@ const Results = () => {
                             }`}>
                               {key}
                             </div>
-                            <MathText className={`font-bold text-sm ${isCorrectAnswer ? 'text-emerald-900' : isUserAnswer ? 'text-rose-900' : 'text-slate-600'}`}>
+                            <MathText inlineOnly className={`font-bold text-sm ${isCorrectAnswer ? 'text-emerald-900' : isUserAnswer ? 'text-rose-900' : 'text-slate-600'}`}>
                               {val}
                             </MathText>
                           </div>

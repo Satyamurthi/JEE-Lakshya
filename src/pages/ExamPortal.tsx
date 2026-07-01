@@ -970,7 +970,7 @@ const ExamPortal = () => {
                          }`}>
                            {key}
                          </div>
-                         <MathText className={`font-bold text-sm ${answers[currentIndex] === key ? 'text-indigo-900' : 'text-slate-600'}`}>
+                         <MathText inlineOnly className={`font-bold text-sm ${answers[currentIndex] === key ? 'text-indigo-900' : 'text-slate-600'}`}>
                            {val}
                          </MathText>
                        </button>

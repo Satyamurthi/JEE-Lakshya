@@ -7,9 +7,10 @@ interface MathTextProps {
   children?: string;
   text?: string;
   className?: string;
+  inlineOnly?: boolean;
 }
 
-const MathText: FC<MathTextProps> = ({ children, text, className = '' }) => {
+const MathText: FC<MathTextProps> = ({ children, text, className = '', inlineOnly = false }) => {
   const contentToRender = children !== undefined ? children : (text !== undefined ? text : '');
 
   const renderMathInText = (rawText: string): string => {
@@ -17,6 +18,12 @@ const MathText: FC<MathTextProps> = ({ children, text, className = '' }) => {
     
     // Clean and sanitize text first
     let text = cleanQuestionText(String(rawText));
+
+    if (inlineOnly) {
+      // Demote all display math blocks to inline math blocks
+      text = text.replace(/\$\$/g, '$');
+      text = text.replace(/\\\[([\s\S]*?)\\\]/g, '\\($1\\)');
+    }
 
     // 0. Standardize LaTeX delimiters
     text = text.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$1$$$$');

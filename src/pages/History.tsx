@@ -231,7 +231,7 @@ const History = () => {
                                           {optKey}
                                         </span>
                                         <div className="flex-1 pt-0.5">
-                                          <MathText text={optVal} />
+                                          <MathText inlineOnly text={optVal} />
                                         </div>
                                         {isCorrectOpt && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />}
                                       </div>

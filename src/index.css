@@ -60,3 +60,24 @@
     print-color-adjust: exact !important;
   }
 }
+
+/* KaTeX Layout and Text Wrapping Overrides */
+.math-text {
+  word-wrap: break-word;
+  word-break: break-word;
+}
+.math-text .katex {
+  white-space: normal !important;
+  font-size: 1.05em;
+}
+.math-text .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding: 4px 0;
+  margin: 0.5em 0 !important;
+}
+.math-text .katex .base {
+  white-space: normal !important;
+  display: inline !important;
+}
