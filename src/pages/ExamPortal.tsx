@@ -91,6 +91,7 @@ const ExamPortal = () => {
   // Security and Lockout State
   const [securityWarnings, setSecurityWarnings] = useState(3);
   const [activeViolation, setActiveViolation] = useState<'fullscreen' | 'focus' | 'tab' | null>(null);
+  const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(false);
 
   let profile: any = {};
   try {
@@ -292,7 +293,9 @@ const ExamPortal = () => {
 
     // 2. Fullscreen Change
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
+      if (document.fullscreenElement) {
+        setHasEnteredFullscreen(true);
+      } else if (hasEnteredFullscreen) {
         triggerViolation('fullscreen');
       }
     };
@@ -346,7 +349,7 @@ const ExamPortal = () => {
         document.exitFullscreen().catch(() => {});
       }
     };
-  }, [isRestricted, questions.length, isInitialGateActive, handleSubmit]);
+  }, [isRestricted, questions.length, isInitialGateActive, hasEnteredFullscreen, handleSubmit]);
 
   
 
