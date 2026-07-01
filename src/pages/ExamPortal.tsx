@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Clock, ChevronLeft, ChevronRight, CheckCircle2, Flag, 
@@ -98,14 +98,22 @@ const ExamPortal = () => {
 
   const isRestricted = profile.role !== 'super_admin';
 
+  const isTransitioningRef = useRef(false);
+  const isFullscreenSupported = typeof document !== 'undefined' && !!document.documentElement.requestFullscreen;
+
   // Security and Lockout State
   const [securityWarnings, setSecurityWarnings] = useState(3);
   const [activeViolation, setActiveViolation] = useState<'fullscreen' | 'focus' | 'tab' | null>(null);
-  const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(isRestricted && !!document.fullscreenElement);
-  const [isInitialGateActive, setIsInitialGateActive] = useState(isRestricted && !document.fullscreenElement);
+  const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(isRestricted && isFullscreenSupported && !!document.fullscreenElement);
+  const [isInitialGateActive, setIsInitialGateActive] = useState(isRestricted && isFullscreenSupported && !document.fullscreenElement);
 
   const handleResumeExam = async () => {
+    if (!isFullscreenSupported) {
+      setActiveViolation(null);
+      return;
+    }
     try {
+      isTransitioningRef.current = true;
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
       }
@@ -115,6 +123,10 @@ const ExamPortal = () => {
     } catch (err) {
       console.warn("Could not request fullscreen on resume:", err);
       alert("Fullscreen mode is required to resume the exam. Please ensure you are not in split-screen mode.");
+    } finally {
+      setTimeout(() => {
+        isTransitioningRef.current = false;
+      }, 1500);
     }
   };
 
@@ -330,6 +342,8 @@ const ExamPortal = () => {
 
     // 2. Fullscreen Change
     const handleFullscreenChange = () => {
+      if (!isFullscreenSupported) return;
+      if (isTransitioningRef.current) return;
       if (document.fullscreenElement) {
         setHasEnteredFullscreen(true);
       } else if (hasEnteredFullscreen) {
@@ -339,6 +353,7 @@ const ExamPortal = () => {
 
     // 3. Tab focus / Visibility warning checks
     const handleVisibility = () => {
+      if (isTransitioningRef.current) return;
       if (document.hidden) {
         triggerViolation('tab');
       }
@@ -346,6 +361,7 @@ const ExamPortal = () => {
 
     // 4. Window focus loss (switching applications)
     const handleBlur = () => {
+      if (isTransitioningRef.current) return;
       triggerViolation('focus');
     };
 
@@ -723,6 +739,7 @@ const ExamPortal = () => {
           <button 
             onClick={async () => {
               try {
+                isTransitioningRef.current = true;
                 if (!document.fullscreenElement) {
                   await document.documentElement.requestFullscreen();
                 }
@@ -733,6 +750,10 @@ const ExamPortal = () => {
               } catch (err) {
                 console.warn("Could not request fullscreen on start:", err);
                 alert("Fullscreen mode is required to take this exam. Please ensure you are not in split-screen or windowed mode.");
+              } finally {
+                setTimeout(() => {
+                  isTransitioningRef.current = false;
+                }, 1500);
               }
             }}
             className="w-full py-5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-900/40 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
