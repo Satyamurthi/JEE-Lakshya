@@ -55,6 +55,10 @@ class MainActivity : AppCompatActivity() {
         val supabaseKey = getString(R.string.supabase_anon_key)
         val neetUrl = getString(R.string.neet_supabase_url)
         val neetKey = getString(R.string.neet_supabase_anon_key)
+        val kcetUrl = getString(R.string.kcet_supabase_url)
+        val kcetKey = getString(R.string.kcet_supabase_anon_key)
+        val upscUrl = getString(R.string.upsc_supabase_url)
+        val upscKey = getString(R.string.upsc_supabase_anon_key)
         val razorpayKey = getString(R.string.razorpay_key_id)
 
         // Check for updates from Supabase backend in background
@@ -97,6 +101,10 @@ class MainActivity : AppCompatActivity() {
                             localStorage.setItem('VITE_SUPABASE_ANON_KEY', '$supabaseKey');
                             localStorage.setItem('VITE_NEET_SUPABASE_URL', '$neetUrl');
                             localStorage.setItem('VITE_NEET_SUPABASE_ANON_KEY', '$neetKey');
+                            localStorage.setItem('VITE_KCET_SUPABASE_URL', '$kcetUrl');
+                            localStorage.setItem('VITE_KCET_SUPABASE_ANON_KEY', '$kcetKey');
+                            localStorage.setItem('VITE_UPSC_SUPABASE_URL', '$upscUrl');
+                            localStorage.setItem('VITE_UPSC_SUPABASE_ANON_KEY', '$upscKey');
                             localStorage.setItem('VITE_RAZORPAY_KEY_ID', '$razorpayKey');
                         } catch(e) { console.log('Config inject error', e); }
                     })()

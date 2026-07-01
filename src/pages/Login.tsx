@@ -133,7 +133,27 @@ const Login = () => {
         }
       }
 
+      // Check subscription expiry
+      if (user.subscription_expires_at) {
+        const expiry = new Date(user.subscription_expires_at);
+        if (expiry < new Date()) {
+          user.status = 'frozen';
+          if (supabase) {
+            try {
+              await supabase.from('profiles').update({ status: 'frozen' }).eq('id', user.id);
+            } catch (e) {
+              console.error("Auto-freeze sync failed at login:", e);
+            }
+          }
+        }
+      }
+
       // Check for approval status
+      if (user.status === 'frozen') {
+        setError("Your account has been frozen due to subscription expiration or administrator action.");
+        setIsLoading(false);
+        return;
+      }
       if (user.status !== 'approved') {
         setError("Your account is pending approval from the administrator. Please check back later.");
         setIsLoading(false);

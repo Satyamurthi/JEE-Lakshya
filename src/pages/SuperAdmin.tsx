@@ -45,6 +45,7 @@ const SuperAdmin = () => {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminLimit, setAdminLimit] = useState(30);
+  const [adminDuration, setAdminDuration] = useState('365');
   const [isAddingAdmin, setIsAddingAdmin] = useState(false);
 
   // Edit Admin State
@@ -54,6 +55,7 @@ const SuperAdmin = () => {
   const [editAdminEmail, setEditAdminEmail] = useState('');
   const [editAdminPassword, setEditAdminPassword] = useState('');
   const [editAdminLimit, setEditAdminLimit] = useState(30);
+  const [editAdminExpiryDate, setEditAdminExpiryDate] = useState('');
   const [editCanDaily, setEditCanDaily] = useState(false);
   const [editCanFullExam, setEditCanFullExam] = useState(false);
   const [editCanPractice, setEditCanPractice] = useState(false);
@@ -256,6 +258,15 @@ const SuperAdmin = () => {
         return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
       });
 
+      // Calculate subscription_expires_at
+      let expiresAt: string | null = null;
+      if (adminDuration !== '9999') {
+        const days = parseInt(adminDuration) || 365;
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + days);
+        expiresAt = expiryDate.toISOString();
+      }
+
       // Use public.profiles credential check fallback direct write to avoid logging out Super Admin
       const newAdminProfile = {
         id: newAdminId,
@@ -265,6 +276,8 @@ const SuperAdmin = () => {
         role: 'admin',
         status: 'approved',
         admin_max_students: adminLimit,
+        subscription_expires_at: expiresAt,
+        subscription_tier: 'admin_premium',
         created_at: new Date().toISOString()
       };
 
@@ -276,6 +289,7 @@ const SuperAdmin = () => {
       setAdminEmail('');
       setAdminPassword('');
       setAdminLimit(30);
+      setAdminDuration('365');
       loadDashboardData();
     } catch (err: any) {
       let msg = err.message || "Failed to add admin";
@@ -307,6 +321,15 @@ const SuperAdmin = () => {
     setEditCanDaily(admin.can_access_daily ?? !!admin.super_admin_permission);
     setEditCanFullExam(admin.can_access_full_exam ?? !!admin.super_admin_permission);
     setEditCanPractice(admin.can_access_practice ?? !!admin.super_admin_permission);
+    if (admin.subscription_expires_at) {
+      const d = new Date(admin.subscription_expires_at);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      setEditAdminExpiryDate(`${yyyy}-${mm}-${dd}`);
+    } else {
+      setEditAdminExpiryDate('');
+    }
     setIsEditAdminModalOpen(true);
   };
 
@@ -314,7 +337,8 @@ const SuperAdmin = () => {
     e.preventDefault();
     setIsUpdatingAdmin(true);
     try {
-      const err = await updateAdminDetails(editAdminId, editAdminName, editAdminEmail, editAdminLimit, editAdminPassword);
+      const expiresAt = editAdminExpiryDate ? new Date(editAdminExpiryDate).toISOString() : null;
+      const err = await updateAdminDetails(editAdminId, editAdminName, editAdminEmail, editAdminLimit, editAdminPassword, expiresAt);
       if (err) throw new Error(err);
 
       const permErr = await updateAdminModulePermissions(editAdminId, {
@@ -1025,7 +1049,7 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Initial Student Limit</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 font-mono">Initial Student Limit</label>
                 <input
                   type="number"
                   required
@@ -1034,6 +1058,21 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
                   placeholder="30"
                   className="w-full p-4 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 rounded-xl font-bold text-xs outline-none transition-all"
                 />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 font-mono">Duration Period</label>
+                <select
+                  value={adminDuration}
+                  onChange={e => setAdminDuration(e.target.value)}
+                  className="w-full p-4 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 rounded-xl font-bold text-xs outline-none transition-all"
+                >
+                  <option value="10">10 Days</option>
+                  <option value="30">1 Month (30 Days)</option>
+                  <option value="90">3 Months (90 Days)</option>
+                  <option value="180">6 Months (180 Days)</option>
+                  <option value="365">1 Year (365 Days)</option>
+                  <option value="9999">Lifetime (Unlimited)</option>
+                </select>
               </div>
               <button
                 type="submit"
@@ -1085,13 +1124,25 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
                             </span>
                           </div>
                           <p className="text-xs text-slate-400 font-medium">{admin.email}</p>
-                          <div className="mt-1.5 flex items-center gap-2">
+                          <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                             <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold">
                               Students: {admin.studentCount || 0} / {admin.admin_max_students}
                             </span>
                             {(admin.studentCount || 0) >= admin.admin_max_students && (
                               <span className="text-[8px] bg-rose-50 text-rose-600 border border-rose-100 px-2 py-0.5 rounded-full font-black uppercase">Capacity Reached</span>
                             )}
+                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
+                              admin.subscription_expires_at 
+                                ? new Date(admin.subscription_expires_at) < new Date()
+                                  ? 'bg-rose-50 text-rose-600 border border-rose-100 animate-pulse'
+                                  : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {admin.subscription_expires_at 
+                                ? `Expires: ${new Date(admin.subscription_expires_at).toLocaleDateString()}`
+                                : 'Lifetime Access'
+                              }
+                            </span>
                           </div>
                         </div>
                         
@@ -1247,6 +1298,15 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
                   onChange={(e) => setEditAdminPassword(e.target.value)}
                   placeholder="Leave unchanged or enter new key"
                   className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Subscription Expiry Date</label>
+                <input
+                  type="date"
+                  value={editAdminExpiryDate}
+                  onChange={(e) => setEditAdminExpiryDate(e.target.value)}
+                  className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-850 outline-none focus:bg-white focus:border-indigo-500 transition-all"
                 />
               </div>
 
@@ -1954,6 +2014,7 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
                       onChange={(e) => setGrantDuration(e.target.value)}
                       className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
                     >
+                      <option value="10">10 Days</option>
                       <option value="30">1 Month (30 Days)</option>
                       <option value="90">3 Months (90 Days)</option>
                       <option value="180">6 Months (180 Days)</option>

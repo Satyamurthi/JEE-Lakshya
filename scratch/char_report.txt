@@ -1,4 +1,0 @@
-U+2261 ('≡'): 42 occurrences
-   [Sample pyq_jee_main_2013_25_apr-q-48]: The Gibbs energy for the decomposition of  at  is as follows :  The potential difference needed for 
-   [Sample pyq_jee_main_2019_12_apr_shift_2-q-58]: Benzene diazonium chloride on reaction with aniline in the presence of dilute hydrochloric acid give
-   [Sample pyq_jee_main_2019_12_apr_shift_2-q-58]: Benzene diazonium chloride on reaction with aniline in the presence of dilute hydrochloric acid give

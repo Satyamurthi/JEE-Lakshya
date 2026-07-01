@@ -147,9 +147,13 @@ export const saveQuestionsToDB = async (questions: any[]) => {
 
   if (!supabase) {
     try {
+      const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
       const res = await fetch('http://localhost/api/questions.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Active-Stream': activeStream
+        },
         body: JSON.stringify(formattedQuestions)
       });
       if (!res.ok) {
@@ -196,7 +200,8 @@ export const fetchQuestionsFromDB = async (
 ) => {
   if (!supabase) {
     try {
-      let url = `http://localhost/api/questions.php?mcqCount=${mcqCount}&numericalCount=${numericalCount}`;
+      const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
+      let url = `http://localhost/api/questions.php?mcqCount=${mcqCount}&numericalCount=${numericalCount}&stream=${encodeURIComponent(activeStream)}`;
       if (subject) url += `&subject=${encodeURIComponent(subject)}`;
       if (chapter) url += `&chapter=${encodeURIComponent(chapter)}`;
       if (difficulty) url += `&difficulty=${encodeURIComponent(difficulty)}`;
@@ -609,12 +614,22 @@ export const updateAdminMaxLimit = async (adminId: string, limit: number) => {
   }
 };
 
-export const updateAdminDetails = async (adminId: string, full_name: string, email: string, limit: number, password?: string) => {
+export const updateAdminDetails = async (
+  adminId: string, 
+  full_name: string, 
+  email: string, 
+  limit: number, 
+  password?: string,
+  subscription_expires_at?: string | null
+) => {
   if (!supabase) return "Supabase not configured";
   try {
     const updates: any = { full_name, email: email.toLowerCase().trim(), admin_max_students: limit };
     if (password && password.trim() !== '') {
       updates.password = password;
+    }
+    if (subscription_expires_at !== undefined) {
+      updates.subscription_expires_at = subscription_expires_at;
     }
     const { error } = await supabase.from('profiles').update(updates).eq('id', adminId);
     if (error) return error.message;

@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Integrated Database & API Credentials from .env -->
+    <!-- JEE / Default Supabase Credentials -->
     <string name="supabase_url">https://daitgcrjlimjajmqoemm.supabase.co</string>
     <string name="supabase_anon_key">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhaXRnY3JqbGltamFqbXFvZW1tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1Nzc0MjIsImV4cCI6MjA5ODE1MzQyMn0.gGGHEQaVL0aXPkI-u5CMSPod5BazzBEAKr2ZfxnBh6Y</string>
     
+    <!-- NEET Supabase Credentials -->
     <string name="neet_supabase_url">https://pasyqykxlskcrvtqboxd.supabase.co</string>
     <string name="neet_supabase_anon_key">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhc3lxeWt4bHNrY3J2dHFib3hkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1ODM0MTcsImV4cCI6MjA5ODE1OTQxN30.Yph_m9uhN4eVkCnSslGqghcZ__rGc03udvTA7q0mxnk</string>
+
+    <!-- KCET Supabase Credentials (Placeholder) -->
+    <string name="kcet_supabase_url">https://your-kcet-project.supabase.co</string>
+    <string name="kcet_supabase_anon_key">your-kcet-anon-key-here</string>
+
+    <!-- UPSC Supabase Credentials (Placeholder) -->
+    <string name="upsc_supabase_url">https://your-upsc-project.supabase.co</string>
+    <string name="upsc_supabase_anon_key">your-upsc-anon-key-here</string>
     
+    <!-- Razorpay Payment Integration Key -->
     <string name="razorpay_key_id">rzp_live_T7ivdfyBiKsv73</string>
 </resources>

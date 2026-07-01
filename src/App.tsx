@@ -94,6 +94,22 @@ const ProtectedRoute: FC<{ children: ReactNode }> = ({ children }) => {
   if (!profileRaw) return <Navigate to="/login" replace />;
   const profile = JSON.parse(profileRaw);
 
+  // Dynamic self-subscription check and auto-freeze
+  let isSelfExpired = false;
+  if (profile.subscription_expires_at) {
+    const expiry = new Date(profile.subscription_expires_at);
+    if (expiry < new Date()) {
+      isSelfExpired = true;
+      if (profile.status !== 'frozen') {
+        profile.status = 'frozen';
+        localStorage.setItem('user_profile', JSON.stringify(profile));
+        if (supabase) {
+          supabase.from('profiles').update({ status: 'frozen' }).eq('id', profile.id).then();
+        }
+      }
+    }
+  }
+
   useEffect(() => {
     let isMounted = true;
     const checkAdminStatus = async () => {
@@ -101,12 +117,23 @@ const ProtectedRoute: FC<{ children: ReactNode }> = ({ children }) => {
         try {
           const { data: admin } = await supabase
             .from('profiles')
-            .select('status')
+            .select('status, subscription_expires_at')
             .eq('id', profile.admin_id)
             .maybeSingle();
           if (isMounted) {
-            if (admin && admin.status !== 'approved') {
-              setIsAdminFrozen(true);
+            if (admin) {
+              let adminFrozen = admin.status !== 'approved';
+              if (admin.subscription_expires_at) {
+                const expiry = new Date(admin.subscription_expires_at);
+                if (expiry < new Date()) {
+                  adminFrozen = true;
+                  // Auto-freeze admin in background if not already frozen
+                  if (admin.status !== 'frozen') {
+                    supabase.from('profiles').update({ status: 'frozen' }).eq('id', profile.admin_id).then();
+                  }
+                }
+              }
+              setIsAdminFrozen(adminFrozen);
             } else {
               setIsAdminFrozen(false);
             }
@@ -125,7 +152,7 @@ const ProtectedRoute: FC<{ children: ReactNode }> = ({ children }) => {
     return () => { isMounted = false; };
   }, [profile.admin_id]);
 
-  if (profile.status === 'frozen' || isAdminFrozen === true) {
+  if (profile.status === 'frozen' || isAdminFrozen === true || isSelfExpired) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white">
         <div className="bg-slate-800/80 p-10 rounded-[2.5rem] border border-slate-700/80 shadow-2xl max-w-lg space-y-6 relative overflow-hidden animate-in zoom-in duration-300">
