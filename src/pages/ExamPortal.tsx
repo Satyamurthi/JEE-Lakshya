@@ -118,6 +118,43 @@ const ExamPortal = () => {
     }
   };
 
+  const [isOverridingSession, setIsOverridingSession] = useState(false);
+
+  const handleOverrideSession = async () => {
+    setIsOverridingSession(true);
+    try {
+      let deviceToken = localStorage.getItem('exam_device_token');
+      if (!deviceToken) {
+        deviceToken = `dev_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+        localStorage.setItem('exam_device_token', deviceToken);
+      }
+
+      if (supabase && profile.id) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            current_exam_token: deviceToken,
+            current_exam_started_at: new Date().toISOString()
+          })
+          .eq('id', profile.id);
+
+        if (error) {
+          alert("Failed to override session: " + error.message);
+          return;
+        }
+
+        // Release local block
+        setIsSessionBlocked(false);
+        // Force them to re-authenticate fullscreen
+        setIsInitialGateActive(isRestricted && !document.fullscreenElement);
+      }
+    } catch (err: any) {
+      alert("Error overriding session: " + (err.message || err));
+    } finally {
+      setIsOverridingSession(false);
+    }
+  };
+
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
     try {
@@ -419,6 +456,39 @@ const ExamPortal = () => {
     verifyAndLockSession();
   }, [profile.id]);
 
+  // Periodic session lock check (polls Supabase every 10 seconds to verify lock has not been stolen)
+  useEffect(() => {
+    if (!supabase || !profile.id || isSessionBlocked || isInitialGateActive) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const deviceToken = localStorage.getItem('exam_device_token');
+        const { data: dbProfile, error } = await supabase
+          .from('profiles')
+          .select('current_exam_token')
+          .eq('id', profile.id)
+          .maybeSingle();
+
+        if (!error && dbProfile) {
+          const dbToken = dbProfile.current_exam_token;
+          if (dbToken && dbToken !== deviceToken) {
+            // Our session was hijacked/terminated by another device!
+            setIsSessionBlocked(true);
+            
+            // Exit fullscreen if we are currently in it
+            if (document.fullscreenElement) {
+              document.exitFullscreen().catch(() => {});
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Periodic session check error:", err);
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [profile.id, isSessionBlocked, isInitialGateActive]);
+
   // Load Exam Data
   useEffect(() => {
     const activeSession = localStorage.getItem('active_session');
@@ -706,12 +776,21 @@ const ExamPortal = () => {
             Your active session token is locked to another browser window or device.
           </p>
         </div>
-        <button
-          onClick={() => navigate('/')}
-          className="px-8 py-4 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
-        >
-          Return to Dashboard
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md justify-center px-4">
+          <button
+            onClick={() => navigate('/')}
+            className="flex-1 px-8 py-4 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all cursor-pointer"
+          >
+            Return to Dashboard
+          </button>
+          <button
+            onClick={handleOverrideSession}
+            disabled={isOverridingSession}
+            className="flex-1 px-8 py-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-550 hover:to-rose-550 disabled:from-red-800 disabled:to-rose-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-red-950/40 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {isOverridingSession ? 'Overriding...' : 'Start Here (Override)'}
+          </button>
+        </div>
       </div>
     );
   }
