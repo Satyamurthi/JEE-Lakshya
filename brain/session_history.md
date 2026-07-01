@@ -30,7 +30,18 @@ This file records the chronological history of tasks, major changes, and feature
 ## Session 3: Expiry & Automated Freeze Controls
 *   **Request**: Add 10 days tenure to student premium plans, add duration settings to coaching admins, and enforce automatic account freezing when subscriptions expire.
 *   **Work Done**:
-    *   Added the `10 Days` option to both the student bypass grant dropdown and the new Coaching Admin registration duration selector in the Super Admin panel.
-    *   Added "Duration Period" configuration fields to the "Create Admin Account" form and "Subscription Expiry Date" inputs to the "Edit Coaching Admin" modal, persisting dates to Supabase via `updateAdminDetails`.
-    *   Displayed a license status badge showing expiration dates in the Active Coaching Admins list.
-    *   Implemented real-time subscription expiration verification and background `frozen` status auto-sync in `ProtectedRoute` (`App.tsx`) and `Login.tsx`. Accounts freeze automatically upon expiration, and parent admin freezing automatically blocks registered student modules.
+    1.  Added the `10 Days` option to both the student bypass grant dropdown and the new Coaching Admin registration duration selector in the Super Admin panel.
+    2.  Added "Duration Period" configuration fields to the "Create Admin Account" form and "Subscription Expiry Date" inputs to the "Edit Coaching Admin" modal, persisting dates to Supabase via `updateAdminDetails`.
+    3.  Displayed a license status badge showing expiration dates in the Active Coaching Admins list.
+    4.  Implemented real-time subscription expiration verification and background `frozen` status auto-sync in `ProtectedRoute` (`App.tsx`) and `Login.tsx`. Accounts freeze automatically upon expiration, and parent admin freezing automatically blocks registered student modules.
+
+---
+
+## Session 4: Export Format Adjustment & Push to GitHub
+*   **Request**: Convert Chapter Doc export format from `.doc` to `.docx` and push all changes to GitHub main branch, backup old code to `original-code` branch.
+*   **Work Done**:
+    1.  Updated the download MIME type in `src/pages/SuperAdmin.tsx` to `application/vnd.openxmlformats-officedocument.wordprocessingml.document`.
+    2.  Modified the download link generator file extension from `.doc` to `.docx`.
+    3.  Updated the Super Admin button label and loader state to show `Chapter Doc (.docx)`.
+    4.  Created a backup branch `original-code` from the repository's original main on GitHub.
+    5.  Committed and pushed the latest codebase as the `main` branch to both `JEE-Lakshya` and `JEE-Nexus` GitHub repositories.

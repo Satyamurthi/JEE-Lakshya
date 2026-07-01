@@ -740,12 +740,12 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
       docHtml += `</body></html>`;
 
       // Include UTF-8 Byte Order Mark (\uFEFF) to prevent MS Word read-only file lock
-      const blob = new Blob(['\uFEFF' + docHtml], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document;charset=utf-8' });
+      const blob = new Blob(['\uFEFF' + docHtml], { type: 'application/msword;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `JEE_Question_Bank_${exportSubject}_Chapterwise_${Date.now()}.docx`;
+      link.download = `JEE_Question_Bank_${exportSubject}_Chapterwise_${Date.now()}.doc`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1835,7 +1835,7 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
                   className="py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isExporting && exportType === 'DOC' ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
-                  {isExporting && exportType === 'DOC' ? 'Generating DOCX...' : `Chapter Doc (.docx)`}
+                  {isExporting && exportType === 'DOC' ? 'Generating DOC...' : `Chapter Doc (.doc)`}
                 </button>
               </div>
             </div>
