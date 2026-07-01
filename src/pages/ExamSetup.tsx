@@ -1,9 +1,9 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Zap, BookOpen, Clock, AlertTriangle, CheckCircle2, Loader2, PlayCircle, Atom, Sliders, Hash, RotateCcw, Database, DollarSign, X, Sparkles } from 'lucide-react';
 import { ExamType, Subject } from '../types';
 import { initiateRazorpayPayment, checkSubscriptionActive } from '../utils/payment';
+import { supabase } from '../supabase';
 
 const ExamSetup = () => {
   const navigate = useNavigate();
@@ -22,6 +22,26 @@ const ExamSetup = () => {
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
   const isIndependent = profile.role === 'student' && !profile.admin_id;
   const needsPayment = isIndependent && !checkSubscriptionActive(profile);
+
+  useEffect(() => {
+    // Clear any stale exam session locks on setup mount
+    if (profile && profile.id) {
+      const clearLock = async () => {
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              current_exam_token: null,
+              current_exam_started_at: null
+            })
+            .eq('id', profile.id);
+        } catch (err) {
+          console.warn("Failed to clear stale exam session on setup mount:", err);
+        }
+      };
+      clearLock();
+    }
+  }, [profile?.id]);
 
   const initialCounts = isNeet ? { mcq: 45, numerical: 0 } : { mcq: 25, numerical: 5 };
   const [questionCounts, setQuestionCounts] = useState(initialCounts);

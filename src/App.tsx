@@ -905,6 +905,26 @@ const AppContent = () => {
   const hasSelectedStream = !!sessionStorage.getItem('super_admin_stream_selected');
   const showStreamSelect = isSuperAdmin && !hasSelectedStream && !isAuth;
 
+  useEffect(() => {
+    // Automatically clear active exam session locks in Supabase when leaving the Exam Portal
+    if (!isExamPortal && profile && profile.id) {
+      const clearLock = async () => {
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              current_exam_token: null,
+              current_exam_started_at: null
+            })
+            .eq('id', profile.id);
+        } catch (err) {
+          console.warn("Failed to clear stale exam session lock globally:", err);
+        }
+      };
+      clearLock();
+    }
+  }, [location.pathname, profile?.id, isExamPortal]);
+
   if (showStreamSelect) {
     return (
       <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-slate-900/95 backdrop-blur-xl">

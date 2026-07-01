@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Award, Target, TrendingUp, BookOpen, ChevronRight, Brain, Flame, Activity, Zap, Layers, Crown, Sparkles, X, Loader2, CheckCircle2 } from 'lucide-react';
 
-import { getUserExamAttempts, getUserAllDailyAttempts } from '../supabase';
+import { getUserExamAttempts, getUserAllDailyAttempts, supabase } from '../supabase';
 import { calculateDailyStreak, calculateOverallAccuracy, calculatePercentile, calculateTotalXP } from '../utils/metricsHelper';
 import { checkSubscriptionActive } from '../utils/payment';
 
@@ -55,6 +55,21 @@ const Dashboard = () => {
       const profileRaw = localStorage.getItem('user_profile');
       const userProf = profileRaw ? JSON.parse(profileRaw) : {};
       setProfile(userProf);
+
+      // Clear any stale exam session locks on dashboard mount
+      if (userProf && userProf.id) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              current_exam_token: null,
+              current_exam_started_at: null
+            })
+            .eq('id', userProf.id);
+        } catch (err) {
+          console.warn("Failed to clear stale exam session on dashboard mount:", err);
+        }
+      }
 
       const activeStream = localStorage.getItem('active_stream') || userProf.selected_stream || 'JEE Main & Advanced';
       const isNeet = activeStream.toLowerCase().includes('neet');
