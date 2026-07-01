@@ -205,6 +205,8 @@ d:\JEE\
 - Fixed temporal dead zone `ReferenceError` with `isRestricted` blocking the CBT Exam Portal render cycle, resolving the blank page issue.
 - Integrated a secure web application lockdown sandbox: automatic fullscreen entrance, disabled key controls (reload, inspect, standard hotkeys), disabled text selection, right-click context menus, and copy/cut/paste event processing.
 - Implemented window focus (`blur`), tab switches (`visibilitychange`), and fullscreen exit (`fullscreenchange`) detection systems, warning the student via a custom React Security Lockout Overlay UI and auto-submitting the exam session after 3 violations.
+- Resolved startup false-positive fullscreen violations by gating the exam portal with an initial "Terminal Lock Required" screen and deferring validation triggers until the browser enters fullscreen successfully (`hasEnteredFullscreen`).
+- Resolved duplicate login `SEC_DUPLICATE_LOGIN` lockouts by implementing global route watchers (`App.tsx`) and page mount cleaners (`Dashboard.tsx`, `ExamSetup.tsx`) that automatically clear active Supabase exam session locks when leaving or loading pages outside the exam portal path.
 
 ---
 
