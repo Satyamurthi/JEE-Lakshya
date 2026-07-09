@@ -114,50 +114,53 @@ const ExamSetup = () => {
         setProgress(prev => ({ ...prev, [sub]: 'loading' }));
         
         let questions: any[] = [];
-        let source = "Database Engine";
+        let source = "Database Question Bank";
 
-        if (savedKey) {
-          try {
-            setPreparationLogs(prev => [...prev, `Attempting AI generation for ${sub} (${difficulty} Level)...`]);
-            const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
-            const service = await getStreamGeminiService(activeStream);
-            questions = await service.generateJEEQuestions(
-                sub, 
-                totalPerSubject, 
-                examType,
-                undefined,
-                difficulty,
-                undefined,
-                { mcq: questionCounts.mcq, numerical: questionCounts.numerical }
-            );
+        // 1. Try fetching from Database Question Bank first
+        try {
+          setPreparationLogs(prev => [...prev, `Fetching ${difficulty} level questions for ${sub} from Question Bank...`]);
+          questions = await fetchQuestionsFromDB(
+            sub,
+            undefined,
+            undefined,
+            questionCounts.mcq,
+            questionCounts.numerical,
+            difficulty
+          );
+        } catch (dbErr: any) {
+          console.error(`[ExamSetup] Database fetch failed for ${sub}:`, dbErr);
+        }
 
-            if (questions && questions.length > 0) {
-                source = "AI Engine";
-                setPreparationLogs(prev => [...prev, `Saving ${sub} AI questions to database...`]);
-                await saveQuestionsToDB(questions);
+        // 2. If Database has insufficient questions, fall back to AI Engine
+        if (!questions || questions.length < totalPerSubject) {
+          if (savedKey) {
+            try {
+              setPreparationLogs(prev => [...prev, `Database has insufficient questions. Attempting AI generation for ${sub}...`]);
+              const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+              const service = await getStreamGeminiService(activeStream);
+              const aiQuestions = await service.generateJEEQuestions(
+                  sub, 
+                  totalPerSubject, 
+                  examType,
+                  undefined,
+                  difficulty,
+                  undefined,
+                  { mcq: questionCounts.mcq, numerical: questionCounts.numerical }
+              );
+
+              if (aiQuestions && aiQuestions.length > 0) {
+                  questions = aiQuestions;
+                  source = "AI Engine";
+                  setPreparationLogs(prev => [...prev, `Saving ${sub} AI questions to database...`]);
+                  await saveQuestionsToDB(questions);
+              }
+            } catch (aiErr: any) {
+              setPreparationLogs(prev => [...prev, `⚠️ AI generation failed for ${sub}.`]);
             }
-          } catch (aiErr: any) {
-            setPreparationLogs(prev => [...prev, `⚠️ AI generation unavailable for ${sub}. Fetching from DB...`]);
           }
         }
 
-        if (!questions || questions.length === 0) {
-          setPreparationLogs(prev => [...prev, `Fetching ${difficulty} level JEE questions for ${sub} from Question Bank...`]);
-          source = "Database Question Bank";
-          try {
-            questions = await fetchQuestionsFromDB(
-              sub,
-              undefined,
-              undefined,
-              questionCounts.mcq,
-              questionCounts.numerical,
-              difficulty
-            );
-          } catch (dbErr: any) {
-            console.error(`[ExamSetup] Database fetch failed for ${sub}:`, dbErr);
-          }
-        }
-
+        // 3. Fallback to Synthesized Offline Bank if still empty
         if (!questions || questions.length === 0) {
           try {
             const { getStreamGeminiService } = await import('../streamGeminiDispatcher');

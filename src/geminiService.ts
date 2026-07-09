@@ -101,7 +101,7 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
   // Use the native proxy endpoint `/nvidia-api` which is configured in Netlify (_redirects)
   // and Vite (vite.config.ts) with built-in retries and backoff for rate limiting (429).
   let lastError: any = null;
-  const maxAttempts = 3;
+  const maxAttempts = 5;
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -122,8 +122,8 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
       }
       
       if (response.status === 429) {
-        console.warn(`[NVIDIA] Rate limit (429) hit. Attempt ${attempt} of ${maxAttempts}. Retrying in ${attempt * 3}s...`);
-        await delay(attempt * 3000);
+        console.warn(`[NVIDIA] Rate limit (429) hit. Attempt ${attempt} of ${maxAttempts}. Retrying in ${attempt * 4}s...`);
+        await delay(attempt * 4000);
       } else {
         const errorText = await response.text();
         throw new Error(`NVIDIA API Error (${response.status}): ${errorText || response.statusText}`);

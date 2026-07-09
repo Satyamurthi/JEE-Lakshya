@@ -152,58 +152,70 @@ const Practice = () => {
 
     setIsPreparing(true);
     let questions: any[] = [];
-    let source = "Gemini AI";
+    let source = "Local/Cloud Database";
     
+    // 1. Try fetching from Database Question Bank first
     try {
-      console.log("[Practice] Attempting AI generation first...");
-      const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
-      const service = await getStreamGeminiService(activeStream);
-      const { saveQuestionsToDB } = await import('../supabase');
-      const { Subject, ExamType } = await import('../types');
-      
-      const subjectEnum = selectedSubject === 'Physics' ? Subject.Physics : 
-                         selectedSubject === 'Chemistry' ? Subject.Chemistry : 
-                         selectedSubject === 'Biology' ? Subject.Biology : 
-                         selectedSubject === 'Botany' ? Subject.Botany : 
-                         selectedSubject === 'Zoology' ? Subject.Zoology : 
-                         Subject.Mathematics;
-
-      questions = await service.generateJEEQuestions(
-        subjectEnum,
-        mcqCount + numericalCount,
-        isNeet ? ExamType.NEET : ExamType.Advanced,
-        [selectedChapter],
-        difficulty,
-        selectedTopics,
-        { mcq: mcqCount, numerical: numericalCount }
+      console.log("[Practice] Fetching from database first...");
+      questions = await fetchQuestionsFromDB(
+        selectedSubject, 
+        selectedChapter, 
+        selectedTopics, 
+        mcqCount, 
+        numericalCount,
+        difficulty
       );
+    } catch (dbErr: any) {
+      console.error("[Practice] Database fetch failed:", dbErr);
+    }
 
-      if (questions && questions.length > 0) {
-        console.log("[Practice] AI generation succeeded. Storing questions in database...");
-        await saveQuestionsToDB(questions);
-      }
-    } catch (aiErr: any) {
-      console.warn("[Practice] AI generation failed or was bypassed. Falling back to database...", aiErr);
-      source = "Local/Cloud Database";
-      try {
-        questions = await fetchQuestionsFromDB(
-          selectedSubject, 
-          selectedChapter, 
-          selectedTopics, 
-          mcqCount, 
-          numericalCount,
-          difficulty
-        );
-      } catch (dbErr: any) {
-        console.error("[Practice] Database fetch fallback failed:", dbErr);
+    // 2. If Database has insufficient questions, fall back to AI generation
+    const requestedCount = mcqCount + numericalCount;
+    if (!questions || questions.length < requestedCount) {
+      const savedKey = localStorage.getItem('user_gemini_api_key') || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+      if (savedKey) {
+        try {
+          console.log("[Practice] Database has insufficient questions. Attempting AI generation...");
+          source = "Gemini AI";
+          const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+          const service = await getStreamGeminiService(activeStream);
+          const { saveQuestionsToDB: saveToDB } = await import('../supabase');
+          const { Subject, ExamType } = await import('../types');
+          
+          const subjectEnum = selectedSubject === 'Physics' ? Subject.Physics : 
+                             selectedSubject === 'Chemistry' ? Subject.Chemistry : 
+                             selectedSubject === 'Biology' ? Subject.Biology : 
+                             selectedSubject === 'Botany' ? Subject.Botany : 
+                             selectedSubject === 'Zoology' ? Subject.Zoology : 
+                             Subject.Mathematics;
+
+          const aiQuestions = await service.generateJEEQuestions(
+            subjectEnum,
+            requestedCount,
+            isNeet ? ExamType.NEET : ExamType.Advanced,
+            [selectedChapter],
+            difficulty,
+            selectedTopics,
+            { mcq: mcqCount, numerical: numericalCount }
+          );
+
+          if (aiQuestions && aiQuestions.length > 0) {
+            questions = aiQuestions;
+            console.log("[Practice] AI generation succeeded. Storing questions in database...");
+            await saveToDB(questions);
+          }
+        } catch (aiErr: any) {
+          console.warn("[Practice] AI generation failed:", aiErr);
+        }
       }
     }
     
+    // 3. Fallback to Synthesized Chapter Practice Bank
     if (!questions || questions.length === 0) {
       try {
         const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
         const service = await getStreamGeminiService(activeStream);
-        const { saveQuestionsToDB } = await import('../supabase');
+        const { saveQuestionsToDB: saveToDB } = await import('../supabase');
         const { Subject } = await import('../types');
         const subjectEnum = selectedSubject === 'Physics' ? Subject.Physics : 
                            selectedSubject === 'Chemistry' ? Subject.Chemistry : 
@@ -217,7 +229,7 @@ const Practice = () => {
           chapter: selectedChapter,
           concept: selectedChapter
         }));
-        await saveQuestionsToDB(questions);
+        await saveToDB(questions);
       } catch (fbErr) {
         console.error("[Practice] Offline fallback synthesis failed:", fbErr);
       }
