@@ -41,15 +41,25 @@ export const getCleanedNvidiaKey = (apiKey: string): string => {
   if (cleanKey.toLowerCase().startsWith("bearer ")) {
     cleanKey = cleanKey.substring(7).trim();
   }
-  if (cleanKey.startsWith("AO_") && !cleanKey.startsWith("nvapi-")) {
+  // If not already starting with nvapi- and not a Google key, auto-prepend nvapi-
+  if (!cleanKey.startsWith("nvapi-") && !cleanKey.startsWith("AIzaSy") && !cleanKey.startsWith("AQ.")) {
     cleanKey = "nvapi-" + cleanKey;
   }
   return cleanKey;
 };
 
 export const isNvidiaKey = (apiKey: string): boolean => {
-  const clean = apiKey.trim().toLowerCase();
-  return clean.includes("nvapi-") || clean.includes("ao_");
+  const clean = apiKey.trim();
+  if (clean.toLowerCase().includes("nvapi-")) return true;
+  
+  if (typeof window !== 'undefined') {
+    const selectedModel = localStorage.getItem('user_ai_model') || 'google/gemini-2.5-flash';
+    if (selectedModel.startsWith('z-ai/') || selectedModel.includes('gemma-4')) {
+      return true;
+    }
+  }
+  
+  return !clean.startsWith("AIzaSy") && !clean.startsWith("AQ.");
 };
 
 export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstruction: string): Promise<string> => {
