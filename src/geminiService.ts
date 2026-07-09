@@ -99,29 +99,45 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
   }
 
   // Use the native proxy endpoint `/nvidia-api` which is configured in Netlify (_redirects)
-  // and Vite (vite.config.ts). This completely bypasses CORS and preflight blocks natively.
-  const response = await fetch("/nvidia-api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": authHeader,
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    },
-    body: JSON.stringify(bodyData)
-  });
+  // and Vite (vite.config.ts) with built-in retries and backoff for rate limiting (429).
+  let lastError: any = null;
+  const maxAttempts = 3;
   
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`NVIDIA API Error (${response.status}): ${errorText || response.statusText}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch("/nvidia-api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": authHeader,
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(bodyData)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) return content;
+      }
+      
+      if (response.status === 429) {
+        console.warn(`[NVIDIA] Rate limit (429) hit. Attempt ${attempt} of ${maxAttempts}. Retrying in ${attempt * 3}s...`);
+        await delay(attempt * 3000);
+      } else {
+        const errorText = await response.text();
+        throw new Error(`NVIDIA API Error (${response.status}): ${errorText || response.statusText}`);
+      }
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[NVIDIA] Attempt ${attempt} failed:`, err.message || err);
+      if (attempt < maxAttempts) {
+        await delay(attempt * 2000);
+      }
+    }
   }
   
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new Error("NVIDIA API returned empty content or invalid choices structure.");
-  }
-  
-  return content;
+  throw lastError || new Error("NVIDIA API call failed after max retries.");
 };
 
 export const verifyGeminiAPIKey = async (apiKey: string): Promise<boolean> => {
