@@ -9,6 +9,7 @@ const Settings = () => {
   const [verifyStatus, setVerifyStatus] = useState<'idle' | 'success' | 'failed'>('idle');
   const [verifyError, setVerifyError] = useState('');
   const [savedKeyExists, setSavedKeyExists] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('google/gemini-2.5-flash');
 
   useEffect(() => {
     const savedKey = localStorage.getItem('user_gemini_api_key') || '';
@@ -16,6 +17,8 @@ const Settings = () => {
       setApiKey(savedKey);
       setSavedKeyExists(true);
     }
+    const savedModel = localStorage.getItem('user_ai_model') || 'google/gemini-2.5-flash';
+    setSelectedModel(savedModel);
   }, []);
 
   const handleSave = async () => {
@@ -30,6 +33,7 @@ const Settings = () => {
 
     // Always save locally first so the user is never blocked from adding their key
     localStorage.setItem('user_gemini_api_key', apiKey.trim());
+    localStorage.setItem('user_ai_model', selectedModel);
     setSavedKeyExists(true);
     
     // Sync API key to Supabase profile on the server
@@ -69,6 +73,8 @@ const Settings = () => {
   const handleClear = async () => {
     if (confirm("Are you sure you want to clear your stored Gemini API key? AI generation will not function without it (system defaults/fallbacks will apply).")) {
       localStorage.removeItem('user_gemini_api_key');
+      localStorage.removeItem('user_ai_model');
+      setSelectedModel('google/gemini-2.5-flash');
       
       // Remove API key from Supabase profile on the server
       try {
@@ -138,6 +144,22 @@ const Settings = () => {
               API Credentials
             </h3>
             
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500">Select AI Model / Provider</label>
+              <select
+                value={selectedModel}
+                onChange={(e) => {
+                  setSelectedModel(e.target.value);
+                  if (verifyStatus !== 'idle') setVerifyStatus('idle');
+                }}
+                className="w-full px-4 py-4 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-sm font-semibold outline-none transition-all cursor-pointer"
+              >
+                <option value="google/gemini-2.5-flash">Google Gemini (Default)</option>
+                <option value="google/gemma-4-31b-it">NVIDIA NIM - Google Gemma 4 (31B)</option>
+                <option value="z-ai/glm-5.2">NVIDIA NIM - GLM 5.2</option>
+              </select>
+            </div>
+
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500">Google Gemini API Key</label>
               <div className="relative flex items-center">

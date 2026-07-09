@@ -55,18 +55,33 @@ export const isNvidiaKey = (apiKey: string): boolean => {
 export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstruction: string): Promise<string> => {
   const cleanedKey = getCleanedNvidiaKey(apiKey);
   const authHeader = `Bearer ${cleanedKey}`;
-  const bodyData = {
-    "model": "google/gemma-4-31b-it",
+  
+  let model = localStorage.getItem('user_ai_model') || 'google/gemma-4-31b-it';
+  if (model.includes('gemini')) {
+    model = 'google/gemma-4-31b-it';
+  }
+
+  const bodyData: any = {
+    "model": model,
     "messages": [
       { "role": "system", "content": systemInstruction },
       { "role": "user", "content": prompt }
     ],
     "max_tokens": 16384,
-    "temperature": 1.00,
-    "top_p": 0.95,
-    "stream": false,
-    "chat_template_kwargs": {"enable_thinking": true}
+    "stream": false
   };
+
+  if (model === 'z-ai/glm-5.2') {
+    bodyData.temperature = 1;
+    bodyData.top_p = 1;
+    bodyData.seed = 42;
+    bodyData.chat_template_kwargs = { "enable_thinking": true, "clear_thinking": false };
+  } else {
+    // Default fallback to gemma-4-31b-it parameters
+    bodyData.temperature = 1.00;
+    bodyData.top_p = 0.95;
+    bodyData.chat_template_kwargs = { "enable_thinking": true };
+  }
 
   try {
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
