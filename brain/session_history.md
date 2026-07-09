@@ -128,6 +128,8 @@ This file records the chronological history of tasks, major changes, and feature
     7.  Updated `geminiService.ts` and `neetGeminiService.ts` to accept custom API keys for requests. Updated the seeder to fetch all stored Gemini keys in user profiles on the server, executing requests sequentially (one question at a time) and rotating keys in a round-robin sequence to completely prevent truncation/parse failures.
     8.  Created a background seeder (`runAutomaticDailyQuestionSeeding`) that checks if any questions were added today. If not, it generates the remaining questions up to a strict cap of 100 per day. Added the trigger to the Super Admin panel load hook.
     9.  Added settings syncing to automatically store Gemini API keys in the database profile whenever changed.
+    10. Implemented a strict practice generation limit of 5 questions per user per day inside `src/utils/questionTracker.ts` and integrated it into all question generators (`geminiService.ts`, `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts`) to avoid exceeding API quotas. Super admins are exempted from this practicing constraint to allow database seeding.
+
 
 
 

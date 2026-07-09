@@ -164,6 +164,10 @@ const generateJEEQuestionsBatch = async (subject: Subject, count: number, mcqTar
 };
 
 export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }, apiKey?: string): Promise<Question[]> => {
+  // Enforce daily 5-question limit per user for practicing
+  const { checkAndIncrementDailyGenerationLimit } = await import("./utils/questionTracker");
+  checkAndIncrementDailyGenerationLimit(count);
+
   let totalMcqTarget = distribution ? distribution.mcq : Math.ceil(count * 0.8);
   let totalNumTarget = distribution ? distribution.numerical : count - totalMcqTarget;
   

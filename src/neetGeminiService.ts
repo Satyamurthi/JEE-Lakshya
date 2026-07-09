@@ -165,6 +165,10 @@ const generateNEETQuestionsBatch = async (subject: Subject, count: number, mcqTa
 };
 
 export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }, apiKey?: string): Promise<Question[]> => {
+  // Enforce daily 5-question limit per user for practicing
+  const { checkAndIncrementDailyGenerationLimit } = await import("./utils/questionTracker");
+  checkAndIncrementDailyGenerationLimit(count);
+
   // NEET has absolutely no numerical entry questions; all questions are 100% MCQ.
   let totalMcqTarget = count;
   let totalNumTarget = 0;

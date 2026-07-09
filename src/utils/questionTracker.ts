@@ -83,3 +83,41 @@ export const filterUniqueQuestions = (questions: any[], targetCount?: number): a
 
   return reusedQuestions;
 };
+
+export const checkAndIncrementDailyGenerationLimit = (countToGenerate: number): void => {
+  let profile: any = {};
+  try {
+    const profileRaw = localStorage.getItem('user_profile');
+    if (profileRaw) {
+      profile = JSON.parse(profileRaw);
+    }
+  } catch (e) {}
+
+  // If the user is the Super Admin, bypass the daily Practising generation limit
+  if (profile.role === 'super_admin') {
+    return;
+  }
+
+  const todayStr = new Date().toDateString();
+  const userId = profile.id || 'anonymous';
+  const trackerKey = `daily_gen_count_${userId}`;
+  const trackerDateKey = `daily_gen_date_${userId}`;
+  
+  const lastDate = localStorage.getItem(trackerDateKey);
+  let currentCount = 0;
+  
+  if (lastDate === todayStr) {
+    const rawCount = localStorage.getItem(trackerKey);
+    currentCount = rawCount ? parseInt(rawCount, 10) : 0;
+  } else {
+    localStorage.setItem(trackerDateKey, todayStr);
+    localStorage.setItem(trackerKey, '0');
+  }
+  
+  if (currentCount + countToGenerate > 5) {
+    throw new Error(`Daily generation limit reached! You can generate at most 5 questions per day. You have already generated ${currentCount} questions today.`);
+  }
+  
+  localStorage.setItem(trackerKey, String(currentCount + countToGenerate));
+};
+

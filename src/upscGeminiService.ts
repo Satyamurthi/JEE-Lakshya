@@ -135,6 +135,10 @@ const generateUPSCQuestionsBatch = async (subject: Subject, count: number, mcqTa
 };
 
 export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }): Promise<Question[]> => {
+  // Enforce daily 5-question limit per user for practicing
+  const { checkAndIncrementDailyGenerationLimit } = await import("./utils/questionTracker");
+  checkAndIncrementDailyGenerationLimit(count);
+
   return await generateUPSCQuestionsBatch(subject, count, count, type, chapters, difficulty, topics);
 };
 
