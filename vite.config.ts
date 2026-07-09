@@ -15,6 +15,13 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
         watch: {
           ignored: ['**/package-lock.zip', '**/*.zip']
+        },
+        proxy: {
+          '/nvidia-api': {
+            target: 'https://integrate.api.nvidia.com',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/nvidia-api/, '')
+          }
         }
       },
       resolve: {
