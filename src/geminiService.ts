@@ -82,7 +82,7 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
       { "role": "system", "content": systemInstruction },
       { "role": "user", "content": prompt }
     ],
-    "max_tokens": isVerification ? 100 : 16384,
+    "max_tokens": isVerification ? 100 : 4096,
     "stream": false
   };
 
@@ -90,12 +90,12 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
     bodyData.temperature = 1;
     bodyData.top_p = 1;
     bodyData.seed = 42;
-    bodyData.chat_template_kwargs = { "enable_thinking": true, "clear_thinking": false };
+    bodyData.chat_template_kwargs = { "enable_thinking": false, "clear_thinking": false };
   } else {
     // Default fallback to gemma-4-31b-it parameters
     bodyData.temperature = 1.00;
     bodyData.top_p = 0.95;
-    bodyData.chat_template_kwargs = { "enable_thinking": !isVerification };
+    bodyData.chat_template_kwargs = { "enable_thinking": false };
   }
 
   // Use the native proxy endpoint `/nvidia-api` which is configured in Netlify (_redirects)
