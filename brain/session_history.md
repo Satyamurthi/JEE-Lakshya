@@ -135,6 +135,8 @@ This file records the chronological history of tasks, major changes, and feature
     14. Created an AI Model Selector dropdown in `Settings.tsx` allowing the user to switch between Google Gemini, NVIDIA Gemma 4 (31B), and NVIDIA GLM 5.2. Configured custom model parameters (`temperature = 1`, `top_p = 1`, `seed = 42`, and `clear_thinking = false` under `chat_template_kwargs`) for GLM 5.2 dynamic query execution.
     15. Replaced third-party CORS proxies with a native same-origin proxy configuration. Configured `/nvidia-api` endpoint mapping in `vite.config.ts` (dev server proxy) and `_redirects` (Netlify CDN redirect rule). This completely bypasses CORS restrictions and preflight blocks for both local development and production environments natively, without third-party services.
     16. Resolved Netlify's 10-second gateway timeout on key verification queries by forcing verification checks to run on a fast, non-thinking model (`google/gemma-4-31b-it`) with a limited token count (100) and `enable_thinking: false`, allowing verification to return in under 500ms.
+    17. Implemented automated question database sync. Integrated runtime dynamic imports to call `saveQuestionsToDB` inside all four stream generators (`geminiService.ts`, `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts`), deduping questions by statement text before inserting them into Supabase.
+
 
 
 
