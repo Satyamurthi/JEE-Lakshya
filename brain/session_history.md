@@ -124,5 +124,7 @@ This file records the chronological history of tasks, major changes, and feature
     3.  Verified that our client-side deduplication refactoring in `questionTracker.ts` successfully filters out duplicates when presenting mock and practice tests, resolving the repeat question issues.
     4.  Pushed all local commits to remote GitHub repositories (`JEE-Lakshya` and `JEE-Nexus`) using the user's secure PAT.
     5.  Verified the React app production build (`npm run build`) builds cleanly with zero errors.
+    6.  Refactored `seedMassiveQuestionsToDB` inside [supabase.ts](file:///d:/JEE/src/supabase.ts) to strictly generate questions via Gemini in real-time. Configured it to generate equal numbers of questions across all subjects following the official exam formats (e.g. 20 MCQs and 10 Numericals per subject for JEE, and 45 MCQs per subject for NEET).
+
 
 

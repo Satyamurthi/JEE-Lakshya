@@ -1,4 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
+import { generateJEEQuestions as generateJEEServiceQuestions } from './geminiService';
+import { generateJEEQuestions as generateNEETServiceQuestions } from './neetGeminiService';
+import { Subject, ExamType } from './types';
 
 const getEnv = (key: string) => {
   try {
@@ -843,110 +846,92 @@ export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Prom
   if (!supabase) return { success: false, count: 0, error: "Supabase client not initialized." };
   
   const isNeet = streamName.toLowerCase().includes('neet');
-  const subjects = isNeet ? ['Physics', 'Chemistry', 'Botany', 'Zoology'] : ['Physics', 'Chemistry', 'Mathematics'];
-  const difficulties = ['Easy', 'Medium', 'Hard'];
-  const chaptersMap: Record<string, string[]> = isNeet ? {
-    Physics: ['Kinematics', 'Electrostatics', 'Ray Optics', 'Thermodynamics', 'Current Electricity', 'Laws of Motion', 'Gravitation', 'Wave Optics'],
-    Chemistry: ['Redox Reactions', 'Chemical Bonding', 'Thermodynamics', 'Organic Chemistry Basics', 'Equilibrium', 'Structure of Atom', 'Coordination Compounds', 'Solutions'],
-    Botany: ['Plant Physiology', 'Cell: Structure and Functions', 'Genetics and Evolution', 'Ecology and Environment', 'Plant Kingdom', 'Biomolecules'],
-    Zoology: ['Human Physiology', 'Animal Kingdom', 'Biotechnology & Applications', 'Cell Biology', 'Evolution', 'Human Reproduction & Health', 'Animal Tissues']
-  } : {
-    Physics: ['Rotational Dynamics', 'Electrostatics', 'Ray Optics', 'Thermodynamics', 'Current Electricity', 'Laws of Motion', 'Gravitation'],
-    Chemistry: ['Chemical Bonding', 'Thermodynamics', 'Organic Chemistry', 'Chemical Kinetics', 'Equilibrium', 'Atomic Structure', 'Solutions'],
-    Mathematics: ['Calculus', 'Quadratic Equations', 'Differential Equations', 'Complex Numbers', 'Probability', 'Coordinate Geometry', 'Vectors 3D']
-  };
-
-  const batch: any[] = [];
-  const countPerSub = isNeet ? 100 : 150;
-  const timestampToken = Date.now().toString(36).toUpperCase();
   
-  subjects.forEach(sub => {
-    const chaps = chaptersMap[sub] || ['General Concepts'];
-    for (let i = 0; i < countPerSub; i++) {
-      const diff = difficulties[i % 3];
-      const chap = chaps[i % chaps.length];
-      const isMcq = isNeet ? true : (i % 2 === 0);
-      const uniqueRef = `${timestampToken}-${sub.substring(0,2).toUpperCase()}${i+1}-${Math.floor(1000 + Math.random()*9000)}`;
+  try {
+    let generatedQuestions: any[] = [];
+    
+    if (isNeet) {
+      // NEET Official Pattern:
+      // - 45 questions per subject (Easy, Medium, Hard distribution)
+      // - 100% MCQ
+      // - Subjects: Physics, Chemistry, Botany, Zoology
+      const subjects = [Subject.Physics, Subject.Chemistry, Subject.Botany, Subject.Zoology];
       
-      let stmt = '';
-      let opts = {};
-      if (isNeet) {
-        if (sub === 'Botany' || sub === 'Zoology') {
-          const qTypeMod = i % 3;
-          if (qTypeMod === 0) {
-            // Match the Following
-            stmt = `[NEET ${sub} - Match Column I & II] ${chap} (Ref: ${uniqueRef}):\nMatch Column-I with Column-II and choose the correct option.\n\nColumn-I:\n(A) Structural Complex X\n(B) Regulatory Pathway Y\n(C) Enzyme/Hormone Z\n(D) Cellular Organelle W\n\nColumn-II:\n(i) Regulates osmotic balance and ionic transport\n(ii) Catalyzes ATP synthesis & phosphorylation\n(iii) Primary site of glycosylation and packaging\n(iv) Initiates transcript elongation cycle`;
-            opts = {
-              A: "A-(ii), B-(iv), C-(i), D-(iii)",
-              B: "A-(i), B-(iii), C-(iv), D-(ii)",
-              C: "A-(iii), B-(i), C-(ii), D-(iv)",
-              D: "A-(iv), B-(ii), C-(iii), D-(i)"
-            };
-          } else if (qTypeMod === 1) {
-            // Diagrammatical & Labeled Identification
-            stmt = `[NEET ${sub} - Diagrammatical Identification] ${chap} (Ref: ${uniqueRef}): Refer to the anatomical/schematic diagram of ${chap}. Identify the parts labeled as (A), (B), (C), and (D) and select the correct functional representation.`;
-            opts = {
-              A: "(A)-Thylakoid Membrane, (B)-Stroma Matrix, (C)-Granum Stack, (D)-Outer Envelope",
-              B: "(A)-Cristae Fold, (B)-Matrix Domain, (C)-Inner Membrane, (D)-Intermembrane Space",
-              C: "(A)-Nucleolus Site, (B)-Chromatin Thread, (C)-Nuclear Pore, (D)-Ribosome Subunit",
-              D: "(A)-Plasma Membrane, (B)-Cytosol Matrix, (C)-Golgi Cisternae, (D)-Lysosome Vesicle"
-            };
-          } else {
-            // Statement Evaluation (Assertion/Reason or Stmt I/II)
-            stmt = `[NEET ${sub} - NCERT Statement Evaluation] ${chap} (Ref: ${uniqueRef}): Read the following statements regarding ${chap}:\nStatement-I: Physiological mechanisms governing ${chap} operate under strict homeostatic control.\nStatement-II: Enzymatic catalysis rates double for every 10°C rise in temperature until denaturing occurs.\nSelect the correct answer from the options given below:`;
-            opts = {
-              A: "Both Statement-I and Statement-II are correct",
-              B: "Both Statement-I and Statement-II are incorrect",
-              C: "Statement-I is correct but Statement-II is incorrect",
-              D: "Statement-I is incorrect but Statement-II is correct"
-            };
-          }
-        } else {
-          // Physics & Chemistry NEET MCQs
-          stmt = `[NEET Medical ${diff}] ${chap} (Q-Ref: ${uniqueRef}): Identify the correct physiological mechanism, numerical constant, or theoretical principle governing ${sub} regarding ${chap}.`;
-          opts = {
-            A: `Primary physiological or physical reaction under standard NCERT ${chap} principles.`,
-            B: `Alternative regulatory mechanism observed in ${sub} structural systems.`,
-            C: `Inhibited metabolic or kinetic pathway during ${chap} phase.`,
-            D: `Secondary kinetic equilibrium state in physical conditions.`
-          };
-        }
-      } else {
-        stmt = `[JEE Engineering ${diff}] ${chap} (Q-Ref: ${uniqueRef}): Evaluate the numerical/analytical parameters for ${sub} system model under ${chap}.`;
-        opts = isMcq ? {
-          A: `Calculated value parameter alpha under ${chap} dynamics.`,
-          B: `Evaluated matrix boundary result for ${sub}.`,
-          C: `Theoretical upper limit constraint in system state.`,
-          D: `Zero field equilibrium vector constant.`
-        } : {};
-      }
-
-      batch.push({
-        subject: sub,
-        chapter: chap,
-        type: isMcq ? 'MCQ' : 'Numerical',
-        difficulty: diff,
-        statement: stmt,
-        options: opts,
-        correctAnswer: isMcq ? (["A", "B", "C", "D"][i % 4]) : String((i % 10) + 1),
-        solution: `Detailed step-by-step ${isNeet ? 'NEET Medical NCERT' : 'JEE Advanced'} solution explanation for ${chap} (${uniqueRef}).`,
-        concept: chap,
-        markingScheme: { positive: 4, negative: isMcq ? 1 : 0 }
+      console.log("[Seeder] Generating NEET questions strictly via Gemini API...");
+      const promises = subjects.map(sub => 
+        generateNEETServiceQuestions(sub, 45, ExamType.NEET)
+      );
+      
+      const results = await Promise.all(promises);
+      results.forEach(res => {
+        generatedQuestions.push(...res);
+      });
+      
+    } else {
+      // JEE Official Pattern:
+      // - 30 questions per subject
+      // - 20 MCQs and 10 Numericals
+      // - Subjects: Physics, Chemistry, Mathematics
+      const subjects = [Subject.Physics, Subject.Chemistry, Subject.Mathematics];
+      
+      console.log("[Seeder] Generating JEE questions strictly via Gemini API...");
+      const promises = subjects.map(sub => 
+        generateJEEServiceQuestions(
+          sub, 
+          30, 
+          ExamType.Main, 
+          [], 
+          'Hard', 
+          [], 
+          { mcq: 20, numerical: 10 }
+        )
+      );
+      
+      const results = await Promise.all(promises);
+      results.forEach(res => {
+        generatedQuestions.push(...res);
       });
     }
-  });
-
-  try {
-    const { data, error } = await supabase.from('questions').upsert(batch, { onConflict: 'statement' }).select();
-    if (error) {
-      // If upsert fails due to schema conflict target, fallback to insert with random UUIDs
-      const { data: insData, error: insErr } = await supabase.from('questions').insert(batch).select();
-      if (insErr) return { success: false, count: 0, error: insErr.message };
-      return { success: true, count: insData?.length || batch.length };
+    
+    if (generatedQuestions.length === 0) {
+      return { success: false, count: 0, error: "Gemini AI returned 0 questions." };
     }
-    return { success: true, count: data?.length || batch.length };
+    
+    // Normalize properties for database schema
+    const formattedQuestions = generatedQuestions.map(q => {
+      const isMcq = q.type === 'MCQ' || (q.options && Object.keys(q.options).length >= 2);
+      return {
+        subject: q.subject,
+        chapter: q.chapter || 'General Concepts',
+        type: isMcq ? 'MCQ' : 'Numerical',
+        difficulty: q.difficulty || 'Medium',
+        statement: q.statement,
+        options: isMcq ? (q.options || {}) : {},
+        correctAnswer: String(q.correctAnswer),
+        solution: q.solution || q.explanation || 'Detailed step-by-step solution.',
+        explanation: q.explanation || q.solution || 'Detailed explanation.',
+        concept: q.concept || q.chapter || 'General Concepts',
+        markingScheme: q.markingScheme || { positive: 4, negative: isMcq ? 1 : 0 }
+      };
+    });
+    
+    console.log(`[Seeder] Successfully generated ${formattedQuestions.length} questions from Gemini. Seeding to Supabase...`);
+    
+    const { data, error } = await supabase.from('questions').upsert(formattedQuestions, { onConflict: 'statement' }).select();
+    if (error) {
+      // Fallback: try direct insert if upsert target fails
+      const { data: insData, error: insErr } = await supabase.from('questions').insert(formattedQuestions).select();
+      if (insErr) {
+        console.error("[Seeder] Supabase insert failed:", insErr);
+        return { success: false, count: 0, error: insErr.message };
+      }
+      return { success: true, count: insData?.length || formattedQuestions.length };
+    }
+    return { success: true, count: data?.length || formattedQuestions.length };
+    
   } catch (e: any) {
-    return { success: false, count: 0, error: e.message };
+    console.error("[Seeder] Seeding error:", e);
+    return { success: false, count: 0, error: e.message || "Error generating or seeding questions from Gemini" };
   }
 };
 
