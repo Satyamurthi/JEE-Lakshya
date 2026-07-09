@@ -38,25 +38,49 @@ const callAIWithFallback = async (ai: GoogleGenAI, contents: any, config: any) =
 
 export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstruction: string): Promise<string> => {
   const authHeader = apiKey.startsWith("Bearer ") ? apiKey : `Bearer ${apiKey}`;
-  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+  const bodyData = {
+    "model": "google/gemma-4-31b-it",
+    "messages": [
+      { "role": "system", "content": systemInstruction },
+      { "role": "user", "content": prompt }
+    ],
+    "max_tokens": 16384,
+    "temperature": 1.00,
+    "top_p": 0.95,
+    "stream": false,
+    "chat_template_kwargs": {"enable_thinking": true}
+  };
+
+  try {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": authHeader,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(bodyData)
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (content) return content;
+    }
+  } catch (directErr) {
+    console.warn("[NVIDIA] Direct call failed (likely due to CORS). Attempting via proxy...", directErr);
+  }
+
+  // CORS Proxy Fallback
+  const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent("https://integrate.api.nvidia.com/v1/chat/completions")}`;
+  const response = await fetch(proxyUrl, {
     method: "POST",
     headers: {
       "Authorization": authHeader,
       "Content-Type": "application/json",
       "Accept": "application/json"
     },
-    body: JSON.stringify({
-      "model": "google/gemma-4-31b-it",
-      "messages": [
-        { "role": "system", "content": systemInstruction },
-        { "role": "user", "content": prompt }
-      ],
-      "max_tokens": 16384,
-      "temperature": 1.00,
-      "top_p": 0.95,
-      "stream": false,
-      "chat_template_kwargs": {"enable_thinking": true}
-    })
+    body: JSON.stringify(bodyData)
   });
   
   if (!response.ok) {
