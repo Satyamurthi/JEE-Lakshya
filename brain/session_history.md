@@ -125,6 +125,10 @@ This file records the chronological history of tasks, major changes, and feature
     4.  Pushed all local commits to remote GitHub repositories (`JEE-Lakshya` and `JEE-Nexus`) using the user's secure PAT.
     5.  Verified the React app production build (`npm run build`) builds cleanly with zero errors.
     6.  Refactored `seedMassiveQuestionsToDB` inside [supabase.ts](file:///d:/JEE/src/supabase.ts) to strictly generate questions via Gemini in real-time. Configured it to generate equal numbers of questions across all subjects following the official exam formats (e.g. 20 MCQs and 10 Numericals per subject for JEE, and 45 MCQs per subject for NEET).
+    7.  Updated `geminiService.ts` and `neetGeminiService.ts` to accept custom API keys for requests. Updated the seeder to fetch all stored Gemini keys in user profiles on the server, executing requests sequentially (one question at a time) and rotating keys in a round-robin sequence to completely prevent truncation/parse failures.
+    8.  Created a background seeder (`runAutomaticDailyQuestionSeeding`) that checks if any questions were added today. If not, it generates the remaining questions up to a strict cap of 100 per day. Added the trigger to the Super Admin panel load hook.
+    9.  Added settings syncing to automatically store Gemini API keys in the database profile whenever changed.
+
 
 
 

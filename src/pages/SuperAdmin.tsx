@@ -215,6 +215,30 @@ const SuperAdmin = () => {
     }
   }, [activeTab, loadDashboardData, loadChallenges, loadStreams]);
 
+  useEffect(() => {
+    // Run automatic daily question seeder in the background once per day
+    const runAutoSeed = async () => {
+      const todayStr = new Date().toDateString();
+      const lastRun = localStorage.getItem('last_auto_seed_date');
+      if (lastRun !== todayStr) {
+        console.log("[AutoSeeder] Triggering automatic daily question seeder...");
+        localStorage.setItem('last_auto_seed_date', todayStr);
+        try {
+          const { runAutomaticDailyQuestionSeeding } = await import('../supabase');
+          const result = await runAutomaticDailyQuestionSeeding(activeStream);
+          if (result.success && result.count > 0) {
+            console.log(`[AutoSeeder] Automatically seeded ${result.count} questions today.`);
+            // Refresh count in dashboard
+            loadDashboardData();
+          }
+        } catch (autoErr) {
+          console.error("[AutoSeeder] Background seeder error:", autoErr);
+        }
+      }
+    };
+    runAutoSeed();
+  }, [activeStream, loadDashboardData]);
+
   const handleAddStream = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStreamName.trim()) return;

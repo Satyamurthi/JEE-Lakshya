@@ -351,6 +351,8 @@ alter table public.profiles add column if not exists admin_max_students integer 
 alter table public.profiles add column if not exists has_used_free_test boolean default false;
 alter table public.profiles add column if not exists subscription_tier text default 'free';
 alter table public.profiles add column if not exists subscription_expires_at timestamp with time zone;
+alter table public.profiles add column if not exists gemini_api_key text;
+
 
 -- Reapply constraints
 alter table public.profiles add constraint profiles_role_check check (role in ('student', 'admin', 'super_admin'));

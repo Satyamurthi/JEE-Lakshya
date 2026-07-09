@@ -71,7 +71,7 @@ const questionSchema: Schema = {
   }
 };
 
-const generateJEEQuestionsBatch = async (subject: Subject, count: number, mcqTarget: number, numTarget: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], batchIdx: number = 0, totalBatches: number = 1): Promise<Question[]> => {
+const generateJEEQuestionsBatch = async (subject: Subject, count: number, mcqTarget: number, numTarget: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], batchIdx: number = 0, totalBatches: number = 1, apiKey?: string): Promise<Question[]> => {
   const allQuestions: Question[] = [];
   const isFullSyllabus = !chapters || chapters.length === 0;
   let topicFocus = isFullSyllabus ? "Full Syllabus" : `Chapters: ${chapters.join(', ')}`;
@@ -93,7 +93,7 @@ const generateJEEQuestionsBatch = async (subject: Subject, count: number, mcqTar
       
       Scope: ${topicFocus}. Difficulty: ${difficulty || 'Advanced'}. Use LaTeX for math formulas.`;
       
-      const ai = getAIClient();
+      const ai = getAIClient(apiKey);
       const response = await callAIWithFallback(ai, prompt, { 
         responseMimeType: "application/json", 
         responseSchema: questionSchema,
@@ -163,7 +163,7 @@ const generateJEEQuestionsBatch = async (subject: Subject, count: number, mcqTar
   return selected;
 };
 
-export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }): Promise<Question[]> => {
+export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }, apiKey?: string): Promise<Question[]> => {
   let totalMcqTarget = distribution ? distribution.mcq : Math.ceil(count * 0.8);
   let totalNumTarget = distribution ? distribution.numerical : count - totalMcqTarget;
   
@@ -191,19 +191,19 @@ export const generateJEEQuestions = async (subject: Subject, count: number, type
       }
       batches.push({ mcq: batchMcq, numerical: batchNum });
   }
-
+  
   console.log(`[AI] Generating ${count} total questions for ${subject} split into ${batches.length} batches...`);
-
+  
   const results: Question[] = [];
   for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
-      const batchQs = await generateJEEQuestionsBatch(subject, batch.mcq + batch.numerical, batch.mcq, batch.numerical, type, chapters, difficulty, topics, i, batches.length);
+      const batchQs = await generateJEEQuestionsBatch(subject, batch.mcq + batch.numerical, batch.mcq, batch.numerical, type, chapters, difficulty, topics, i, batches.length, apiKey);
       results.push(...batchQs);
       if (i < batches.length - 1) {
           await delay(300);
       }
   }
-
+  
   return results;
 };
 

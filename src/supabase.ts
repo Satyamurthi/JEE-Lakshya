@@ -848,92 +848,269 @@ export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Prom
   const isNeet = streamName.toLowerCase().includes('neet');
   
   try {
-    let generatedQuestions: any[] = [];
-    
-    if (isNeet) {
-      // NEET Official Pattern:
-      // - 45 questions per subject (Easy, Medium, Hard distribution)
-      // - 100% MCQ
-      // - Subjects: Physics, Chemistry, Botany, Zoology
-      const subjects = [Subject.Physics, Subject.Chemistry, Subject.Botany, Subject.Zoology];
-      
-      console.log("[Seeder] Generating NEET questions strictly via Gemini API...");
-      const promises = subjects.map(sub => 
-        generateNEETServiceQuestions(sub, 45, ExamType.NEET)
-      );
-      
-      const results = await Promise.all(promises);
-      results.forEach(res => {
-        generatedQuestions.push(...res);
-      });
-      
-    } else {
-      // JEE Official Pattern:
-      // - 30 questions per subject
-      // - 20 MCQs and 10 Numericals
-      // - Subjects: Physics, Chemistry, Mathematics
-      const subjects = [Subject.Physics, Subject.Chemistry, Subject.Mathematics];
-      
-      console.log("[Seeder] Generating JEE questions strictly via Gemini API...");
-      const promises = subjects.map(sub => 
-        generateJEEServiceQuestions(
-          sub, 
-          30, 
-          ExamType.Main, 
-          [], 
-          'Hard', 
-          [], 
-          { mcq: 20, numerical: 10 }
-        )
-      );
-      
-      const results = await Promise.all(promises);
-      results.forEach(res => {
-        generatedQuestions.push(...res);
-      });
-    }
-    
-    if (generatedQuestions.length === 0) {
-      return { success: false, count: 0, error: "Gemini AI returned 0 questions." };
-    }
-    
-    // Normalize properties for database schema
-    const formattedQuestions = generatedQuestions.map(q => {
-      const isMcq = q.type === 'MCQ' || (q.options && Object.keys(q.options).length >= 2);
-      return {
-        subject: q.subject,
-        chapter: q.chapter || 'General Concepts',
-        type: isMcq ? 'MCQ' : 'Numerical',
-        difficulty: q.difficulty || 'Medium',
-        statement: q.statement,
-        options: isMcq ? (q.options || {}) : {},
-        correctAnswer: String(q.correctAnswer),
-        solution: q.solution || q.explanation || 'Detailed step-by-step solution.',
-        explanation: q.explanation || q.solution || 'Detailed explanation.',
-        concept: q.concept || q.chapter || 'General Concepts',
-        markingScheme: q.markingScheme || { positive: 4, negative: isMcq ? 1 : 0 }
-      };
-    });
-    
-    console.log(`[Seeder] Successfully generated ${formattedQuestions.length} questions from Gemini. Seeding to Supabase...`);
-    
-    const { data, error } = await supabase.from('questions').upsert(formattedQuestions, { onConflict: 'statement' }).select();
-    if (error) {
-      // Fallback: try direct insert if upsert target fails
-      const { data: insData, error: insErr } = await supabase.from('questions').insert(formattedQuestions).select();
-      if (insErr) {
-        console.error("[Seeder] Supabase insert failed:", insErr);
-        return { success: false, count: 0, error: insErr.message };
+    // 1. Fetch server API keys from profiles where gemini_api_key is stored
+    let apiKeys: string[] = [];
+    try {
+      const { data: dbProfiles } = await supabase.from('profiles').select('gemini_api_key').not('gemini_api_key', 'is', null);
+      if (dbProfiles) {
+        apiKeys = dbProfiles.map(p => p.gemini_api_key).filter(k => k && k.trim() !== '');
       }
-      return { success: true, count: insData?.length || formattedQuestions.length };
+    } catch (fetchErr) {
+      console.warn("[Seeder] Failed to fetch server API keys, falling back to local:", fetchErr);
     }
-    return { success: true, count: data?.length || formattedQuestions.length };
+    
+    // Fallback to local storage or env key if none found on server
+    if (apiKeys.length === 0) {
+      const localKey = typeof window !== 'undefined' ? localStorage.getItem('user_gemini_api_key') : '';
+      const envKey = getEnv('GEMINI_API_KEY') || getEnv('VITE_GEMINI_API_KEY');
+      const fallback = localKey || envKey;
+      if (fallback) apiKeys.push(fallback);
+    }
+    
+    if (apiKeys.length === 0) {
+      return { success: false, count: 0, error: "AI Generation Failed: Gemini API Key is not configured on server or client." };
+    }
+
+    // 2. Prepare the list of tasks (each task generates exactly 1 question)
+    interface GenTask {
+      subject: Subject;
+      type: 'MCQ' | 'Numerical';
+    }
+    const tasks: GenTask[] = [];
+    if (isNeet) {
+      const subjects = [Subject.Physics, Subject.Chemistry, Subject.Botany, Subject.Zoology];
+      subjects.forEach(sub => {
+        for (let i = 0; i < 45; i++) {
+          tasks.push({ subject: sub, type: 'MCQ' });
+        }
+      });
+    } else {
+      const subjects = [Subject.Physics, Subject.Chemistry, Subject.Mathematics];
+      subjects.forEach(sub => {
+        for (let i = 0; i < 20; i++) {
+          tasks.push({ subject: sub, type: 'MCQ' });
+        }
+        for (let i = 0; i < 10; i++) {
+          tasks.push({ subject: sub, type: 'Numerical' });
+        }
+      });
+    }
+
+    let successCount = 0;
+    let apiKeyIndex = 0;
+    
+    console.log(`[Seeder] Starting sequential generation of ${tasks.length} questions strictly via Gemini API...`);
+    
+    // 3. Loop sequentially and generate 1 question at a time using round-robin keys
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i];
+      const currentApiKey = apiKeys[apiKeyIndex % apiKeys.length];
+      apiKeyIndex++;
+      
+      console.log(`[Seeder] [Question ${i + 1}/${tasks.length}] Generating 1 ${task.type} question for ${task.subject} using API Key index ${apiKeyIndex % apiKeys.length}...`);
+      
+      try {
+        let generated: any[] = [];
+        if (isNeet) {
+          generated = await generateNEETServiceQuestions(
+            task.subject,
+            1,
+            ExamType.NEET,
+            [],
+            'Medium',
+            [],
+            { mcq: 1, numerical: 0 },
+            currentApiKey
+          );
+        } else {
+          generated = await generateJEEServiceQuestions(
+            task.subject,
+            1,
+            ExamType.Main,
+            [],
+            'Hard',
+            [],
+            { mcq: task.type === 'MCQ' ? 1 : 0, numerical: task.type === 'Numerical' ? 1 : 0 },
+            currentApiKey
+          );
+        }
+        
+        if (generated && generated.length > 0) {
+          const q = generated[0];
+          const isMcq = q.type === 'MCQ' || (q.options && Object.keys(q.options).length >= 2);
+          const formatted = {
+            subject: q.subject,
+            chapter: q.chapter || 'General Concepts',
+            type: isMcq ? 'MCQ' : 'Numerical',
+            difficulty: q.difficulty || 'Medium',
+            statement: q.statement,
+            options: isMcq ? (q.options || {}) : {},
+            correctAnswer: String(q.correctAnswer),
+            solution: q.solution || q.explanation || 'Detailed step-by-step solution.',
+            explanation: q.explanation || q.solution || 'Detailed explanation.',
+            concept: q.concept || q.chapter || 'General Concepts',
+            markingScheme: q.markingScheme || { positive: 4, negative: isMcq ? 1 : 0 }
+          };
+          
+          // Immediately upload/upsert each question to the database
+          const { error } = await supabase.from('questions').upsert([formatted], { onConflict: 'statement' });
+          if (error) {
+            // Fallback direct insert
+            const { error: insErr } = await supabase.from('questions').insert([formatted]);
+            if (insErr) {
+              console.warn(`[Seeder] Database upload failed for question ${i + 1}:`, insErr.message);
+            } else {
+              successCount++;
+              console.log(`[Seeder] Seeded ${successCount}/${tasks.length} successfully.`);
+            }
+          } else {
+            successCount++;
+            console.log(`[Seeder] Seeded ${successCount}/${tasks.length} successfully.`);
+          }
+        } else {
+          console.warn(`[Seeder] Question ${i + 1} generation returned 0 valid questions.`);
+        }
+      } catch (genErr: any) {
+        console.error(`[Seeder] Error generating question ${i + 1}:`, genErr.message || genErr);
+      }
+      
+      // Short delay between generations to prevent API rate limit issues
+      await new Promise(r => setTimeout(r, 400));
+    }
+    
+    return { success: true, count: successCount };
     
   } catch (e: any) {
     console.error("[Seeder] Seeding error:", e);
     return { success: false, count: 0, error: e.message || "Error generating or seeding questions from Gemini" };
   }
 };
+
+export const getQuestionsCountAddedToday = async (): Promise<number> => {
+  if (!supabase) return 0;
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0,0,0,0);
+    const { count, error } = await supabase
+      .from('questions')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', todayStart.toISOString());
+    if (error) return 0;
+    return count || 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const runAutomaticDailyQuestionSeeding = async (streamName: string = 'JEE'): Promise<{ success: boolean, count: number, error?: string }> => {
+  if (!supabase) return { success: false, count: 0, error: "Supabase not configured." };
+  
+  try {
+    const countToday = await getQuestionsCountAddedToday();
+    const limit = 100;
+    if (countToday >= limit) {
+      console.log(`[AutoSeeder] Daily limit of ${limit} questions already reached today (${countToday} seeded). Skipping.`);
+      return { success: true, count: 0 };
+    }
+    
+    const remaining = limit - countToday;
+    console.log(`[AutoSeeder] Starting automatic daily question seeding for ${streamName}. Remaining to seed today: ${remaining}`);
+    
+    // Fetch server API keys
+    let apiKeys: string[] = [];
+    const { data: dbProfiles } = await supabase.from('profiles').select('gemini_api_key').not('gemini_api_key', 'is', null);
+    if (dbProfiles) {
+      apiKeys = dbProfiles.map(p => p.gemini_api_key).filter(k => k && k.trim() !== '');
+    }
+    
+    if (apiKeys.length === 0) {
+      const localKey = typeof window !== 'undefined' ? localStorage.getItem('user_gemini_api_key') : '';
+      const envKey = getEnv('GEMINI_API_KEY') || getEnv('VITE_GEMINI_API_KEY');
+      const fallback = localKey || envKey;
+      if (fallback) apiKeys.push(fallback);
+    }
+    
+    if (apiKeys.length === 0) {
+      return { success: false, count: 0, error: "No Gemini API keys found on server or client." };
+    }
+    
+    const isNeet = streamName.toLowerCase().includes('neet');
+    let successCount = 0;
+    let apiKeyIndex = 0;
+    
+    const subjects = isNeet 
+      ? [Subject.Physics, Subject.Chemistry, Subject.Botany, Subject.Zoology]
+      : [Subject.Physics, Subject.Chemistry, Subject.Mathematics];
+      
+    for (let i = 0; i < remaining; i++) {
+      const currentApiKey = apiKeys[apiKeyIndex % apiKeys.length];
+      apiKeyIndex++;
+      
+      const sub = subjects[i % subjects.length];
+      const type = isNeet ? 'MCQ' : (i % 2 === 0 ? 'MCQ' : 'Numerical');
+      
+      try {
+        let generated: any[] = [];
+        if (isNeet) {
+          generated = await generateNEETServiceQuestions(
+            sub,
+            1,
+            ExamType.NEET,
+            [],
+            'Medium',
+            [],
+            { mcq: 1, numerical: 0 },
+            currentApiKey
+          );
+        } else {
+          generated = await generateJEEServiceQuestions(
+            sub,
+            1,
+            ExamType.Main,
+            [],
+            'Hard',
+            [],
+            { mcq: type === 'MCQ' ? 1 : 0, numerical: type === 'Numerical' ? 1 : 0 },
+            currentApiKey
+          );
+        }
+        
+        if (generated && generated.length > 0) {
+          const q = generated[0];
+          const isMcq = q.type === 'MCQ' || (q.options && Object.keys(q.options).length >= 2);
+          const formatted = {
+            subject: q.subject,
+            chapter: q.chapter || 'General Concepts',
+            type: isMcq ? 'MCQ' : 'Numerical',
+            difficulty: q.difficulty || 'Medium',
+            statement: q.statement,
+            options: isMcq ? (q.options || {}) : {},
+            correctAnswer: String(q.correctAnswer),
+            solution: q.solution || q.explanation || 'Detailed step-by-step solution.',
+            explanation: q.explanation || q.solution || 'Detailed explanation.',
+            concept: q.concept || q.chapter || 'General Concepts',
+            markingScheme: q.markingScheme || { positive: 4, negative: isMcq ? 1 : 0 }
+          };
+          
+          const { error } = await supabase.from('questions').upsert([formatted], { onConflict: 'statement' });
+          if (!error) {
+            successCount++;
+            console.log(`[AutoSeeder] Successfully auto-seeded question ${successCount}/${remaining} (${sub} - ${type}).`);
+          }
+        }
+      } catch (err: any) {
+        console.error(`[AutoSeeder] Failed to generate question ${i + 1}:`, err.message || err);
+      }
+      
+      await new Promise(r => setTimeout(r, 500));
+    }
+    
+    return { success: true, count: successCount };
+  } catch (e: any) {
+    return { success: false, count: 0, error: e.message };
+  }
+};
+
 
 export const getAllQuestionsFromDB = async (subjectFilter?: string, maxRecords: number = 15000): Promise<any[]> => {
   let allData: any[] = [];

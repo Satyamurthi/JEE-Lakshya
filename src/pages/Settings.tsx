@@ -32,6 +32,25 @@ const Settings = () => {
       const isValid = await verifyGeminiAPIKey(apiKey.trim());
       if (isValid) {
         localStorage.setItem('user_gemini_api_key', apiKey.trim());
+        
+        // Sync API key to Supabase profile on the server
+        try {
+          const profileRaw = localStorage.getItem('user_profile');
+          if (profileRaw) {
+            const profileObj = JSON.parse(profileRaw);
+            if (profileObj.id) {
+              const { supabase } = await import('../supabase');
+              if (supabase) {
+                await supabase.from('profiles').update({ gemini_api_key: apiKey.trim() }).eq('id', profileObj.id);
+                profileObj.gemini_api_key = apiKey.trim();
+                localStorage.setItem('user_profile', JSON.stringify(profileObj));
+              }
+            }
+          }
+        } catch (dbErr) {
+          console.error("Failed to sync API key to server profile:", dbErr);
+        }
+
         setVerifyStatus('success');
         setSavedKeyExists(true);
       } else {
@@ -46,9 +65,28 @@ const Settings = () => {
     }
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
     if (confirm("Are you sure you want to clear your stored Gemini API key? AI generation will not function without it (system defaults/fallbacks will apply).")) {
       localStorage.removeItem('user_gemini_api_key');
+      
+      // Remove API key from Supabase profile on the server
+      try {
+        const profileRaw = localStorage.getItem('user_profile');
+        if (profileRaw) {
+          const profileObj = JSON.parse(profileRaw);
+          if (profileObj.id) {
+            const { supabase } = await import('../supabase');
+            if (supabase) {
+              await supabase.from('profiles').update({ gemini_api_key: null }).eq('id', profileObj.id);
+              profileObj.gemini_api_key = null;
+              localStorage.setItem('user_profile', JSON.stringify(profileObj));
+            }
+          }
+        }
+      } catch (dbErr) {
+        console.error("Failed to remove API key from server profile:", dbErr);
+      }
+
       setApiKey('');
       setVerifyStatus('idle');
       setSavedKeyExists(false);

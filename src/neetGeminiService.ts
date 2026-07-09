@@ -71,7 +71,7 @@ const questionSchema: Schema = {
   }
 };
 
-const generateNEETQuestionsBatch = async (subject: Subject, count: number, mcqTarget: number, numTarget: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], batchIdx: number = 0, totalBatches: number = 1): Promise<Question[]> => {
+const generateNEETQuestionsBatch = async (subject: Subject, count: number, mcqTarget: number, numTarget: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], batchIdx: number = 0, totalBatches: number = 1, apiKey?: string): Promise<Question[]> => {
   const allQuestions: Question[] = [];
   const isFullSyllabus = !chapters || chapters.length === 0;
   let topicFocus = isFullSyllabus ? "Full Syllabus" : `Chapters: ${chapters.join(', ')}`;
@@ -94,7 +94,7 @@ const generateNEETQuestionsBatch = async (subject: Subject, count: number, mcqTa
       
       Scope: ${topicFocus}. Difficulty: ${difficulty || 'Medium'}. DO NOT generate any engineering or JEE-like math questions. Biology questions must be related strictly to NCERT concepts.`;
       
-      const ai = getAIClient();
+      const ai = getAIClient(apiKey);
       const response = await callAIWithFallback(ai, prompt, { 
         responseMimeType: "application/json", 
         responseSchema: questionSchema,
@@ -164,7 +164,7 @@ const generateNEETQuestionsBatch = async (subject: Subject, count: number, mcqTa
   return selected;
 };
 
-export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }): Promise<Question[]> => {
+export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }, apiKey?: string): Promise<Question[]> => {
   // NEET has absolutely no numerical entry questions; all questions are 100% MCQ.
   let totalMcqTarget = count;
   let totalNumTarget = 0;
@@ -188,7 +188,7 @@ export const generateJEEQuestions = async (subject: Subject, count: number, type
   const results: Question[] = [];
   for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
-      const batchQs = await generateNEETQuestionsBatch(subject, batch.mcq, batch.mcq, 0, type, chapters, difficulty, topics, i, batches.length);
+      const batchQs = await generateNEETQuestionsBatch(subject, batch.mcq, batch.mcq, 0, type, chapters, difficulty, topics, i, batches.length, apiKey);
       results.push(...batchQs);
       if (i < batches.length - 1) {
           await delay(300);
