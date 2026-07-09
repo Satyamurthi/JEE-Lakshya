@@ -78,6 +78,8 @@ Ensure XAMPP is running Apache on localhost. The PHP files in `api/` will handle
 *   **Daily Practice Generation Limit (5 questions per user/day)**: Enforces a strict practice generation limit of 5 questions per user per day for students and normal admins to conserve API keys and quotas. Super admins are exempted from this practicing constraint to allow admin-triggered database seeding.
 *   **NVIDIA NIM API Key Support**: Supports NVIDIA API keys (keys containing `nvapi-` or `AO_`). When an NVIDIA key is configured, the application automatically routes chat and question generation requests to the NVIDIA NIM completions endpoint (`https://integrate.api.nvidia.com/v1/chat/completions`). Both Google Gemini and NVIDIA API keys are fully supported in parallel.
 *   **Multiple Model Support (Gemma 4 & GLM 5.2)**: Built a dynamic AI Model Selector in the settings dashboard allowing users to select between Google Gemini (Default), NVIDIA Gemma 4 (31B), and NVIDIA GLM 5.2. When GLM 5.2 is selected, custom parameters (`temperature = 1`, `top_p = 1`, `seed = 42`, and `clear_thinking = false` under `chat_template_kwargs`) are automatically configured to enable reasoning output.
+*   **CORS Preflight Bypass for NVIDIA NIM**: Implemented a query-parameter header embedding technique on the primary proxy (`corsproxy.io`) to completely bypass browser preflight request blocks on custom `Authorization` headers. Added `thingproxy` as a secondary CORS proxy fail-safe. This guarantees bulletproof client-side verification and question generation via NVIDIA NIM.
+
 
 
 

@@ -83,6 +83,7 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
     bodyData.chat_template_kwargs = { "enable_thinking": true };
   }
 
+  // 1. Direct call (in non-browser or CORS-enabled environments)
   try {
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
@@ -103,9 +104,30 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
     console.warn("[NVIDIA] Direct call failed (likely due to CORS). Attempting via proxy...", directErr);
   }
 
-  // CORS Proxy Fallback
-  const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent("https://integrate.api.nvidia.com/v1/chat/completions")}`;
-  const response = await fetch(proxyUrl, {
+  // 2. CORS Proxy Fallback using query parameters to bypass Authorization preflight CORS blockages
+  try {
+    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent("https://integrate.api.nvidia.com/v1/chat/completions")}&reqHeaders=authorization:${encodeURIComponent(authHeader)}`;
+    const response = await fetch(proxyUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(bodyData)
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (content) return content;
+    }
+  } catch (proxyErr) {
+    console.warn("[NVIDIA] Primary CORS proxy failed. Retrying via secondary proxy...", proxyErr);
+  }
+
+  // 3. Secondary CORS Proxy (thingproxy)
+  const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/https://integrate.api.nvidia.com/v1/chat/completions`;
+  const response = await fetch(thingProxyUrl, {
     method: "POST",
     headers: {
       "Authorization": authHeader,
