@@ -36,8 +36,25 @@ const callAIWithFallback = async (ai: GoogleGenAI, contents: any, config: any) =
   throw lastError || new Error("All Gemini AI models and retries exhausted.");
 };
 
+export const getCleanedNvidiaKey = (apiKey: string): string => {
+  let cleanKey = apiKey.trim();
+  if (cleanKey.toLowerCase().startsWith("bearer ")) {
+    cleanKey = cleanKey.substring(7).trim();
+  }
+  if (cleanKey.startsWith("AO_") && !cleanKey.startsWith("nvapi-")) {
+    cleanKey = "nvapi-" + cleanKey;
+  }
+  return cleanKey;
+};
+
+export const isNvidiaKey = (apiKey: string): boolean => {
+  const clean = apiKey.trim().toLowerCase();
+  return clean.includes("nvapi-") || clean.includes("ao_");
+};
+
 export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstruction: string): Promise<string> => {
-  const authHeader = apiKey.startsWith("Bearer ") ? apiKey : `Bearer ${apiKey}`;
+  const cleanedKey = getCleanedNvidiaKey(apiKey);
+  const authHeader = `Bearer ${cleanedKey}`;
   const bodyData = {
     "model": "google/gemma-4-31b-it",
     "messages": [
@@ -99,7 +116,7 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
 
 export const verifyGeminiAPIKey = async (apiKey: string): Promise<boolean> => {
   try {
-    if (apiKey.includes('nvapi-')) {
+    if (isNvidiaKey(apiKey)) {
       const text = await callNvidiaAPI(apiKey, "Respond with exactly the word 'OK' if you can read this.", "Answer concisely.");
       return text.trim().toUpperCase().includes("OK") || false;
     } else {
@@ -162,7 +179,7 @@ const generateJEEQuestionsBatch = async (subject: Subject, count: number, mcqTar
       const resolvedKey = apiKey || localStorage.getItem('user_gemini_api_key') || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
 
       let text = '';
-      if (resolvedKey.includes('nvapi-')) {
+      if (isNvidiaKey(resolvedKey)) {
         text = await callNvidiaAPI(resolvedKey, prompt, systemInstruction);
       } else {
         const ai = getAIClient(resolvedKey);

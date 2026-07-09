@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Subject, ExamType, Question, QuestionType } from "./types";
 import { generateDynamicQuestions } from "./utils/fallbackGenerator";
-import { callNvidiaAPI } from "./geminiService";
+import { callNvidiaAPI, isNvidiaKey } from "./geminiService";
 
 const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -83,7 +83,7 @@ const generateUPSCQuestionsBatch = async (subject: Subject, count: number, mcqTa
       const resolvedKey = apiKey || localStorage.getItem('user_gemini_api_key') || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
 
       let text = '';
-      if (resolvedKey.includes('nvapi-')) {
+      if (isNvidiaKey(resolvedKey)) {
         text = await callNvidiaAPI(resolvedKey, prompt, systemInstruction);
       } else {
         const ai = getAIClient(resolvedKey);
