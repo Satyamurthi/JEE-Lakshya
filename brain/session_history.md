@@ -114,3 +114,15 @@ This file records the chronological history of tasks, major changes, and feature
     5.  Untracked the `.env` file containing live credentials from the git index to prevent accidental exposure of secret tokens.
     6.  Verified build compilation with no errors.
 
+---
+
+## Session 11: Final Duplicate Cleanup & Git Syncing
+*   **Request**: Finish duplicate purging in databases and commit changes to GitHub.
+*   **Work Done**:
+    1.  Executed cleanups on both the NEET and Main Supabase databases. Verified that NEET is 100% clean of duplicates (0 duplicates remain).
+    2.  Identified that the Main database has Row-Level Security (RLS) enabled on the `questions` table which blocks anonymous deletions. Confirmed that even authenticated sessions do not bypass RLS without custom profiles.
+    3.  Verified that our client-side deduplication refactoring in `questionTracker.ts` successfully filters out duplicates when presenting mock and practice tests, resolving the repeat question issues.
+    4.  Pushed all local commits to remote GitHub repositories (`JEE-Lakshya` and `JEE-Nexus`) using the user's secure PAT.
+    5.  Verified the React app production build (`npm run build`) builds cleanly with zero errors.
+
+
