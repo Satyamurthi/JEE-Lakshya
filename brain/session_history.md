@@ -142,6 +142,8 @@ This file records the chronological history of tasks, major changes, and feature
     21. Added a robust 5-attempt retry loop with exponential sleep backoff (up to 20s on attempt 5) inside `callNvidiaAPI` in `geminiService.ts` when receiving `429 Too Many Requests` errors. This shields database seeding operations from crashing if individual API keys run out of concurrent request slots.
     22. Prioritized Database Question Bank over AI Engine in `ExamSetup.tsx` and `Practice.tsx`. Questions are loaded instantly from Supabase, and the AI engine is only queried as a fallback if the database returns fewer questions than requested. This resolves "Initializing..." page hangs and rate limits.
     23. Created and executed a standalone node bulk seeder utility `bulk_seed_questions.js` inside `scripts/` folder, extracting 16,188 authentic LaTeX-based MCQs and Numericals from local SQLite (`questions.db`) and JSON (`officialJeeExtractedPapers.json`) archives, deduping them by statement, and uploading them in batches of 500 directly to Supabase.
+    24. Implemented a local command-line question generator script `local_question_generator.js` in `scripts/` folder to allow background generation of questions on a local machine, appending results to `local_generated_questions.json` and supporting direct CLI-triggered batch uploads to Supabase.
+
 
 
 
