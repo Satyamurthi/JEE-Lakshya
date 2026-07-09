@@ -28,38 +28,39 @@ const Settings = () => {
     setVerifyStatus('idle');
     setVerifyError('');
 
+    // Always save locally first so the user is never blocked from adding their key
+    localStorage.setItem('user_gemini_api_key', apiKey.trim());
+    setSavedKeyExists(true);
+    
+    // Sync API key to Supabase profile on the server
+    try {
+      const profileRaw = localStorage.getItem('user_profile');
+      if (profileRaw) {
+        const profileObj = JSON.parse(profileRaw);
+        if (profileObj.id) {
+          const { supabase } = await import('../supabase');
+          if (supabase) {
+            await supabase.from('profiles').update({ gemini_api_key: apiKey.trim() }).eq('id', profileObj.id);
+            profileObj.gemini_api_key = apiKey.trim();
+            localStorage.setItem('user_profile', JSON.stringify(profileObj));
+          }
+        }
+      }
+    } catch (dbErr) {
+      console.error("Failed to sync API key to server profile:", dbErr);
+    }
+
     try {
       const isValid = await verifyGeminiAPIKey(apiKey.trim());
       if (isValid) {
-        localStorage.setItem('user_gemini_api_key', apiKey.trim());
-        
-        // Sync API key to Supabase profile on the server
-        try {
-          const profileRaw = localStorage.getItem('user_profile');
-          if (profileRaw) {
-            const profileObj = JSON.parse(profileRaw);
-            if (profileObj.id) {
-              const { supabase } = await import('../supabase');
-              if (supabase) {
-                await supabase.from('profiles').update({ gemini_api_key: apiKey.trim() }).eq('id', profileObj.id);
-                profileObj.gemini_api_key = apiKey.trim();
-                localStorage.setItem('user_profile', JSON.stringify(profileObj));
-              }
-            }
-          }
-        } catch (dbErr) {
-          console.error("Failed to sync API key to server profile:", dbErr);
-        }
-
         setVerifyStatus('success');
-        setSavedKeyExists(true);
       } else {
         setVerifyStatus('failed');
-        setVerifyError("Verification succeeded but returned unexpected response. Check key permissions.");
+        setVerifyError("Verification failed: The key was saved, but the AI model returned an unexpected response. Check key permissions.");
       }
     } catch (err: any) {
       setVerifyStatus('failed');
-      setVerifyError(err.message || "Failed to verify key. Check network connectivity or API key quota.");
+      setVerifyError(`Verification failed: The key was saved, but Google/NVIDIA returned an error: "${err.message || err}".`);
     } finally {
       setIsVerifying(false);
     }
