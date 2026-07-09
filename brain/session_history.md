@@ -137,6 +137,9 @@ This file records the chronological history of tasks, major changes, and feature
     16. Resolved Netlify's 10-second gateway timeout on key verification queries by forcing verification checks to run on a fast, non-thinking model (`google/gemma-4-31b-it`) with a limited token count (100) and `enable_thinking: false`, allowing verification to return in under 500ms.
     17. Implemented automated question database sync. Integrated runtime dynamic imports to call `saveQuestionsToDB` inside all four stream generators (`geminiService.ts`, `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts`), deduping questions by statement text before inserting them into Supabase.
     18. Prevented Netlify's 10-second gateway timeout on NVIDIA NIM requests during database seeding and student practice by disabling `enable_thinking` and capping `max_tokens` at `4096` for all question generation calls. This makes the models return formatted JSON objects in under 2 seconds.
+    19. Removed the automatic background daily seeder hook in `SuperAdmin.tsx` to stop background automatic question generation when the panel is mounted. Seeding is now 100% manual.
+    20. Implemented a dynamic rate limit preservation mechanism inside `seedMassiveQuestionsToDB` in `supabase.ts`. Dynamically calculates the delay interval between sequential generations based on configured key counts (4.2s for 1 key, 2.2s for 2 keys, and 1.5s for 3+ keys) to completely prevent Too Many Requests (429) rate limit errors during manual seeding.
+
 
 
 
