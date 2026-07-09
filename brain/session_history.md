@@ -133,7 +133,8 @@ This file records the chronological history of tasks, major changes, and feature
     12. Fixed the `"verifyGeminiAPIKey is not defined"` bug on settings validation by changing the dynamic import in `Settings.tsx` to a static import, resolving potential chunk loading issues.
     13. Integrated support for the `z-ai/glm-5.2` model from NVIDIA NIM. Enabled automatic detection and normalization of NVIDIA keys that are missing the `nvapi-` prefix but start with the model sub-prefix `AO_`.
     14. Created an AI Model Selector dropdown in `Settings.tsx` allowing the user to switch between Google Gemini, NVIDIA Gemma 4 (31B), and NVIDIA GLM 5.2. Configured custom model parameters (`temperature = 1`, `top_p = 1`, `seed = 42`, and `clear_thinking = false` under `chat_template_kwargs`) for GLM 5.2 dynamic query execution.
-    15. Resolved browser CORS preflight blocks on custom `Authorization` headers sent to NVIDIA NIM by implementing query-parameter header routing (`reqHeaders=authorization:...`) on the primary proxy (`corsproxy.io`) to suppress preflight checks. Implemented a secondary CORS proxy fallback (`thingproxy`) for additional resilience.
+    15. Replaced third-party CORS proxies with a native same-origin proxy configuration. Configured `/nvidia-api` endpoint mapping in `vite.config.ts` (dev server proxy) and `_redirects` (Netlify CDN redirect rule). This completely bypasses CORS restrictions and preflight blocks for both local development and production environments natively, without third-party services.
+
 
 
 
