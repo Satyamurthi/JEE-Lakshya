@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Key, Eye, EyeOff, Save, Trash2, CheckCircle2, AlertCircle, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
+import { verifyGeminiAPIKey } from '../geminiService';
 
 const Settings = () => {
   const [apiKey, setApiKey] = useState('');
@@ -28,7 +29,6 @@ const Settings = () => {
     setVerifyError('');
 
     try {
-      const { verifyGeminiAPIKey } = await import('../geminiService');
       const isValid = await verifyGeminiAPIKey(apiKey.trim());
       if (isValid) {
         localStorage.setItem('user_gemini_api_key', apiKey.trim());

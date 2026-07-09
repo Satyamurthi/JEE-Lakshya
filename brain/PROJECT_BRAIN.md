@@ -76,6 +76,8 @@ Ensure XAMPP is running Apache on localhost. The PHP files in `api/` will handle
 *   **Real-Time Seeding via Gemini**: The Supabase seeder (`seedMassiveQuestionsToDB`) has been updated to strictly query the Gemini API in real-time. It enforces official pattern distributions (20 MCQs and 10 Numericals per subject for JEE, and 45 MCQs per subject for NEET) and guarantees equal distribution across all subjects.
 *   **Server Key Distribution & Sequential Single-Question Seeding**: Question generation runs sequentially (one question at a time) using a round-robin rotation across all Gemini API keys stored in user profiles on the server, avoiding rate limits and output token truncation errors. Additionally, a background daily seeder (`runAutomaticDailyQuestionSeeding`) automatically triggers when the Super Admin panel mounts to seed up to 100 questions per day.
 *   **Daily Practice Generation Limit (5 questions per user/day)**: Enforces a strict practice generation limit of 5 questions per user per day for students and normal admins to conserve API keys and quotas. Super admins are exempted from this practicing constraint to allow admin-triggered database seeding.
+*   **NVIDIA NIM API Key Support**: Supports NVIDIA API keys (keys containing `nvapi-`). When an NVIDIA key is configured, the application automatically routes chat and question generation requests to the NVIDIA NIM completions endpoint (`https://integrate.api.nvidia.com/v1/chat/completions`) using the `google/gemma-4-31b-it` model. Both Google Gemini and NVIDIA API keys are fully supported in parallel.
+
 
 
 

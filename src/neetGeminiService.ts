@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Subject, ExamType, Question, QuestionType } from "./types";
 import { generateDynamicQuestions } from "./utils/fallbackGenerator";
+import { callNvidiaAPI } from "./geminiService";
 
 const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -94,16 +95,22 @@ const generateNEETQuestionsBatch = async (subject: Subject, count: number, mcqTa
       
       Scope: ${topicFocus}. Difficulty: ${difficulty || 'Medium'}. DO NOT generate any engineering or JEE-like math questions. Biology questions must be related strictly to NCERT concepts.`;
       
-      const ai = getAIClient(apiKey);
-      const response = await callAIWithFallback(ai, prompt, { 
-        responseMimeType: "application/json", 
-        responseSchema: questionSchema,
-        systemInstruction: systemInstruction,
-        temperature: 0.85,
-        topP: 0.95,
-      });
-      
-      let text = response.text || '';
+      const resolvedKey = apiKey || localStorage.getItem('user_gemini_api_key') || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+
+      let text = '';
+      if (resolvedKey.includes('nvapi-')) {
+        text = await callNvidiaAPI(resolvedKey, prompt, systemInstruction);
+      } else {
+        const ai = getAIClient(resolvedKey);
+        const response = await callAIWithFallback(ai, prompt, { 
+          responseMimeType: "application/json", 
+          responseSchema: questionSchema,
+          systemInstruction: systemInstruction,
+          temperature: 0.85,
+          topP: 0.95,
+        });
+        text = response.text || '';
+      }
       text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
 
       if (text) {

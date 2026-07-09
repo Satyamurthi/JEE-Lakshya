@@ -129,6 +129,9 @@ This file records the chronological history of tasks, major changes, and feature
     8.  Created a background seeder (`runAutomaticDailyQuestionSeeding`) that checks if any questions were added today. If not, it generates the remaining questions up to a strict cap of 100 per day. Added the trigger to the Super Admin panel load hook.
     9.  Added settings syncing to automatically store Gemini API keys in the database profile whenever changed.
     10. Implemented a strict practice generation limit of 5 questions per user per day inside `src/utils/questionTracker.ts` and integrated it into all question generators (`geminiService.ts`, `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts`) to avoid exceeding API quotas. Super admins are exempted from this practicing constraint to allow database seeding.
+    11. Enabled support for NVIDIA NIM API keys (containing `nvapi-`). Configured the validation function and all four stream question generators to detect NVIDIA keys and route completions to the NVIDIA NIM endpoint (`https://integrate.api.nvidia.com/v1/chat/completions`) using the `google/gemma-4-31b-it` model.
+    12. Fixed the `"verifyGeminiAPIKey is not defined"` bug on settings validation by changing the dynamic import in `Settings.tsx` to a static import, resolving potential chunk loading issues.
+
 
 
 

@@ -36,13 +36,55 @@ const callAIWithFallback = async (ai: GoogleGenAI, contents: any, config: any) =
   throw lastError || new Error("All Gemini AI models and retries exhausted.");
 };
 
+export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstruction: string): Promise<string> => {
+  const authHeader = apiKey.startsWith("Bearer ") ? apiKey : `Bearer ${apiKey}`;
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": authHeader,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify({
+      "model": "google/gemma-4-31b-it",
+      "messages": [
+        { "role": "system", "content": systemInstruction },
+        { "role": "user", "content": prompt }
+      ],
+      "max_tokens": 16384,
+      "temperature": 1.00,
+      "top_p": 0.95,
+      "stream": false,
+      "chat_template_kwargs": {"enable_thinking": true}
+    })
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`NVIDIA API Error (${response.status}): ${errorText || response.statusText}`);
+  }
+  
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("NVIDIA API returned empty content or invalid choices structure.");
+  }
+  
+  return content;
+};
+
 export const verifyGeminiAPIKey = async (apiKey: string): Promise<boolean> => {
   try {
-    const ai = getAIClient(apiKey);
-    const response = await callAIWithFallback(ai, "Respond with exactly the word 'OK' if you can read this.", { systemInstruction: "Answer concisely." });
-    return response.text?.trim().toUpperCase().includes("OK") || false;
+    if (apiKey.includes('nvapi-')) {
+      const text = await callNvidiaAPI(apiKey, "Respond with exactly the word 'OK' if you can read this.", "Answer concisely.");
+      return text.trim().toUpperCase().includes("OK") || false;
+    } else {
+      const ai = getAIClient(apiKey);
+      const response = await callAIWithFallback(ai, "Respond with exactly the word 'OK' if you can read this.", { systemInstruction: "Answer concisely." });
+      return response.text?.trim().toUpperCase().includes("OK") || false;
+    }
   } catch (e: any) {
-    console.error("Gemini API Key verification failed:", e);
+    console.error("API Key verification failed:", e);
     throw new Error(e.message || "Invalid API key or network error.");
   }
 };
@@ -93,16 +135,22 @@ const generateJEEQuestionsBatch = async (subject: Subject, count: number, mcqTar
       
       Scope: ${topicFocus}. Difficulty: ${difficulty || 'Advanced'}. Use LaTeX for math formulas.`;
       
-      const ai = getAIClient(apiKey);
-      const response = await callAIWithFallback(ai, prompt, { 
-        responseMimeType: "application/json", 
-        responseSchema: questionSchema,
-        systemInstruction: systemInstruction,
-        temperature: 0.8,
-        topP: 0.9,
-      });
-      
-      let text = response.text || '';
+      const resolvedKey = apiKey || localStorage.getItem('user_gemini_api_key') || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+
+      let text = '';
+      if (resolvedKey.includes('nvapi-')) {
+        text = await callNvidiaAPI(resolvedKey, prompt, systemInstruction);
+      } else {
+        const ai = getAIClient(resolvedKey);
+        const response = await callAIWithFallback(ai, prompt, { 
+          responseMimeType: "application/json", 
+          responseSchema: questionSchema,
+          systemInstruction: systemInstruction,
+          temperature: 0.8,
+          topP: 0.9,
+        });
+        text = response.text || '';
+      }
       text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
 
       if (text) {

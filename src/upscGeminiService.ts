@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Subject, ExamType, Question, QuestionType } from "./types";
 import { generateDynamicQuestions } from "./utils/fallbackGenerator";
+import { callNvidiaAPI } from "./geminiService";
 
 const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -60,7 +61,7 @@ const questionSchema: Schema = {
   }
 };
 
-const generateUPSCQuestionsBatch = async (subject: Subject, count: number, mcqTarget: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], batchIdx: number = 0, totalBatches: number = 1): Promise<Question[]> => {
+const generateUPSCQuestionsBatch = async (subject: Subject, count: number, mcqTarget: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], batchIdx: number = 0, totalBatches: number = 1, apiKey?: string): Promise<Question[]> => {
   const allQuestions: Question[] = [];
   const isFullSyllabus = !chapters || chapters.length === 0;
   let topicFocus = isFullSyllabus ? "Full Syllabus" : `Chapters: ${chapters.join(', ')}`;
@@ -79,16 +80,22 @@ const generateUPSCQuestionsBatch = async (subject: Subject, count: number, mcqTa
       
       Scope: ${topicFocus}. Difficulty: ${difficulty || 'Hard'}.`;
       
-      const ai = getAIClient();
-      const response = await callAIWithFallback(ai, prompt, { 
-        responseMimeType: "application/json", 
-        responseSchema: questionSchema,
-        systemInstruction: systemInstruction,
-        temperature: 0.85,
-        topP: 0.95,
-      });
-      
-      let text = response.text || '';
+      const resolvedKey = apiKey || localStorage.getItem('user_gemini_api_key') || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+
+      let text = '';
+      if (resolvedKey.includes('nvapi-')) {
+        text = await callNvidiaAPI(resolvedKey, prompt, systemInstruction);
+      } else {
+        const ai = getAIClient(resolvedKey);
+        const response = await callAIWithFallback(ai, prompt, { 
+          responseMimeType: "application/json", 
+          responseSchema: questionSchema,
+          systemInstruction: systemInstruction,
+          temperature: 0.85,
+          topP: 0.95,
+        });
+        text = response.text || '';
+      }
       text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
 
       if (text) {
@@ -134,12 +141,12 @@ const generateUPSCQuestionsBatch = async (subject: Subject, count: number, mcqTa
   return allQuestions.slice(0, count);
 };
 
-export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }): Promise<Question[]> => {
+export const generateJEEQuestions = async (subject: Subject, count: number, type: ExamType, chapters?: string[], difficulty?: string, topics?: string[], distribution?: { mcq: number, numerical: number }, apiKey?: string): Promise<Question[]> => {
   // Enforce daily 5-question limit per user for practicing
   const { checkAndIncrementDailyGenerationLimit } = await import("./utils/questionTracker");
   checkAndIncrementDailyGenerationLimit(count);
 
-  return await generateUPSCQuestionsBatch(subject, count, count, type, chapters, difficulty, topics);
+  return await generateUPSCQuestionsBatch(subject, count, count, type, chapters, difficulty, topics, 0, 1, apiKey);
 };
 
 export const getQuickHint = async (statement: string, subject: string): Promise<string> => {
