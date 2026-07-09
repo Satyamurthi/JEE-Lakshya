@@ -206,6 +206,14 @@ export const generateJEEQuestions = async (subject: Subject, count: number, type
       }
   }
 
+  // Save generated questions to Supabase database for future reuse
+  try {
+    const { saveQuestionsToDB } = await import("./supabase");
+    await saveQuestionsToDB(results);
+  } catch (dbErr) {
+    console.warn("[neetGeminiService] Failed to save generated questions to DB:", dbErr);
+  }
+
   return results;
 };
 

@@ -146,7 +146,17 @@ export const generateJEEQuestions = async (subject: Subject, count: number, type
   const { checkAndIncrementDailyGenerationLimit } = await import("./utils/questionTracker");
   checkAndIncrementDailyGenerationLimit(count);
 
-  return await generateUPSCQuestionsBatch(subject, count, count, type, chapters, difficulty, topics, 0, 1, apiKey);
+  const results = await generateUPSCQuestionsBatch(subject, count, count, type, chapters, difficulty, topics, 0, 1, apiKey);
+
+  // Save generated questions to Supabase database for future reuse
+  try {
+    const { saveQuestionsToDB } = await import("./supabase");
+    await saveQuestionsToDB(results);
+  } catch (dbErr) {
+    console.warn("[upscGeminiService] Failed to save generated questions to DB:", dbErr);
+  }
+
+  return results;
 };
 
 export const getQuickHint = async (statement: string, subject: string): Promise<string> => {
