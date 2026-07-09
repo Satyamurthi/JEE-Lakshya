@@ -114,14 +114,14 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
     console.warn("[NVIDIA] Direct call failed (likely due to CORS). Attempting via proxy...", directErr);
   }
 
-  // 2. CORS Proxy Fallback using query parameters to bypass Authorization preflight CORS blockages
+  // 2. CORS Proxy Fallback: Bypasses preflight entirely by utilizing text/plain to avoid OPTIONS calls,
+  // and having corsproxy.io reconstruct headers (Authorization & Content-Type) on the target outgoing request.
   try {
-    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent("https://integrate.api.nvidia.com/v1/chat/completions")}&reqHeaders=authorization:${encodeURIComponent(authHeader)}`;
+    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent("https://integrate.api.nvidia.com/v1/chat/completions")}&reqHeaders=authorization:${encodeURIComponent(authHeader)},content-type:${encodeURIComponent("application/json")},accept:${encodeURIComponent("application/json")}`;
     const response = await fetch(proxyUrl, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Content-Type": "text/plain"
       },
       body: JSON.stringify(bodyData)
     });
