@@ -974,8 +974,9 @@ export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Prom
         console.error(`[Seeder] Error generating question ${i + 1}:`, genErr.message || genErr);
       }
       
-      // Short delay between generations to prevent API rate limit issues
-      await new Promise(r => setTimeout(r, 400));
+      // Dynamic delay based on available keys count to stay safely below Gemini's 15 RPM rate limit per key
+      const dynamicDelay = apiKeys.length === 1 ? 4200 : (apiKeys.length === 2 ? 2200 : 1500);
+      await new Promise(r => setTimeout(r, dynamicDelay));
     }
     
     return { success: true, count: successCount };
