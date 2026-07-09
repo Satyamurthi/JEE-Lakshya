@@ -30,6 +30,7 @@ graph TD
 *   [PROJECT_BRAIN.md](file:///d:/JEE/brain/PROJECT_BRAIN.md): General overview, architecture diagrams, and system configurations.
 *   [session_history.md](file:///d:/JEE/brain/session_history.md): Session-by-session diaries, work records, and design decisions.
 *   [next_steps.md](file:///d:/JEE/brain/next_steps.md): Pending items, future plans, and upcoming features.
+*   [make_repos_private.js](file:///d:/JEE/scripts/make_repos_private.js): Utility script to bulk convert owned GitHub repositories from public to private.
 
 ---
 
@@ -44,3 +45,32 @@ npm run build   # Build production bundle
 
 ### Local API
 Ensure XAMPP is running Apache on localhost. The PHP files in `api/` will handle local requests.
+
+---
+
+## 5. Revenue & Micro-Payments Tracking Design
+*   **Micro-Unlock Price**: Student micro-payment mock-unlocks cost ₹10.
+*   **Immediate Draft Registration**: When a student completes Razorpay checkout, the client immediately calls `createDraftPaidAttempt()` (or `submitDailyAttempt()`) to write a draft/initial record (with `paid: true` in its config) to the database. This records the revenue instantly even if the student closes the browser tab before completing the mock test.
+*   **Upsert on Completion**: Switched mock attempt saving to use Supabase `upsert` keyed by the draft's unique ID. When the student clicks submit, the draft record is overwritten with final exam scores, preventing duplicate revenue logging.
+*   **Schema Fallback Protection**: In cases where schema sync is pending and the `paid` column is missing from `exam_attempts` (throwing pg errors), `getActualTotalRevenue()` falls back to client-side parsing of the `config` JSONB column (`config.paid === true`) to calculate the actual platform revenue accurately.
+
+---
+
+## 6. NEET UG Stream Details
+*   **Subjects**: Structured into Physics, Chemistry, Botany, and Zoology.
+*   **Dynamic Credentials**: Integrates with the distinct NEET Supabase database (`https://pasyqykxlskcrvtqboxd.supabase.co`) using a Proxy switcher context that activates when the user selects the NEET stream.
+*   **Question Type**: NEET relies strictly on MCQs (+4/-1 marking scheme). All numerical entry inputs are bypassed, and question engines (both AI and deterministic fallbacks) are fully isolated from JEE/math-based elements.
+
+---
+
+## 7. GitHub Repository Visibility Utility
+*   **Script Location**: [make_repos_private.js](file:///d:/JEE/scripts/make_repos_private.js)
+*   **Purpose**: Bulk updates visibility of all public repositories owned by the user to private.
+*   **Authentication**: Reads the `GITHUB_PAT` token from the `.env` file (stored locally and gitignored) or accepts it as a command line argument.
+
+---
+
+## 8. Question Deduplication & Database Integrity
+*   **Hash Deduplication Strategy**: To prevent repeating questions in a single exam or across practice sessions, client-side filtering utilizes [questionTracker.ts](file:///d:/JEE/src/utils/questionTracker.ts) which computes question hashes strictly based on normalized question statement text. This guarantees identical question statements are deduplicated, even if they have different database primary IDs.
+*   **Database Cleanup**: Periodically run cursor-paginated scan and delete routines to remove physical duplicate entries from Supabase. In July 2026, 312 duplicates were cleaned from the NEET database, and 1,045 from the Main database.
+

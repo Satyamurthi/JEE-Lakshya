@@ -95,7 +95,7 @@ if (savedStream && savedStream !== 'JEE Main & Advanced') {
   switchSupabaseBackend(savedStream);
 }
 
-const generateId = () => {
+export const generateId = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return Math.random().toString(36).substring(2, 15);
 };
@@ -296,12 +296,43 @@ export const submitExamAttempt = async (attempt: any) => {
     }
   }
   try {
-    const { data, error } = await supabase.from('exam_attempts').insert(attempt).select().single();
+    const { data, error } = await supabase.from('exam_attempts').upsert(attempt).select().single();
     if (error && error.message && error.message.includes("paid")) {
-      console.warn("Schema cache missing 'paid' column, retrying insert without 'paid' field...");
+      console.warn("Schema cache missing 'paid' column, retrying upsert without 'paid' field...");
       const attemptCopy = { ...attempt };
       delete attemptCopy.paid;
-      return await supabase.from('exam_attempts').insert(attemptCopy).select().single();
+      return await supabase.from('exam_attempts').upsert(attemptCopy).select().single();
+    }
+    return { data, error };
+  } catch (e: any) {
+    return { data: null, error: e };
+  }
+};
+
+export const createDraftPaidAttempt = async (attemptId: string, userId: string, userName: string, type: string, paperIdOrChapter: string) => {
+  if (!supabase) return null;
+  const draftAttempt = {
+    id: attemptId,
+    user_id: userId,
+    user_name: userName,
+    score: 0,
+    total_marks: 0,
+    accuracy: 0,
+    config: {
+      paid: true,
+      type: type,
+      paperIdOrChapter: paperIdOrChapter,
+      isDraft: true
+    },
+    paid: true,
+    submitted_at: new Date().toISOString()
+  };
+  try {
+    const { data, error } = await supabase.from('exam_attempts').upsert(draftAttempt).select().single();
+    if (error && error.message && error.message.includes("paid")) {
+      const attemptCopy = { ...draftAttempt };
+      delete attemptCopy.paid;
+      return await supabase.from('exam_attempts').upsert(attemptCopy).select().single();
     }
     return { data, error };
   } catch (e: any) {
@@ -557,10 +588,46 @@ export const getActualTotalRevenue = async () => {
     try {
       const { data: examPaid } = await supabase
         .from('exam_attempts')
-        .select('score')
-        .eq('paid', true);
-      if (Array.isArray(examPaid)) examCount = examPaid.length;
-    } catch (e) {}
+        .select('paid, config');
+      if (Array.isArray(examPaid)) {
+        examCount = examPaid.filter((item: any) => {
+          if (item.paid === true) return true;
+          if (item.config && typeof item.config === 'object') {
+            return item.config.paid === true;
+          }
+          try {
+            if (typeof item.config === 'string') {
+              const parsed = JSON.parse(item.config);
+              return parsed.paid === true;
+            }
+          } catch {}
+          return false;
+        }).length;
+      }
+    } catch (e) {
+      console.warn("Table exam_attempts does not support paid column directly, trying config fallback:", e);
+      try {
+        const { data: examPaidOnlyConfig } = await supabase
+          .from('exam_attempts')
+          .select('config');
+        if (Array.isArray(examPaidOnlyConfig)) {
+          examCount = examPaidOnlyConfig.filter((item: any) => {
+            if (item.config && typeof item.config === 'object') {
+              return item.config.paid === true;
+            }
+            try {
+              if (typeof item.config === 'string') {
+                const parsed = JSON.parse(item.config);
+                return parsed.paid === true;
+              }
+            } catch {}
+            return false;
+          }).length;
+        }
+      } catch (innerErr) {
+        console.error("Config fallback fetch failed:", innerErr);
+      }
+    }
 
     const dailyCount = Array.isArray(dailyPaid) ? dailyPaid.length : 0;
     return (dailyCount + examCount) * 10;

@@ -84,6 +84,21 @@ const Daily = () => {
       );
       if (success) {
         setIsPaid(true);
+        try {
+          const { submitDailyAttempt } = await import('../supabase');
+          await submitDailyAttempt({
+            challenge_id: challenge.id,
+            user_id: profile.id,
+            score: 0,
+            total_marks: challenge.questions.length * 4,
+            stats: { accuracy: 0 },
+            attempt_data: [],
+            paid: true,
+            submitted_at: new Date().toISOString()
+          });
+        } catch (dbErr) {
+          console.error("Failed to write draft daily attempt:", dbErr);
+        }
         setIsPaymentModalOpen(false);
         localStorage.setItem('active_exam_questions', JSON.stringify(challenge.questions));
         localStorage.setItem('active_exam_config', JSON.stringify({

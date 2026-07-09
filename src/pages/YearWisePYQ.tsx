@@ -96,11 +96,26 @@ const YearWisePYQ = () => {
         );
 
         if (success) {
+          let attemptId: string | undefined;
+          try {
+            const { createDraftPaidAttempt, generateId } = await import('../supabase');
+            attemptId = generateId();
+            await createDraftPaidAttempt(
+              attemptId,
+              profile.id,
+              profile.full_name || 'Aspirant',
+              isNeet ? `NEET UG ${paper.year} (${paper.shift})` : `JEE Main ${paper.year} (${paper.shift})`,
+              paper.id
+            );
+          } catch (dbErr) {
+            console.error("Failed to write draft paid attempt:", dbErr);
+          }
+
           const updated = { ...unlockedPapers, [paper.id]: true };
           setUnlockedPapers(updated);
           localStorage.setItem('unlocked_pyq_papers', JSON.stringify(updated));
-          alert(`🎉 Payment Verified! JEE ${paper.year} Paper unlocked for this attempt.`);
-          startExamFlow(paper, true);
+          alert(`🎉 Payment Verified! ${isNeet ? 'NEET' : 'JEE'} ${paper.year} Paper unlocked for this attempt.`);
+          startExamFlow(paper, true, attemptId);
         }
       } catch (err: any) {
         console.error("Unlock error:", err);
@@ -124,7 +139,7 @@ const YearWisePYQ = () => {
     }
   };
 
-  const startExamFlow = async (paper: PYQPaper, paid: boolean = false) => {
+  const startExamFlow = async (paper: PYQPaper, paid: boolean = false, attemptId?: string) => {
     try {
       const { cleanQuestionText } = await import('../utils/sanitizer');
       const { filterUniqueQuestions } = await import('../utils/questionTracker');
@@ -156,6 +171,7 @@ const YearWisePYQ = () => {
       questions = filterUniqueQuestions(questions, false);
 
       const sessionData = {
+        id: attemptId,
         type: isNeet ? `NEET UG ${paper.year} (${paper.shift})` : `JEE Main ${paper.year} (${paper.shift})`,
         questions: questions,
         startTime: Date.now(),

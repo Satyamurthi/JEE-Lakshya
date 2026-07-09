@@ -462,6 +462,46 @@ export const generateDynamicQuestions = (
         correctAnswer: correctKey,
         solution: `By Chargaff's rule, Cytosine (C) = Guanine (G) = $${c}\\%$. Thus C + G = $${c * 2}\\%$. The remaining DNA is Adenine (A) + Thymine (T) = $100\\% - ${c * 2}\\% = ${100 - c * 2}\\%$. Since A = T, Adenine percentage = $${100 - c * 2}\\% / 2 = ${a}\\%$.`
       };
+    },
+    (rand: () => number, idx: number) => {
+      const correct = "Auxin";
+      const distractors = ["Gibberellin", "Cytokinin", "Abscisic Acid"];
+      const { options, correctKey } = shuffleOptions(correct, distractors, rand);
+      return {
+        chapter: "Plant Growth and Development",
+        statement: `The phenomenon of apical dominance in plants, where the growth of lateral buds is inhibited by the terminal bud, is primarily mediated by which hormone?`,
+        options,
+        correctAnswer: correctKey,
+        solution: "Apical dominance is caused by the polar transport of Auxins synthesized at the shoot apex down the stem, which suppresses lateral bud development."
+      };
+    },
+    (rand: () => number, idx: number) => {
+      const correct = "One male gamete fuses with two polar nuclei";
+      const distractors = [
+        "One male gamete fuses with the egg cell",
+        "Two male gametes fuse with the egg cell",
+        "Synergids fuse with polar nuclei"
+      ];
+      const { options, correctKey } = shuffleOptions(correct, distractors, rand);
+      return {
+        chapter: "Sexual Reproduction in Flowering Plants",
+        statement: `During double fertilization in angiosperms, the primary endosperm nucleus (PEN) is formed when:`,
+        options,
+        correctAnswer: correctKey,
+        solution: "Double fertilization involves syngamy (fusion of one male gamete with the egg) and triple fusion (fusion of the second male gamete with the two polar nuclei to form the triploid primary endosperm nucleus)."
+      };
+    },
+    (rand: () => number, idx: number) => {
+      const correct = "Phosphoenolpyruvate (PEP)";
+      const distractors = ["Ribulose-1,5-bisphosphate (RuBP)", "Oxaloacetic acid (OAA)", "Phosphoglyceric acid (PGA)"];
+      const { options, correctKey } = shuffleOptions(correct, distractors, rand);
+      return {
+        chapter: "Photosynthesis in Higher Plants",
+        statement: `In $C_4$ plants, the primary carbon dioxide acceptor in the mesophyll cells is:`,
+        options,
+        correctAnswer: correctKey,
+        solution: "In C4 plants, the initial carbon fixation occurs in mesophyll cells where PEP carboxylase catalyzes the binding of CO2 to Phosphoenolpyruvate (PEP), forming the 4-carbon acid oxaloacetate (OAA)."
+      };
     }
   ];
 
@@ -479,15 +519,59 @@ export const generateDynamicQuestions = (
       };
     },
     (rand: () => number, idx: number) => {
-      const correct = "Decreases";
-      const distractors = ["Increases", "Remains constant", "First increases then decreases"];
+      const correct = "IgA";
+      const distractors = ["IgG", "IgM", "IgE"];
       const { options, correctKey } = shuffleOptions(correct, distractors, rand);
       return {
-        chapter: "Semiconductor Electronics",
-        statement: `Under forward bias condition in a semiconductor diode (often used in biological signal amplification tools), the width of the depletion region: (ID: ${idx})`,
+        chapter: "Human Health and Disease",
+        statement: `Colostrum, the yellowish fluid secreted by the mother during the initial days of lactation, provides passive immunity to the newborn because it is rich in antibodies of the class:`,
         options,
         correctAnswer: correctKey,
-        solution: "Forward biasing opposes the internal barrier potential, narrowing the depletion width."
+        solution: "Colostrum contains abundant IgA antibodies that cross over to the infant, providing immediate passive immunity against mucosal pathogens."
+      };
+    },
+    (rand: () => number, idx: number) => {
+      const correct = "Permeable to water but almost impermeable to electrolytes";
+      const distractors = [
+        "Impermeable to water but highly permeable to electrolytes",
+        "Permeable to both water and electrolytes",
+        "Impermeable to both water and electrolytes"
+      ];
+      const { options, correctKey } = shuffleOptions(correct, distractors, rand);
+      return {
+        chapter: "Excretory Products and their Elimination",
+        statement: `In the mammalian nephron, the descending limb of the loop of Henle is:`,
+        options,
+        correctAnswer: correctKey,
+        solution: "The descending limb of the loop of Henle is highly permeable to water but impermeable to sodium chloride and other electrolytes, which concentrates the filtrate as it descends."
+      };
+    },
+    (rand: () => number, idx: number) => {
+      const correct = "Denaturation, Annealing, Extension";
+      const distractors = [
+        "Annealing, Extension, Denaturation",
+        "Extension, Denaturation, Annealing",
+        "Denaturation, Extension, Annealing"
+      ];
+      const { options, correctKey } = shuffleOptions(correct, distractors, rand);
+      return {
+        chapter: "Biotechnology: Principles and Processes",
+        statement: `What is the correct sequence of steps involved in a single cycle of the Polymerase Chain Reaction (PCR)?`,
+        options,
+        correctAnswer: correctKey,
+        solution: "A PCR cycle consists of: 1) Denaturation at high temp (~94°C) to separate DNA strands; 2) Annealing (~55°C) to bind primers; and 3) Extension (~72°C) where Taq polymerase synthesizes the complementary strand."
+      };
+    },
+    (rand: () => number, idx: number) => {
+      const correct = "Analogy (Convergent evolution)";
+      const distractors = ["Homology (Divergent evolution)", "Vestigial organs", "Atavism"];
+      const { options, correctKey } = shuffleOptions(correct, distractors, rand);
+      return {
+        chapter: "Evolution",
+        statement: `Flippers of penguins and dolphins are morphological adaptations performing similar functions but having different anatomical structures. They represent:`,
+        options,
+        correctAnswer: correctKey,
+        solution: "Flippers of penguins (birds) and dolphins (mammals) are analogous structures that evolved independently to aid in swimming. This is an example of convergent evolution."
       };
     }
   ];
@@ -498,11 +582,63 @@ export const generateDynamicQuestions = (
       const distractors = ["Chloroplast", "Lysosome", "Ribosome"];
       const { options, correctKey } = shuffleOptions(correct, distractors, rand);
       return {
-        chapter: "Cell Structure",
+        chapter: "Cell: The Unit of Life",
         statement: `Which of the following cell organelles is responsible for cellular respiration and ATP generation? (ID: ${idx})`,
         options,
         correctAnswer: correctKey,
         solution: "Mitochondria are the powerhouses of the cell where ATP is synthesized during aerobic respiration."
+      };
+    },
+    (rand: () => number, idx: number) => {
+      const correct = "Singer and Nicolson";
+      const distractors = ["Watson and Crick", "Schleiden and Schwann", "Robert Brown"];
+      const { options, correctKey } = shuffleOptions(correct, distractors, rand);
+      return {
+        chapter: "Cell: The Unit of Life",
+        statement: `The fluid mosaic model of the cell membrane, which describes it as a lipid bilayer with floating proteins, was proposed by:`,
+        options,
+        correctAnswer: correctKey,
+        solution: "The fluid mosaic model was proposed by Jonathan Singer and Garth Nicolson in 1972, replacing older static models."
+      };
+    },
+    (rand: () => number, idx: number) => {
+      const correct = "Pachytene stage of Prophase I";
+      const distractors = [
+        "Zygotene stage of Prophase I",
+        "Diplotene stage of Prophase I",
+        "Leptotene stage of Prophase I"
+      ];
+      const { options, correctKey } = shuffleOptions(correct, distractors, rand);
+      return {
+        chapter: "Cell Cycle and Cell Division",
+        statement: `During meiotic cell division, homologous recombination and crossing over between non-sister chromatids take place at:`,
+        options,
+        correctAnswer: correctKey,
+        solution: "Crossing over occurs during the pachytene stage of Prophase I in meiosis, facilitated by the recombinase enzyme complex."
+      };
+    },
+    (rand: () => number, idx: number) => {
+      const correct = "Cellulose";
+      const distractors = ["Starch", "Glycogen", "Inulin"];
+      const { options, correctKey } = shuffleOptions(correct, distractors, rand);
+      return {
+        chapter: "Biomolecules",
+        statement: `Which of the following carbohydrates is a linear homopolymer of glucose units joined by $\\beta$-1,4-glycosidic linkages?`,
+        options,
+        correctAnswer: correctKey,
+        solution: "Cellulose is a linear homopolymer composed of glucose monomers. Starch and glycogen are branched polymers, and Inulin is a polymer of fructose."
+      };
+    },
+    (rand: () => number, idx: number) => {
+      const correct = "Inverted";
+      const distractors = ["Upright", "Spindle-shaped", "Urn-shaped"];
+      const { options, correctKey } = shuffleOptions(correct, distractors, rand);
+      return {
+        chapter: "Ecosystem",
+        statement: `In an aquatic ecosystem (such as an ocean), the pyramid of biomass is generally:`,
+        options,
+        correctAnswer: correctKey,
+        solution: "The pyramid of biomass in marine systems is inverted because the biomass of primary producers (phytoplankton) at any given time is much smaller than the biomass of consumers (fishes, zooplankton) that feed on them."
       };
     }
   ];

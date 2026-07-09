@@ -460,7 +460,8 @@ const SuperAdmin = () => {
       const defaultDailyConfig = isNeet ? {
         physics: { mcq: mcqN, numerical: 0, chapters: [], topics: [] },
         chemistry: { mcq: mcqN, numerical: 0, chapters: [], topics: [] },
-        biology: { mcq: mcqN, numerical: 0, chapters: [], topics: [] }
+        botany: { mcq: mcqN, numerical: 0, chapters: [], topics: [] },
+        zoology: { mcq: mcqN, numerical: 0, chapters: [], topics: [] }
       } : {
         physics: { mcq: mcqN, numerical: numN, chapters: [], topics: [] },
         chemistry: { mcq: mcqN, numerical: numN, chapters: [], topics: [] },
@@ -469,7 +470,7 @@ const SuperAdmin = () => {
       
       const result = await service.generateFullJEEDailyPaper(defaultDailyConfig as any);
       const allQs = isNeet 
-        ? [...result.physics, ...result.chemistry, ...(result.biology || [])]
+        ? [...result.physics, ...result.chemistry, ...(result.botany || []), ...(result.zoology || [])]
         : [...result.physics, ...result.chemistry, ...(result.mathematics || [])];
       
       const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
@@ -487,8 +488,16 @@ const SuperAdmin = () => {
       const numN = isNeet ? 0 : Math.max(0, numericalCountPerSubject);
       const fbPhysics = service.generateFallbackQuestions(('Physics' as any), mcqN, numN);
       const fbChem = service.generateFallbackQuestions(('Chemistry' as any), mcqN, numN);
-      const fbThird = service.generateFallbackQuestions(isNeet ? ('Biology' as any) : ('Mathematics' as any), mcqN, numN);
-      const fbQs = [...fbPhysics, ...fbChem, ...fbThird];
+      
+      let fbQs = [];
+      if (isNeet) {
+        const fbBotany = service.generateFallbackQuestions(('Botany' as any), mcqN, numN);
+        const fbZoology = service.generateFallbackQuestions(('Zoology' as any), mcqN, numN);
+        fbQs = [...fbPhysics, ...fbChem, ...fbBotany, ...fbZoology];
+      } else {
+        const fbMath = service.generateFallbackQuestions(('Mathematics' as any), mcqN, numN);
+        fbQs = [...fbPhysics, ...fbChem, ...fbMath];
+      }
       
       const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
       const uniqueQs = filterUniqueQuestions(fbQs);
@@ -2080,7 +2089,11 @@ CREATE POLICY "Plans write policy" ON public.subscription_plans FOR ALL USING (
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'free';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS current_exam_token TEXT;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS current_exam_started_at TIMESTAMPTZ;`}
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS current_exam_started_at TIMESTAMPTZ;
+
+-- Micro-payment unlock schema updates:
+ALTER TABLE public.daily_attempts ADD COLUMN IF NOT EXISTS paid BOOLEAN DEFAULT false;
+ALTER TABLE public.exam_attempts ADD COLUMN IF NOT EXISTS paid BOOLEAN DEFAULT false;`}
                 </pre>
               </div>
 

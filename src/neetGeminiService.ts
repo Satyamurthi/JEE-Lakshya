@@ -83,7 +83,7 @@ const generateNEETQuestionsBatch = async (subject: Subject, count: number, mcqTa
       console.log(`[AI-NEET] [Batch ${batchIdx + 1} of ${totalBatches}] Generating ${count} questions for ${subject} (Batch Target: ${mcqTarget} MCQ, ${numTarget} Num)...`);
       const sessionEntropy = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
       
-      const systemInstruction = `You are an expert NEET medical entrance exam coach. Generate HIGHLY UNIQUE, ORIGINAL, and concept-heavy problems mapped strictly to the NEET UG NCERT syllabus for ${subject}. Biology questions should span Botany and Zoology with application-based clinical or logical statements. Use LaTeX for math/formulas. Ensure output matches the exact JSON schema.`;
+      const systemInstruction = `You are an expert NEET UG medical entrance exam coach. Generate HIGHLY UNIQUE, ORIGINAL, and concept-heavy multiple-choice questions (MCQs) mapped strictly to the NEET UG NCERT syllabus for ${subject}. Under NO circumstances should you generate any math, JEE engineering, or programming questions. All questions must be strictly biological, physical, or chemical sciences relevant to the NEET medical curriculum. Biology questions (Botany or Zoology) must focus on physiological, anatomical, clinical, or biochemical concepts from the NCERT textbook. Use LaTeX only for chemical formulas or physical units. Ensure output matches the exact JSON schema.`;
       
       const prompt = `BatchID: ${sessionEntropy}. 
       Generate EXACTLY ${count} UNIQUE questions for ${subject} (NEET UG level). 
@@ -92,7 +92,7 @@ const generateNEETQuestionsBatch = async (subject: Subject, count: number, mcqTa
       - ${mcqTarget} Multiple Choice Questions (type: "MCQ", must include 4 options in "options" array)
       - ${numTarget} Numerical Value Questions (type: "Numerical", leave "options" as empty array [])
       
-      Scope: ${topicFocus}. Difficulty: ${difficulty || 'Medium'}. Use LaTeX for math/formulas.`;
+      Scope: ${topicFocus}. Difficulty: ${difficulty || 'Medium'}. DO NOT generate any engineering or JEE-like math questions. Biology questions must be related strictly to NCERT concepts.`;
       
       const ai = getAIClient();
       const response = await callAIWithFallback(ai, prompt, { 
@@ -208,15 +208,17 @@ export const getQuickHint = async (statement: string, subject: string): Promise<
   }
 };
 
-export const generateFullJEEDailyPaper = async (config: any): Promise<{ physics: Question[], chemistry: Question[], biology: Question[] }> => {
+export const generateFullJEEDailyPaper = async (config: any): Promise<{ physics: Question[], chemistry: Question[], botany: Question[], zoology: Question[] }> => {
   try {
-    const bioConfig = config.biology || config.mathematics || { mcq: 8, numerical: 2, chapters: [], topics: [] };
-    const [physics, chemistry, biology] = await Promise.all([
-      generateJEEQuestions(Subject.Physics, config.physics.mcq + config.physics.numerical, ExamType.NEET, config.physics.chapters, 'Medium', config.physics.topics, config.physics),
-      generateJEEQuestions(Subject.Chemistry, config.chemistry.mcq + config.chemistry.numerical, ExamType.NEET, config.chemistry.chapters, 'Medium', config.chemistry.topics, config.chemistry),
-      generateJEEQuestions(Subject.Biology, bioConfig.mcq + bioConfig.numerical, ExamType.NEET, bioConfig.chapters, 'Medium', bioConfig.topics, bioConfig)
+    const botanyConfig = config.botany || { mcq: 10, numerical: 0, chapters: [], topics: [] };
+    const zoologyConfig = config.zoology || { mcq: 10, numerical: 0, chapters: [], topics: [] };
+    const [physics, chemistry, botany, zoology] = await Promise.all([
+      generateJEEQuestions(Subject.Physics, config.physics.mcq, ExamType.NEET, config.physics.chapters, 'Medium', config.physics.topics, config.physics),
+      generateJEEQuestions(Subject.Chemistry, config.chemistry.mcq, ExamType.NEET, config.chemistry.chapters, 'Medium', config.chemistry.topics, config.chemistry),
+      generateJEEQuestions(Subject.Botany, botanyConfig.mcq, ExamType.NEET, botanyConfig.chapters, 'Medium', botanyConfig.topics, botanyConfig),
+      generateJEEQuestions(Subject.Zoology, zoologyConfig.mcq, ExamType.NEET, zoologyConfig.chapters, 'Medium', zoologyConfig.topics, zoologyConfig)
     ]);
-    return { physics, chemistry, biology };
+    return { physics, chemistry, botany, zoology };
   } catch (error) {
     console.error("Full NEET daily paper generation failed:", error);
     throw error;

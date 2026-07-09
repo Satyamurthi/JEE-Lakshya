@@ -38,6 +38,21 @@ const Practice = () => {
         receipt
       );
       if (success) {
+        let attemptId: string | undefined;
+        try {
+          const { createDraftPaidAttempt, generateId } = await import('../supabase');
+          attemptId = generateId();
+          await createDraftPaidAttempt(
+            attemptId,
+            profile.id,
+            profile.full_name || 'Aspirant',
+            'Chapter Practice',
+            selectedChapter || 'General'
+          );
+          localStorage.setItem('unlocked_practice_attempt_id', attemptId);
+        } catch (dbErr) {
+          console.error("Failed to write draft practice attempt:", dbErr);
+        }
         setIsPaid(true);
         alert("Payment verified! Your practice session is now unlocked.");
       } else {
@@ -149,6 +164,8 @@ const Practice = () => {
       const subjectEnum = selectedSubject === 'Physics' ? Subject.Physics : 
                          selectedSubject === 'Chemistry' ? Subject.Chemistry : 
                          selectedSubject === 'Biology' ? Subject.Biology : 
+                         selectedSubject === 'Botany' ? Subject.Botany : 
+                         selectedSubject === 'Zoology' ? Subject.Zoology : 
                          Subject.Mathematics;
 
       questions = await service.generateJEEQuestions(
@@ -191,6 +208,8 @@ const Practice = () => {
         const subjectEnum = selectedSubject === 'Physics' ? Subject.Physics : 
                            selectedSubject === 'Chemistry' ? Subject.Chemistry : 
                            selectedSubject === 'Biology' ? Subject.Biology : 
+                           selectedSubject === 'Botany' ? Subject.Botany : 
+                           selectedSubject === 'Zoology' ? Subject.Zoology : 
                            Subject.Mathematics;
         source = "Synthesized Chapter Practice Bank";
         questions = service.generateFallbackQuestions(subjectEnum, mcqCount, numericalCount).map(q => ({
@@ -215,7 +234,9 @@ const Practice = () => {
     recordSeenQuestions(finalQuestions);
 
     localStorage.setItem('active_exam_questions', JSON.stringify(finalQuestions));
+    const unlockedAttemptId = localStorage.getItem('unlocked_practice_attempt_id');
     localStorage.setItem('active_exam_config', JSON.stringify({
+      id: unlockedAttemptId || undefined,
       type: 'Chapter Practice',
       subject: selectedSubject,
       chapter: selectedChapter,
@@ -224,6 +245,9 @@ const Practice = () => {
       duration: (mcqCount + numericalCount) * 2, // 2 minutes per question
       paid: isIndependent && isPaid
     }));
+    if (unlockedAttemptId) {
+      localStorage.removeItem('unlocked_practice_attempt_id');
+    }
     
     setIsPreparing(false);
     navigate('/exam-portal');

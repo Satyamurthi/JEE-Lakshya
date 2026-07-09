@@ -185,6 +185,7 @@ const ExamPortal = () => {
       });
 
       const attemptData = {
+        id: config?.id,
         user_id: profile.id,
         user_name: profile.full_name,
         score,
@@ -518,7 +519,7 @@ const ExamPortal = () => {
     if (activeSession) {
       const session = JSON.parse(activeSession);
       examQuestions = session.questions || [];
-      examConfig = { type: session.type, duration: session.durationMinutes, paid: session.paid || false };
+      examConfig = { id: session.id, type: session.type, duration: session.durationMinutes, paid: session.paid || false };
       if (session.pdfUrl) {
         setPdfUrl(session.pdfUrl);
       }
