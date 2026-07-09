@@ -62,12 +62,17 @@ export const isNvidiaKey = (apiKey: string): boolean => {
   return !clean.startsWith("AIzaSy") && !clean.startsWith("AQ.");
 };
 
-export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstruction: string): Promise<string> => {
+export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstruction: string, isVerification = false): Promise<string> => {
   const cleanedKey = getCleanedNvidiaKey(apiKey);
   const authHeader = `Bearer ${cleanedKey}`;
   
   let model = localStorage.getItem('user_ai_model') || 'google/gemma-4-31b-it';
   if (model.includes('gemini')) {
+    model = 'google/gemma-4-31b-it';
+  }
+
+  // Force fast gemma-4-31b-it for verification to ensure rapid (<1s) execution to stay well below Netlify's 10s timeout
+  if (isVerification) {
     model = 'google/gemma-4-31b-it';
   }
 
@@ -77,7 +82,7 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
       { "role": "system", "content": systemInstruction },
       { "role": "user", "content": prompt }
     ],
-    "max_tokens": 16384,
+    "max_tokens": isVerification ? 100 : 16384,
     "stream": false
   };
 
@@ -90,7 +95,7 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
     // Default fallback to gemma-4-31b-it parameters
     bodyData.temperature = 1.00;
     bodyData.top_p = 0.95;
-    bodyData.chat_template_kwargs = { "enable_thinking": true };
+    bodyData.chat_template_kwargs = { "enable_thinking": !isVerification };
   }
 
   // Use the native proxy endpoint `/nvidia-api` which is configured in Netlify (_redirects)
@@ -122,7 +127,7 @@ export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstru
 export const verifyGeminiAPIKey = async (apiKey: string): Promise<boolean> => {
   try {
     if (isNvidiaKey(apiKey)) {
-      const text = await callNvidiaAPI(apiKey, "Respond with exactly the word 'OK' if you can read this.", "Answer concisely.");
+      const text = await callNvidiaAPI(apiKey, "Respond with exactly the word 'OK' if you can read this.", "Answer concisely.", true);
       return text.trim().toUpperCase().includes("OK") || false;
     } else {
       const ai = getAIClient(apiKey);
