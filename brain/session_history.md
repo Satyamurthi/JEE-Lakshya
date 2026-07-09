@@ -131,6 +131,9 @@ This file records the chronological history of tasks, major changes, and feature
     10. Implemented a strict practice generation limit of 5 questions per user per day inside `src/utils/questionTracker.ts` and integrated it into all question generators (`geminiService.ts`, `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts`) to avoid exceeding API quotas. Super admins are exempted from this practicing constraint to allow database seeding.
     11. Enabled support for NVIDIA NIM API keys (containing `nvapi-`). Configured the validation function and all four stream question generators to detect NVIDIA keys and route completions to the NVIDIA NIM endpoint (`https://integrate.api.nvidia.com/v1/chat/completions`) using the `google/gemma-4-31b-it` model.
     12. Fixed the `"verifyGeminiAPIKey is not defined"` bug on settings validation by changing the dynamic import in `Settings.tsx` to a static import, resolving potential chunk loading issues.
+    13. Integrated support for the `z-ai/glm-5.2` model from NVIDIA NIM. Enabled automatic detection and normalization of NVIDIA keys that are missing the `nvapi-` prefix but start with the model sub-prefix `AO_`.
+    14. Created an AI Model Selector dropdown in `Settings.tsx` allowing the user to switch between Google Gemini, NVIDIA Gemma 4 (31B), and NVIDIA GLM 5.2. Configured custom model parameters (`temperature = 1`, `top_p = 1`, `seed = 42`, and `clear_thinking = false` under `chat_template_kwargs`) for GLM 5.2 dynamic query execution.
+
 
 
 
