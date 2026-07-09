@@ -136,6 +136,8 @@ This file records the chronological history of tasks, major changes, and feature
     15. Replaced third-party CORS proxies with a native same-origin proxy configuration. Configured `/nvidia-api` endpoint mapping in `vite.config.ts` (dev server proxy) and `_redirects` (Netlify CDN redirect rule). This completely bypasses CORS restrictions and preflight blocks for both local development and production environments natively, without third-party services.
     16. Resolved Netlify's 10-second gateway timeout on key verification queries by forcing verification checks to run on a fast, non-thinking model (`google/gemma-4-31b-it`) with a limited token count (100) and `enable_thinking: false`, allowing verification to return in under 500ms.
     17. Implemented automated question database sync. Integrated runtime dynamic imports to call `saveQuestionsToDB` inside all four stream generators (`geminiService.ts`, `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts`), deduping questions by statement text before inserting them into Supabase.
+    18. Prevented Netlify's 10-second gateway timeout on NVIDIA NIM requests during database seeding and student practice by disabling `enable_thinking` and capping `max_tokens` at `4096` for all question generation calls. This makes the models return formatted JSON objects in under 2 seconds.
+
 
 
 
