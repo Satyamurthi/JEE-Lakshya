@@ -139,6 +139,8 @@ This file records the chronological history of tasks, major changes, and feature
     18. Prevented Netlify's 10-second gateway timeout on NVIDIA NIM requests during database seeding and student practice by disabling `enable_thinking` and capping `max_tokens` at `4096` for all question generation calls. This makes the models return formatted JSON objects in under 2 seconds.
     19. Removed the automatic background daily seeder hook in `SuperAdmin.tsx` to stop background automatic question generation when the panel is mounted. Seeding is now 100% manual.
     20. Implemented a dynamic rate limit preservation mechanism inside `seedMassiveQuestionsToDB` in `supabase.ts`. Dynamically calculates the delay interval between sequential generations based on configured key counts (4.2s for 1 key, 2.2s for 2 keys, and 1.5s for 3+ keys) to completely prevent Too Many Requests (429) rate limit errors during manual seeding.
+    21. Added a robust 3-attempt retry loop with exponential sleep backoff (3s on attempt 1, 6s on attempt 2) inside `callNvidiaAPI` in `geminiService.ts` when receiving `429 Too Many Requests` errors. This shields database seeding operations from crashing if individual API keys run out of concurrent request slots.
+
 
 
 
