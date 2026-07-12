@@ -19,8 +19,8 @@ graph TD
     D[Super Admin Profile] -->|Logs into| B
     D -->|Toggles Active Stream| E[Active Database Context]
     E -->|Switches Endpoints| F[Supabase Backends - JEE/NEET/KCET/UPSC]
-    B -->|Local Fallback Requests| G[Local XAMPP PHP API Proxy]
-    G -->|Dynamic Schema Selection| H[Local MySQL Databases - jee_nexus/neet_nexus/etc.]
+    B -->|Local Fallback Requests| G[Local PHP API Proxy]
+    G -->|Dynamic Schema Selection| H[Local MariaDB Databases - jee_nexus/neet_nexus/etc.]
 ```
 
 ---
@@ -43,8 +43,8 @@ npm run dev     # Dev server launches on Port 3000
 npm run build   # Build production bundle
 ```
 
-### Local API
-Ensure XAMPP is running Apache on localhost. The PHP files in `api/` will handle local requests.
+### Local API Backend
+Ensure the MariaDB and PHP built-in servers are running. They are registered as persistent background Windows Scheduled Tasks (`MariaDBServer` and `PHPServer`) running under the `SYSTEM` account, launching automatically at system startup and listening on Port 80.
 
 ---
 
@@ -59,7 +59,7 @@ Ensure XAMPP is running Apache on localhost. The PHP files in `api/` will handle
 ## 6. NEET UG Stream Details
 *   **Subjects**: Structured into Physics, Chemistry, Botany, and Zoology.
 *   **Dynamic Credentials**: Integrates with the distinct NEET Supabase database (`https://pasyqykxlskcrvtqboxd.supabase.co`) using a Proxy switcher context that activates when the user selects the NEET stream.
-*   **Question Type**: NEET relies strictly on MCQs (+4/-1 marking scheme). All numerical entry inputs are bypassed, and question engines (both AI and deterministic fallbacks) are fully isolated from JEE/math-based elements.
+*   **Question Type**: NEET relies strictly on MCQs (+4/-1 marking scheme). All numerical entry inputs are bypassed, and question engines (both AI and deterministic fallbacks) are isolated from JEE/math-based elements.
 
 ---
 
@@ -77,7 +77,6 @@ Ensure XAMPP is running Apache on localhost. The PHP files in `api/` will handle
 *   **Server Key Distribution & Sequential Single-Question Seeding**: Question generation runs sequentially (one question at a time) using a round-robin rotation across all Gemini API keys stored in user profiles on the server, avoiding rate limits and output token truncation errors. Seeding is fully manual and triggers only when the super admin clicks the seeding button.
 *   **Rate-Limit Preserving Seeding**: Calculated dynamic delay intervals between sequential question generations based on the total number of active API keys configured (4.2 seconds for 1 key, 2.2 seconds for 2 keys, and 1.5 seconds for 3+ keys). This preserves Gemini's 15 RPM (requests per minute) limit per key and completely avoids Too Many Requests (429) rate limit errors during bulk database seeding.
 *   **Daily Practice Generation Limit (5 questions per user/day)**: Enforces a strict practice generation limit of 5 questions per user per day for students and normal admins to conserve API keys and quotas. Super admins are exempted from this practicing constraint to allow admin-triggered database seeding.
-
 *   **NVIDIA NIM API Key Support**: Supports NVIDIA API keys (keys containing `nvapi-` or `AO_`). When an NVIDIA key is configured, the application automatically routes chat and question generation requests to the NVIDIA NIM completions endpoint (`https://integrate.api.nvidia.com/v1/chat/completions`). Both Google Gemini and NVIDIA API keys are fully supported in parallel.
 *   **Multiple Model Support (Gemma 4 & GLM 5.2)**: Built a dynamic AI Model Selector in the settings dashboard allowing users to select between Google Gemini (Default), NVIDIA Gemma 4 (31B), and NVIDIA GLM 5.2. When GLM 5.2 is selected, custom parameters (`temperature = 1`, `top_p = 1`, `seed = 42`, and `clear_thinking = false` under `chat_template_kwargs`) are automatically configured to enable reasoning output.
 *   **Same-Origin Proxy Bypass for NVIDIA NIM**: Configured a same-origin proxy path (`/nvidia-api`) to transparently forward chat completions to NVIDIA's server. Implemented via Vite's `server.proxy` object for local development, and Netlify's `_redirects` configuration in production. This completely eliminates CORS preflight issues and third-party proxy requirements/blocks.
@@ -88,17 +87,12 @@ Ensure XAMPP is running Apache on localhost. The PHP files in `api/` will handle
 *   **Local CLI Question Generator Utility**: Implemented a standalone command-line Node.js script [local_question_generator.js](file:///d:/JEE/scripts/local_question_generator.js). This script runs locally in the terminal using configured `.env` credentials, generating structured LaTeX questions sequentially in the background. It appends generated items to a local file (`local_generated_questions.json`) to act as a secure persistent data cache, and includes an option to batch-upload questions to Supabase on demand.
 *   **Automated Question Database Sync**: Integrated database saving directly into all four stream question generation wrappers (`geminiService.ts`, `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts`). Every time a user generates questions using their API credentials, they are formatted, deduped on statement content, and automatically saved back to the database for future practice.
 
+---
 
+## 9. Current Operational State
 
-
-
-
-
-
-
-
-
-
-
-
-
+The platform is configured to run in **Local Server Mode** by default.
+*   **PHP & MariaDB Hosting**: Fully hosted on this local server PC. PHP 8.3 and MariaDB Server are configured as Windows Scheduled Tasks (`MariaDBServer` and `PHPServer`) running under the `SYSTEM` account, serving the API on Port 80 and launching on system startup.
+*   **Database**: All local API requests dynamically connect to local MySQL/MariaDB schemas (`jee_nexus`, `neet_nexus`, `kcet_nexus`, `upsc_nexus`) mapped via the `X-Active-Stream` header.
+*   **Routing proxy**: Frontend Supabase client calls are intercepted via `LocalSupabaseBuilder` and custom `fakeAuth` inside `src/supabase.ts` and redirected to `api/local_db.php` and `api/auth.php`.
+*   **Production Environment**: Pushed `netlify.toml` which forces Netlify builds to use `VITE_USE_LOCAL_SERVER = true` and `VITE_API_URL = http://localhost/api`, meaning that in both local and remote deployments, the database points to the local MariaDB server running on the student's/admin's local machine.

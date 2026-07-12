@@ -43,15 +43,246 @@ if (supabaseAnonKey) {
     supabaseAnonKey = supabaseAnonKey.trim();
 }
 
+const useLocalServer = getEnv('USE_LOCAL_SERVER') === 'true' || getEnv('VITE_USE_LOCAL_SERVER') === 'true';
+
 // Initial client instance
-let activeClient = (supabaseUrl && supabaseAnonKey) 
+let activeClient = (supabaseUrl && supabaseAnonKey && !useLocalServer) 
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
 
-// Proxy wrapper that routes calls to the currently activeClient
+class LocalSupabaseBuilder {
+  private table: string;
+  private action: string = 'select';
+  private columns: string = '*';
+  private payload: any = null;
+  private filters: any[] = [];
+  private orderCol: string | null = null;
+  private orderAsc: boolean = true;
+  private limitVal: number | null = null;
+  private offsetVal: number | null = null;
+  private isSingle: boolean = false;
+  private isMaybeSingle: boolean = false;
+  private countOption: string | null = null;
+
+  constructor(table: string) {
+    this.table = table;
+  }
+
+  select(columns: string = '*', options: { count?: string } = {}) {
+    this.action = 'select';
+    this.columns = columns;
+    if (options.count) {
+      this.countOption = options.count;
+    }
+    return this;
+  }
+
+  insert(data: any) {
+    this.action = 'insert';
+    this.payload = data;
+    return this;
+  }
+
+  update(data: any) {
+    this.action = 'update';
+    this.payload = data;
+    return this;
+  }
+
+  delete() {
+    this.action = 'delete';
+    return this;
+  }
+
+  upsert(data: any, options: any = {}) {
+    this.action = 'upsert';
+    this.payload = data;
+    return this;
+  }
+
+  eq(column: string, value: any) {
+    this.filters.push({ column, op: 'eq', value });
+    return this;
+  }
+
+  neq(column: string, value: any) {
+    this.filters.push({ column, op: 'neq', value });
+    return this;
+  }
+
+  in(column: string, values: any[]) {
+    this.filters.push({ column, op: 'in', value: values });
+    return this;
+  }
+
+  like(column: string, value: string) {
+    this.filters.push({ column, op: 'like', value });
+    return this;
+  }
+
+  ilike(column: string, value: string) {
+    this.filters.push({ column, op: 'ilike', value });
+    return this;
+  }
+
+  not(column: string, op: string, value: any) {
+    this.filters.push({ column, op: 'not', value: { op, value } });
+    return this;
+  }
+
+  is(column: string, value: any) {
+    this.filters.push({ column, op: 'is', value });
+    return this;
+  }
+
+  order(column: string, options: { ascending?: boolean } = {}) {
+    this.orderCol = column;
+    this.orderAsc = options.ascending !== false;
+    return this;
+  }
+
+  limit(value: number) {
+    this.limitVal = value;
+    return this;
+  }
+
+  range(from: number, to: number) {
+    this.limitVal = to - from + 1;
+    this.offsetVal = from;
+    return this;
+  }
+
+  single() {
+    this.isSingle = true;
+    return this;
+  }
+
+  maybeSingle() {
+    this.isMaybeSingle = true;
+    return this;
+  }
+
+  async then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
+    try {
+      const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
+      const apiUrl = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
+      const response = await fetch(`${apiUrl}/local_db.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Active-Stream': activeStream
+        },
+        body: JSON.stringify({
+          table: this.table,
+          action: this.action,
+          columns: this.columns,
+          payload: this.payload,
+          filters: this.filters,
+          orderCol: this.orderCol,
+          orderAsc: this.orderAsc,
+          limitVal: this.limitVal,
+          offsetVal: this.offsetVal,
+          isSingle: this.isSingle,
+          isMaybeSingle: this.isMaybeSingle,
+          countOption: this.countOption
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (onfulfilled) {
+        return onfulfilled(result);
+      }
+      return result;
+    } catch (error: any) {
+      console.error("Local DB builder request failed:", error);
+      const errObj = { data: null, error: { message: error.message || String(error) }, count: 0 };
+      if (onfulfilled) {
+        return onfulfilled(errObj);
+      }
+      return errObj;
+    }
+  }
+}
+
+const fakeAuth = {
+  signInWithPassword: async (credentials: any) => {
+    try {
+      const apiUrl = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
+      const res = await fetch(`${apiUrl}/auth.php?action=login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: credentials.email, password: credentials.password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { data: { user: data.user, session: { user: data.user } }, error: null };
+      }
+      return { data: { user: null, session: null }, error: { message: data.error || "Login failed" } };
+    } catch (e: any) {
+      return { data: { user: null, session: null }, error: { message: e.message || "Network error during login" } };
+    }
+  },
+  signUp: async (credentials: any) => {
+    try {
+      const apiUrl = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
+      const res = await fetch(`${apiUrl}/auth.php?action=signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: credentials.options?.data?.full_name || credentials.email,
+          email: credentials.email,
+          password: credentials.password
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { data: { user: { id: 'temp-local-id', email: credentials.email } }, error: null };
+      }
+      return { data: { user: null }, error: { message: data.error || "Enrollment failed" } };
+    } catch (e: any) {
+      return { data: { user: null }, error: { message: e.message || "Network error during signup" } };
+    }
+  },
+  signOut: async () => ({ error: null }),
+  getSession: async () => {
+    try {
+      const lp = localStorage.getItem('user_profile');
+      if (lp) {
+        const user = JSON.parse(lp);
+        return { data: { session: { user } }, error: null };
+      }
+      return { data: { session: null }, error: null };
+    } catch {
+      return { data: { session: null }, error: null };
+    }
+  },
+  onAuthStateChange: (callback: any) => {
+    return { data: { subscription: { unsubscribe: () => {} } } };
+  },
+  updateUser: async (updates: any) => {
+    return { data: { user: null }, error: null };
+  },
+  resetPasswordForEmail: async (email: string, options: any) => {
+    return { data: null, error: { message: "Password reset not supported locally." } };
+  }
+};
+
+// Proxy wrapper that routes calls to the currently activeClient, or uses LocalSupabaseBuilder when Supabase is disabled
 export const supabase = new Proxy({} as any, {
   get(target, prop) {
-    if (!activeClient) return null;
+    if (!activeClient) {
+      if (prop === 'from') {
+        return (table: string) => new LocalSupabaseBuilder(table);
+      }
+      if (prop === 'auth') {
+        return fakeAuth;
+      }
+      return null;
+    }
     const value = (activeClient as any)[prop];
     if (typeof value === 'function') {
       return value.bind(activeClient);
@@ -66,6 +297,11 @@ export const isSupabaseConfigured = () => !!activeClient;
 export const switchSupabaseBackend = (stream: string) => {
   localStorage.setItem('active_stream', stream);
   
+  if (useLocalServer) {
+    window.dispatchEvent(new Event('supabase_client_changed'));
+    return;
+  }
+
   let url = supabaseUrl;
   let key = supabaseAnonKey;
   
@@ -148,7 +384,7 @@ export const saveQuestionsToDB = async (questions: any[]) => {
     markingScheme: q.markingScheme || { positive: 4, negative: q.type === 'Numerical' ? 0 : 1 }
   }));
 
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
     try {
       const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
       const res = await fetch('http://localhost/api/questions.php', {
@@ -201,7 +437,7 @@ export const fetchQuestionsFromDB = async (
   numericalCount: number = 0,
   difficulty?: string
 ) => {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
     try {
       const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
       let url = `http://localhost/api/questions.php?mcqCount=${mcqCount}&numericalCount=${numericalCount}&stream=${encodeURIComponent(activeStream)}`;
@@ -285,7 +521,7 @@ export const fetchQuestionsFromDB = async (
 };
 
 export const submitExamAttempt = async (attempt: any) => {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
     try {
       const res = await fetch('http://localhost/api/exam_attempts.php', {
         method: 'POST',
@@ -313,7 +549,6 @@ export const submitExamAttempt = async (attempt: any) => {
 };
 
 export const createDraftPaidAttempt = async (attemptId: string, userId: string, userName: string, type: string, paperIdOrChapter: string) => {
-  if (!supabase) return null;
   const draftAttempt = {
     id: attemptId,
     user_id: userId,
@@ -344,7 +579,7 @@ export const createDraftPaidAttempt = async (attemptId: string, userId: string, 
 };
 
 export const getUserExamAttempts = async (userId: string) => {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
     try {
       const res = await fetch(`http://localhost/api/exam_attempts.php?user_id=${encodeURIComponent(userId)}`);
       return await res.json() || [];
@@ -362,7 +597,6 @@ export const getUserExamAttempts = async (userId: string) => {
 };
 
 export const getUserAllDailyAttempts = async (userId: string) => {
-    if (!supabase) return [];
     try {
       const { data, error } = await supabase.from('daily_attempts').select('*').eq('user_id', userId).order('submitted_at', { ascending: false });
       if (error) return [];
@@ -373,7 +607,6 @@ export const getUserAllDailyAttempts = async (userId: string) => {
 };
 
 export const getAllProfiles = async () => {
-  if (!supabase) return { data: [], error: "Supabase not configured" };
   try {
     const response = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
     return response;
@@ -383,7 +616,6 @@ export const getAllProfiles = async () => {
 };
 
 export const getProfile = async (userId: string) => {
-  if (!supabase) return null;
   try {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (data && data.email === 'satyu000@gmail.com' && data.role !== 'super_admin') {
@@ -397,8 +629,6 @@ export const getProfile = async (userId: string) => {
 };
 
 export const updateProfileStatus = async (userId: string, status: string) => {
-  if (!supabase) return "Supabase not configured";
-
   try {
     const { data, error } = await supabase.from('profiles').update({ status }).eq('id', userId).select();
     if (error) {
@@ -412,8 +642,6 @@ export const updateProfileStatus = async (userId: string, status: string) => {
 };
 
 export const deleteProfile = async (userId: string) => {
-  if (!supabase) return "Supabase not configured";
-
   try {
     const { error } = await supabase.from('profiles').delete().eq('id', userId);
     if (error) {
@@ -427,7 +655,6 @@ export const deleteProfile = async (userId: string) => {
 };
 
 export const updateStudentCredentials = async (userId: string, full_name: string, email: string, password?: string) => {
-  if (!supabase) return "Supabase not configured";
   try {
     const updates: any = { full_name, email: email.toLowerCase().trim() };
     if (password && password.trim() !== '') {
@@ -446,7 +673,6 @@ export const syncLocalProfilesToSupabase = async () => {
 };
 
 export const getDailyChallenge = async (date: string, adminId: string | null = null) => {
-  if (!supabase) return null;
   try {
     let query = supabase.from('daily_challenges').select('*').eq('date', date);
     if (adminId) {
@@ -463,7 +689,6 @@ export const getDailyChallenge = async (date: string, adminId: string | null = n
 };
 
 export const getAllDailyChallenges = async (adminId: string | null = null) => {
-    if (!supabase) return [];
     try {
         let query = supabase.from('daily_challenges').select('*');
         if (adminId) {
@@ -479,7 +704,6 @@ export const getAllDailyChallenges = async (adminId: string | null = null) => {
 };
 
 export const createDailyChallenge = async (date: string, questions: any[], adminId: string | null = null) => {
-  if (!supabase) return { data: null, error: "Supabase not configured" };
   try {
     // Delete existing daily challenge on the same date for this admin to bypass upsert conflict target issues
     if (adminId) {
@@ -502,7 +726,6 @@ export const createDailyChallenge = async (date: string, questions: any[], admin
 };
 
 export const submitDailyAttempt = async (attempt: any) => {
-  if (!supabase) return { data: null, error: "Supabase not configured" };
   try {
     const { date, ...validAttempt } = attempt || {};
     const { data, error } = await supabase.from('daily_attempts').upsert(validAttempt, { onConflict: 'user_id, challenge_id' }).select().single();
@@ -513,7 +736,6 @@ export const submitDailyAttempt = async (attempt: any) => {
 };
 
 export const getUserDailyAttempt = async (userId: string, date: string) => {
-  if (!supabase) return null;
   try {
     const profile = await getProfile(userId);
     if (!profile) return null;
@@ -536,7 +758,6 @@ export const getUserDailyAttempt = async (userId: string, date: string) => {
 };
 
 export const getDailyAttempts = async (date: string, adminId: string | null = null) => {
-  if (!supabase) return [];
   try {
     const challenge = await getDailyChallenge(date, adminId);
     if (!challenge) return [];
@@ -559,7 +780,6 @@ export const getDailyAttempts = async (date: string, adminId: string | null = nu
 };
 
 export const getDailyAttemptsByChallenge = async (challengeId: string) => {
-  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('daily_attempts')
@@ -580,7 +800,6 @@ export const getDailyAttemptsByChallenge = async (challengeId: string) => {
 };
 
 export const getActualTotalRevenue = async () => {
-  if (!supabase) return 0;
   try {
     const { data: dailyPaid } = await supabase
       .from('daily_attempts')
@@ -640,7 +859,6 @@ export const getActualTotalRevenue = async () => {
 };
 
 export const getApprovedAdmins = async () => {
-  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -656,7 +874,6 @@ export const getApprovedAdmins = async () => {
 };
 
 export const getAdminStudentCount = async (adminId: string) => {
-  if (!supabase) return 0;
   try {
     const { count, error } = await supabase
       .from('profiles')
@@ -671,7 +888,6 @@ export const getAdminStudentCount = async (adminId: string) => {
 };
 
 export const updateAdminMaxLimit = async (adminId: string, limit: number) => {
-  if (!supabase) return "Supabase not configured";
   try {
     const { error } = await supabase
       .from('profiles')
@@ -692,7 +908,6 @@ export const updateAdminDetails = async (
   password?: string,
   subscription_expires_at?: string | null
 ) => {
-  if (!supabase) return "Supabase not configured";
   try {
     const updates: any = { full_name, email: email.toLowerCase().trim(), admin_max_students: limit };
     if (password && password.trim() !== '') {
@@ -710,12 +925,9 @@ export const updateAdminDetails = async (
 };
 
 export const toggleAdminModuleAccess = async (adminId: string, currentAccess: boolean) => {
-  if (!supabase) return "Supabase not configured";
   try {
     const newPermission = !currentAccess;
-    // Update main permission column
     await supabase.from('profiles').update({ super_admin_permission: newPermission }).eq('id', adminId);
-    // Attempt granular columns update safely
     try {
       await supabase.from('profiles').update({ 
         can_access_daily: newPermission,
@@ -732,10 +944,8 @@ export const toggleAdminModuleAccess = async (adminId: string, currentAccess: bo
 };
 
 export const updateAdminModulePermissions = async (adminId: string, perms: { can_access_daily: boolean, can_access_full_exam: boolean, can_access_practice: boolean }) => {
-  if (!supabase) return "Supabase not configured";
   try {
     const hasAny = perms.can_access_daily || perms.can_access_full_exam || perms.can_access_practice;
-    // Attempt full atomic update with all columns
     const { error: fullErr } = await supabase.from('profiles').update({ 
       super_admin_permission: hasAny,
       can_access_daily: perms.can_access_daily,
@@ -755,20 +965,16 @@ export const updateAdminModulePermissions = async (adminId: string, perms: { can
 };
 
 export const deleteAdminAndStudents = async (adminId: string) => {
-  if (!supabase) return "Supabase not configured";
   try {
-    // 1. Delete challenges published by this admin to avoid FK block
     try {
       await supabase.from('daily_challenges').delete().eq('admin_id', adminId);
     } catch (dcErr) {
       console.warn("Challenge cleanup warning:", dcErr);
     }
 
-    // 2. Delete all students assigned to this admin
     const { error: studentErr } = await supabase.from('profiles').delete().eq('admin_id', adminId);
     if (studentErr) console.warn("Student cascade delete warning:", studentErr);
 
-    // 3. Delete the admin profile itself
     const { error: adminErr } = await supabase.from('profiles').delete().eq('id', adminId);
     if (adminErr) {
       console.error("Admin profile deletion error:", adminErr);
@@ -781,7 +987,6 @@ export const deleteAdminAndStudents = async (adminId: string) => {
 };
 
 export const toggleAdminFreezeStatus = async (adminId: string, isCurrentlyFrozen: boolean) => {
-  if (!supabase) return "Supabase not configured";
   try {
     const newStatus = isCurrentlyFrozen ? 'approved' : 'frozen';
     const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', adminId);
@@ -794,7 +999,7 @@ export const toggleAdminFreezeStatus = async (adminId: string, isCurrentlyFrozen
 
 export const getSystemStreams = async (): Promise<string[]> => {
   const defaultStreams = ['JEE Main & Advanced', 'NEET UG', 'KCET', 'BITSAT', 'CUET'];
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
     const cached = localStorage.getItem('system_streams');
     return cached ? JSON.parse(cached) : defaultStreams;
   }
@@ -813,7 +1018,7 @@ export const getSystemStreams = async (): Promise<string[]> => {
 
 export const saveSystemStreams = async (streams: string[]): Promise<string | null> => {
   localStorage.setItem('system_streams', JSON.stringify(streams));
-  if (!supabase) return null;
+  if (!isSupabaseConfigured()) return null;
   try {
     const { error } = await supabase.from('system_config').upsert({ key: 'system_streams', value: streams });
     if (error) return error.message;
@@ -825,14 +1030,14 @@ export const saveSystemStreams = async (streams: string[]): Promise<string | nul
 
 export const getPaymentApiUrl = (endpoint: string) => {
   const isDev = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (isDev) {
-    return `http://localhost/api/${endpoint}.php`;
+  if (isDev || useLocalServer) {
+    const apiUrl = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
+    return `${apiUrl}/${endpoint}.php`;
   }
   return `/.netlify/functions/${endpoint}`;
 };
 
 export const getQuestionsCountFromDB = async (): Promise<number> => {
-  if (!supabase) return 0;
   try {
     const { count, error } = await supabase.from('questions').select('*', { count: 'exact', head: true });
     if (error) return 0;
@@ -843,8 +1048,6 @@ export const getQuestionsCountFromDB = async (): Promise<number> => {
 };
 
 export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Promise<{ success: boolean, count: number, error?: string }> => {
-  if (!supabase) return { success: false, count: 0, error: "Supabase client not initialized." };
-  
   const isNeet = streamName.toLowerCase().includes('neet');
   
   try {
@@ -988,7 +1191,7 @@ export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Prom
 };
 
 export const getQuestionsCountAddedToday = async (): Promise<number> => {
-  if (!supabase) return 0;
+  if (!isSupabaseConfigured()) return 0;
   try {
     const todayStart = new Date();
     todayStart.setHours(0,0,0,0);
@@ -1004,7 +1207,7 @@ export const getQuestionsCountAddedToday = async (): Promise<number> => {
 };
 
 export const runAutomaticDailyQuestionSeeding = async (streamName: string = 'JEE'): Promise<{ success: boolean, count: number, error?: string }> => {
-  if (!supabase) return { success: false, count: 0, error: "Supabase not configured." };
+  if (!isSupabaseConfigured()) return { success: false, count: 0, error: "Supabase not configured." };
   
   try {
     const countToday = await getQuestionsCountAddedToday();
@@ -1115,7 +1318,7 @@ export const runAutomaticDailyQuestionSeeding = async (streamName: string = 'JEE
 
 export const getAllQuestionsFromDB = async (subjectFilter?: string, maxRecords: number = 15000): Promise<any[]> => {
   let allData: any[] = [];
-  if (supabase) {
+  if (isSupabaseConfigured()) {
     try {
       let from = 0;
       const limit = 1000;
@@ -1171,7 +1374,6 @@ export const getAllQuestionsFromDB = async (subjectFilter?: string, maxRecords: 
 };
 
 export const getSubscriptionPlans = async (): Promise<any[]> => {
-  if (!supabase) return [];
   try {
     const { data, error } = await supabase.from('subscription_plans').select('*').order('created_at', { ascending: true });
     if (error) throw error;
@@ -1183,7 +1385,6 @@ export const getSubscriptionPlans = async (): Promise<any[]> => {
 };
 
 export const saveSubscriptionPlan = async (plan: any): Promise<boolean> => {
-  if (!supabase) throw new Error("Supabase client is not initialized.");
   const { error } = await supabase.from('subscription_plans').upsert(plan);
   if (error) {
     console.error("Failed to save subscription plan:", error);
@@ -1193,7 +1394,6 @@ export const saveSubscriptionPlan = async (plan: any): Promise<boolean> => {
 };
 
 export const deleteSubscriptionPlan = async (planId: string): Promise<boolean> => {
-  if (!supabase) return false;
   try {
     const { error } = await supabase.from('subscription_plans').delete().eq('id', planId);
     if (error) throw error;
@@ -1205,7 +1405,6 @@ export const deleteSubscriptionPlan = async (planId: string): Promise<boolean> =
 };
 
 export const grantFreePremiumAccess = async (email: string, tier: string, expiresAt: string): Promise<{ success: boolean; error?: string }> => {
-  if (!supabase) return { success: false, error: 'Database connection failed' };
   try {
     const cleanEmail = email.toLowerCase().trim();
     // 1. Fetch user by email

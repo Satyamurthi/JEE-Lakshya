@@ -144,19 +144,38 @@ This file records the chronological history of tasks, major changes, and feature
     23. Created and executed a standalone node bulk seeder utility `bulk_seed_questions.js` inside `scripts/` folder, extracting 16,188 authentic LaTeX-based MCQs and Numericals from local SQLite (`questions.db`) and JSON (`officialJeeExtractedPapers.json`) archives, deduping them by statement, and uploading them in batches of 500 directly to Supabase.
     24. Implemented a local command-line question generator script `local_question_generator.js` in `scripts/` folder to allow background generation of questions on a local machine, appending results to `local_generated_questions.json` and supporting direct CLI-triggered batch uploads to Supabase.
 
+---
 
+## Session 12: Database Migration to Local Server
+*   **Request**: Transition backend database from Supabase to local MySQL server, keeping Netlify frontend deployment via GitHub.
+*   **Work Done**:
+    1.  Created `setup_db.php` in the `api/` directory to automatically initialize local MySQL schemas (`profiles`, `exam_attempts`, `daily_challenges`, `daily_attempts`, `system_config`, `subscription_plans`) across all targeted exam streams (`jee_nexus`, `neet_nexus`, `kcet_nexus`, `upsc_nexus`).
+    2.  Developed `local_db.php` as a generic SQL proxy executing SELECT, INSERT, UPDATE, UPSERT, and DELETE commands on local MySQL with full support for filtering, ordering, limiting, offsets, and JSON serialization.
+    3.  Implemented the dynamic `LocalSupabaseBuilder` query builder interceptor and custom `fakeAuth` credentials provider inside [supabase.ts](file:///d:/JEE/src/supabase.ts). These classes automatically translate and route Supabase JS client methods to local API endpoints when the app runs in local mode.
+    4.  Refactored all data query handlers inside [supabase.ts](file:///d:/JEE/src/supabase.ts) to check `isSupabaseConfigured()` instead of `!supabase` Proxy wrappers, allowing standard DB queries to seamlessly fall back to local mode via proxy builders.
+    5.  Enhanced `local_db.php` to intercept nested profiles joins (`profiles:user_id`) in daily attempts fetches, converting them to clean SQL LEFT JOIN operations and reconstructing correct nested JSON layouts for client components.
+    6.  Added `VITE_USE_LOCAL_SERVER = true` and `VITE_API_URL = http://localhost/api` variables in [.env](file:///d:/JEE/.env) and created [netlify.toml](file:///d:/JEE/netlify.toml) to configure Netlify builds to run in local server mode automatically.
 
+---
 
+## Session 13: Local Database and API Hosting Service Setup
+*   **Request**: Install PHP and MySQL/MariaDB locally, host the backend server, and ensure it connects and runs on the local server PC.
+*   **Work Done**:
+    1.  Installed PHP 8.3 on the Windows VM via `winget` and configured `php.ini` to enable `pdo_mysql`, `openssl`, `mbstring`, and `curl` extensions using absolute path references.
+    2.  Installed MariaDB Server 12.3 via `winget` and verified the extraction of bin databases and data files.
+    3.  Created and configured persistent Windows Scheduled Tasks (`MariaDBServer` and `PHPServer`) running under the `SYSTEM` account. This ensures both services run silently in the background, survive shell exits, and launch automatically at machine startup.
+    4.  Used space-free 8.3 short paths (`C:\PROGRA~1\MARIAD~1.3\bin\mysqld.exe` and `C:\PROGRA~1\MARIAD~1.3\data\my.ini`) to bypass command-line parsing bugs in Windows task scheduling.
+    5.  Executed schema initializations via CLI and HTTP on [setup_db.php](file:///d:/JEE/api/setup_db.php), successfully creating and migrating tables for all four nexus streams (`jee_nexus`, `neet_nexus`, `kcet_nexus`, and `upsc_nexus`).
+    6.  Verified that the local server responds on Port 80 and returns database setup statuses.
 
+---
 
-
-
-
-
-
-
-
-
-
+## Session 14: GitHub Sync & Security Controls
+*   **Request**: Push code changes to GitHub, ensuring all credentials remain local and Git is fully operational.
+*   **Work Done**:
+    1.  Resolved system-wide Git execution and installation barriers by downloading and extracting PortableGit to a custom workspace directory.
+    2.  Updated `.gitignore` to exclude `git_portable/`, `PortableGit2.exe`, and transient `scratch/` folders to prevent tracking binaries or temporary scripts.
+    3.  Successfully pushed the latest database migration files (`api/`), environment rules (`netlify.toml`, `.gitignore`), and frontend interceptors (`src/supabase.ts`) to both `Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus` GitHub repositories using the secure `GITHUB_PAT` loaded dynamically.
+    4.  Removed temporary git push settings, leaving the local `.git/config` and repositories 100% secure with no credentials exposed.
 
 
