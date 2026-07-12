@@ -189,5 +189,15 @@ This file records the chronological history of tasks, major changes, and feature
     4.  Created the `reset_password` action endpoint in `api/auth.php` to securely change the password and automatically lift the lockout for verified user accounts.
     5.  Repositioned the "Forgot Password?" entry directly inside the login card below the "Authorize Access" button and upgraded the reset modal to present `New Password` inputs dynamically when offline/in local server mode.
 
+---
 
-
+## Session 16: Complete Supabase Removal & Local Database Diagnostics
+*   **Request**: Remove the browser WebAuthn popup dialog on login, remove all Supabase dependencies, ensure purely local hosting from the local server, resolve local DB query errors, and push to GitHub.
+*   **Work Done**:
+    1.  Completely removed the `@supabase/supabase-js` package dependency from [package.json](file:///d:/JEE/package.json), preventing it from being bundled into the React build and eliminating WebAuthn/credential prompts.
+    2.  Cleaned up [src/supabase.ts](file:///d:/JEE/src/supabase.ts) by removing the Supabase library imports and settings. Set `isSupabaseConfigured()` to permanently return `false`, forcing all data and authentication flows to use the local PHP/MariaDB API endpoints.
+    3.  Updated `fakeAuth.signUp` in `src/supabase.ts` and `api/auth.php` to securely return the database-generated local UUID.
+    4.  Modified `getAllQuestionsFromDB` to check and load records from the local `questions` table before falling back to the static PYQ question bank.
+    5.  Expanded [api/setup_db.php](file:///d:/JEE/api/setup_db.php) to create a flat `questions` table and to migrate the `daily_attempts` table to include the `paid` column. Run the database migration script to successfully align all local databases (`jee_nexus`, `neet_nexus`, `kcet_nexus`, and `upsc_nexus`).
+    6.  Refactored exception catch blocks in `api/local_db.php`, `api/questions.php`, and `api/auth.php` to handle all PHP `Throwable` errors, preventing fatal system errors from throwing blank SAPI HTTP 500 crashes.
+    7.  Staged, committed, and successfully pushed the code modifications to remote GitHub repositories (`Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus`) using the secure local `GITHUB_PAT`.
