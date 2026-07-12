@@ -1,6 +1,6 @@
 $Cwd = "d:\JEE"
 $LogPath = "$Cwd\cloudflared_run.log"
-$UrlFile = "$Cwd\backend_url.txt"
+$UrlFile = "$Cwd\public\backend_url.txt"
 $Pat = "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"
 
 # 1. Kill any existing cloudflared process
@@ -50,7 +50,7 @@ if ($Url -ne $CurrentUrl) {
     git config user.name "System Tunnel Updater"
     git config user.email "satyu000@gmail.com"
     
-    git add backend_url.txt
+    git add public/backend_url.txt
     git commit -m "chore: update dynamic backend tunnel URL [skip ci]"
     
     # Push to repositories

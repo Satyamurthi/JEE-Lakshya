@@ -21,9 +21,9 @@ let resolvedApiUrl = '';
 export const getApiUrl = async (): Promise<string> => {
   if (resolvedApiUrl) return resolvedApiUrl;
   
-  // Try to load dynamic backend URL from GitHub raw content
+  // Try to load dynamic backend URL from public file hosted on the same domain
   try {
-    const res = await fetch('https://raw.githubusercontent.com/Satyamurthi/JEE-Lakshya/main/backend_url.txt');
+    const res = await fetch('/backend_url.txt');
     if (res.ok) {
       const text = (await res.text()).trim();
       if (text && text.startsWith('http')) {
@@ -33,7 +33,7 @@ export const getApiUrl = async (): Promise<string> => {
       }
     }
   } catch (e) {
-    console.warn("Could not fetch remote dynamic backend URL, using env default:", e);
+    console.warn("Could not fetch relative backend URL, using env default:", e);
   }
 
   // Fallback to static env configuration
