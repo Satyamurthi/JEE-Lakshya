@@ -25,8 +25,11 @@ export const getApiUrl = async (): Promise<string> => {
   try {
     const res = await fetch('/backend_url.txt');
     if (res.ok) {
-      const text = (await res.text()).trim();
+      let text = (await res.text()).trim();
       if (text && text.startsWith('http')) {
+        if (!text.endsWith('/api') && !text.endsWith('/api/')) {
+          text = text.replace(/\/$/, '') + '/api';
+        }
         resolvedApiUrl = text;
         console.log("Dynamically resolved backend URL:", resolvedApiUrl);
         return resolvedApiUrl;
@@ -342,29 +345,8 @@ export const saveQuestionsToDB = async (questions: any[]) => {
     markingScheme: q.markingScheme || { positive: 4, negative: q.type === 'Numerical' ? 0 : 1 }
   }));
 
-  if (!isSupabaseConfigured()) {
-    try {
-      const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
-      const apiUrl = await getApiUrl();
-      const res = await fetch(`${apiUrl}/questions.php`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-Active-Stream': activeStream
-        },
-        body: JSON.stringify(formattedQuestions)
-      });
-      if (!res.ok) {
-        console.warn("Local DB questions save failed with status:", res.status);
-      }
-    } catch (e) {
-      console.warn("Local XAMPP questions save failed:", e);
-    }
-    return;
-  }
-
   try {
-    // Query existing questions in Supabase by matching statement text
+    // Query existing questions in local DB by matching statement text
     const statements = formattedQuestions.map(q => q.statement);
     const { data: existing, error: fetchError } = await supabase
       .from('questions')
@@ -373,18 +355,18 @@ export const saveQuestionsToDB = async (questions: any[]) => {
 
     if (fetchError) throw fetchError;
 
-    const existingSet = new Set(existing?.map(e => e.statement.trim()) || []);
+    const existingSet = new Set(existing?.map((e: any) => e.statement.trim()) || []);
     const newQuestions = formattedQuestions.filter(q => !existingSet.has(q.statement));
 
     if (newQuestions.length > 0) {
       const { error: insertError } = await supabase.from('questions').insert(newQuestions);
       if (insertError) throw insertError;
-      console.log(`Successfully saved ${newQuestions.length} unique questions to Supabase.`);
+      console.log(`Successfully saved ${newQuestions.length} unique questions to DB.`);
     } else {
       console.log("No new unique questions to save.");
     }
   } catch (e) {
-    console.warn("Supabase questions save failed:", e);
+    console.warn("DB questions save failed:", e);
   }
 };
 
@@ -396,21 +378,6 @@ export const fetchQuestionsFromDB = async (
   numericalCount: number = 0,
   difficulty?: string
 ) => {
-  if (!isSupabaseConfigured()) {
-    try {
-      const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
-      const apiUrl = await getApiUrl();
-      let url = `${apiUrl}/questions.php?mcqCount=${mcqCount}&numericalCount=${numericalCount}&stream=${encodeURIComponent(activeStream)}`;
-      if (subject) url += `&subject=${encodeURIComponent(subject)}`;
-      if (chapter) url += `&chapter=${encodeURIComponent(chapter)}`;
-      if (difficulty) url += `&difficulty=${encodeURIComponent(difficulty)}`;
-      const res = await fetch(url);
-      return await res.json() || [];
-    } catch (e) {
-      console.warn("Local XAMPP questions fetch failed:", e);
-      return [];
-    }
-  }
   try {
     const { filterUniqueQuestions, recordSeenQuestions } = await import('./utils/questionTracker');
     
@@ -438,7 +405,7 @@ export const fetchQuestionsFromDB = async (
         
         // Pick random set of IDs
         const shuffledIds = idData
-          .map(x => x.id)
+          .map((x: any) => x.id)
           .sort(() => Math.random() - 0.5);
         
         if (shuffledIds.length === 0) return [];
@@ -475,26 +442,12 @@ export const fetchQuestionsFromDB = async (
 
     return resultQuestions;
   } catch (e) {
-    console.warn("Supabase fetch failed:", e);
+    console.warn("DB fetch failed:", e);
     return [];
   }
 };
 
 export const submitExamAttempt = async (attempt: any) => {
-  if (!isSupabaseConfigured()) {
-    try {
-      const apiUrl = await getApiUrl();
-      const res = await fetch(`${apiUrl}/exam_attempts.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(attempt)
-      });
-      const data = await res.json();
-      return { data, error: null };
-    } catch (e: any) {
-      return { data: null, error: e.message || "Local attempt submit failed" };
-    }
-  }
   try {
     const { data, error } = await supabase.from('exam_attempts').upsert(attempt).select().single();
     if (error && error.message && error.message.includes("paid")) {
@@ -540,15 +493,6 @@ export const createDraftPaidAttempt = async (attemptId: string, userId: string, 
 };
 
 export const getUserExamAttempts = async (userId: string) => {
-  if (!isSupabaseConfigured()) {
-    try {
-      const apiUrl = await getApiUrl();
-      const res = await fetch(`${apiUrl}/exam_attempts.php?user_id=${encodeURIComponent(userId)}`);
-      return await res.json() || [];
-    } catch (e) {
-      return [];
-    }
-  }
   try {
     const { data, error } = await supabase.from('exam_attempts').select('*').eq('user_id', userId).order('submitted_at', { ascending: false });
     if (error) return [];
@@ -580,10 +524,6 @@ export const getAllProfiles = async () => {
 export const getProfile = async (userId: string) => {
   try {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    if (data && data.email === 'satyu000@gmail.com' && data.role !== 'super_admin') {
-      data.role = 'super_admin';
-      data.status = 'approved';
-    }
     return data;
   } catch (e) {
     return null;
@@ -594,7 +534,7 @@ export const updateProfileStatus = async (userId: string, status: string) => {
   try {
     const { data, error } = await supabase.from('profiles').update({ status }).eq('id', userId).select();
     if (error) {
-      console.error("Supabase update error:", error);
+      console.error("Local DB update error:", error);
       return error.message;
     }
     return null;
@@ -607,7 +547,7 @@ export const deleteProfile = async (userId: string) => {
   try {
     const { error } = await supabase.from('profiles').delete().eq('id', userId);
     if (error) {
-      console.error("Supabase delete error:", error);
+      console.error("Local DB delete error:", error);
       return error.message;
     }
     return null;
@@ -631,7 +571,7 @@ export const updateStudentCredentials = async (userId: string, full_name: string
 };
 
 export const syncLocalProfilesToSupabase = async () => {
-  return { success: true, message: "Local sync disabled. System is Cloud-only." };
+  return { success: true, message: "Sync not required in local-only database mode." };
 };
 
 export const getDailyChallenge = async (date: string, adminId: string | null = null) => {
