@@ -211,8 +211,9 @@ This file records the chronological history of tasks, major changes, and feature
     2.  Migrated the entire database catalog (all 272 system/stream files, 156 MB) from `C:\Program Files\MariaDB 12.3\data` to the requested path `d:\JEE\DB` using Robocopy.
     3.  Modified `my.ini` to change `datadir` to `d:/JEE/DB`, restarting the MariaDB server. All database writes, login credentials, and user data are now stored inside `d:\JEE\DB`.
     4.  Downloaded `cloudflared.exe` (Cloudflare Tunnel client) to enable HTTPS access to the local PC's port 80.
-    5.  Created a PowerShell script `scripts/run_tunnel.ps1` that launches the tunnel on system startup, parses the randomly generated public HTTPS subdomain URL, and commits/pushes the address to `backend_url.txt` on GitHub.
+    5.  Created a PowerShell script `scripts/run_tunnel.ps1` that launches the tunnel on system startup, parses the randomly generated public HTTPS subdomain URL, and commits/pushes the address to `public/backend_url.txt` on GitHub.
     6.  Registered `run_tunnel.ps1` as a Windows Scheduled Task `CloudflareTunnel` running under the `SYSTEM` account to launch at boot, ensuring 24/7 tunnel uptime.
-    7.  Refactored [src/supabase.ts](file:///d:/JEE/src/supabase.ts) to define a dynamic `getApiUrl()` utility. This fetches the current tunnel URL directly from the raw GitHub repository file at runtime.
+    7.  Refactored [src/supabase.ts](file:///d:/JEE/src/supabase.ts) to define a dynamic `getApiUrl()` utility. This fetches the current tunnel URL relatively from `/backend_url.txt` hosted on the frontend website at runtime, resolving the private repository access blocks.
     8.  Updated all query endpoints and authentication hooks in `src/supabase.ts` and [Login.tsx](file:///d:/JEE/src/pages/Login.tsx) to resolve URL routes via `getApiUrl()` rather than hardcoding to local machine `localhost`.
-    9.  Committed changes and pushed updates to `JEE-Lakshya` and `JEE-Nexus` GitHub repositories to redeploy the Netlify client.
+    9.  Cleaned up the authentication process in `Login.tsx` and `api/auth.php` to bypass all remaining Supabase fallback functions, directly validating credentials locally and returning the full user catalog securely (unsetting password details).
+    10. Committed changes and pushed updates to `JEE-Lakshya` and `JEE-Nexus` GitHub repositories to redeploy the Netlify client.
