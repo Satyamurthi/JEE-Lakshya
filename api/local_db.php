@@ -332,7 +332,7 @@ try {
         http_response_code(405);
         echo json_encode(["error" => "Action '$action' not supported."]);
     }
-} catch (Exception $e) {
+} catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(["data" => null, "error" => ["message" => $e->getMessage()]]);
 }

@@ -234,7 +234,7 @@ try {
     $questions = array_merge($mcqs, $numericals);
     
     echo json_encode($questions);
-} catch (Exception $e) {
+} catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(["error" => $e->getMessage()]);
 }

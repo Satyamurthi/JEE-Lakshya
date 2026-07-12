@@ -29,6 +29,7 @@ foreach ($databases as $db_name) {
             college_name VARCHAR(255) NULL,
             college_address VARCHAR(255) NULL,
             stream VARCHAR(100) NULL,
+            selected_stream VARCHAR(100) NULL,
             password VARCHAR(255) NULL,
             role VARCHAR(50) DEFAULT 'student',
             status VARCHAR(50) DEFAULT 'pending',
@@ -44,6 +45,9 @@ foreach ($databases as $db_name) {
         // Add migration for existing installations
         try {
             $conn->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS failed_attempts INT DEFAULT 0");
+        } catch (Exception $e) {}
+        try {
+            $conn->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS selected_stream VARCHAR(100) NULL");
         } catch (Exception $e) {}
 
 
@@ -87,8 +91,13 @@ foreach ($databases as $db_name) {
             total_marks INT DEFAULT 0,
             accuracy INT DEFAULT 0,
             config JSON NULL,
+            paid TINYINT(1) DEFAULT 0,
             submitted_at VARCHAR(50) NULL
         )");
+
+        try {
+            $conn->exec("ALTER TABLE daily_attempts ADD COLUMN IF NOT EXISTS paid TINYINT(1) DEFAULT 0");
+        } catch (Exception $e) {}
 
         // 5. Create system_config table
         $conn->exec("CREATE TABLE IF NOT EXISTS system_config (
@@ -103,6 +112,23 @@ foreach ($databases as $db_name) {
             price INT DEFAULT 0,
             duration_days INT DEFAULT 0,
             features JSON NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        // 7. Create questions table
+        $conn->exec("CREATE TABLE IF NOT EXISTS questions (
+            id VARCHAR(255) PRIMARY KEY,
+            subject VARCHAR(255) NULL,
+            chapter VARCHAR(255) NULL,
+            type VARCHAR(50) NULL,
+            difficulty VARCHAR(50) NULL,
+            statement TEXT NULL,
+            options JSON NULL,
+            correctAnswer VARCHAR(255) NULL,
+            solution TEXT NULL,
+            explanation TEXT NULL,
+            concept VARCHAR(255) NULL,
+            markingScheme JSON NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 

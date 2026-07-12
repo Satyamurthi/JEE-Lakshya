@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import { generateJEEQuestions as generateJEEServiceQuestions } from './geminiService';
 import { generateJEEQuestions as generateNEETServiceQuestions } from './neetGeminiService';
 import { Subject, ExamType } from './types';
@@ -16,39 +15,6 @@ const getEnv = (key: string) => {
   } catch (e) {}
   return '';
 };
-
-// --- CONFIGURATION ---
-const PROVIDED_URL = process.env.SUPABASE_URL || 'https://daitgcrjlimjajmqoemm.supabase.co';
-const PROVIDED_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhaXRnY3JqbGltamFqbXFvZW1tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1Nzc0MjIsImV4cCI6MjA5ODE1MzQyMn0.gGGHEQaVL0aXPkI-u5CMSPod5BazzBEAKr2ZfxnBh6Y';
-
-const getCustomConfig = () => {
-  if (typeof window === 'undefined') return { url: '', key: '' };
-  try {
-    const custom = JSON.parse(localStorage.getItem('custom_supabase_config') || '{}');
-    return custom;
-  } catch(e) { return { url: '', key: '' }; }
-};
-
-const customConfig = getCustomConfig();
-let supabaseUrl = customConfig.url || getEnv('SUPABASE_URL') || getEnv('VITE_SUPABASE_URL') || getEnv('REACT_APP_SUPABASE_URL') || PROVIDED_URL;
-let supabaseAnonKey = customConfig.key || getEnv('SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('REACT_APP_SUPABASE_ANON_KEY') || PROVIDED_KEY;
-
-if (supabaseUrl) {
-  supabaseUrl = supabaseUrl.trim().replace(/\.\.co$/, '.supabase.co').replace(/\.supabase\.supabase\.co$/, '.supabase.co');
-  if (!supabaseUrl.startsWith('http')) {
-    supabaseUrl = `https://${supabaseUrl}`;
-  }
-}
-if (supabaseAnonKey) {
-    supabaseAnonKey = supabaseAnonKey.trim();
-}
-
-const useLocalServer = getEnv('USE_LOCAL_SERVER') === 'true' || getEnv('VITE_USE_LOCAL_SERVER') === 'true';
-
-// Initial client instance
-let activeClient = (supabaseUrl && supabaseAnonKey && !useLocalServer) 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null;
 
 class LocalSupabaseBuilder {
   private table: string;
@@ -240,7 +206,7 @@ const fakeAuth = {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        return { data: { user: { id: 'temp-local-id', email: credentials.email } }, error: null };
+        return { data: { user: { id: data.userId || 'temp-local-id', email: credentials.email } }, error: null };
       }
       return { data: { user: null }, error: { message: data.error || "Enrollment failed" } };
     } catch (e: any) {
@@ -271,60 +237,24 @@ const fakeAuth = {
   }
 };
 
-// Proxy wrapper that routes calls to the currently activeClient, or uses LocalSupabaseBuilder when Supabase is disabled
+// Proxy wrapper that routes calls to LocalSupabaseBuilder and fakeAuth
 export const supabase = new Proxy({} as any, {
   get(target, prop) {
-    if (!activeClient) {
-      if (prop === 'from') {
-        return (table: string) => new LocalSupabaseBuilder(table);
-      }
-      if (prop === 'auth') {
-        return fakeAuth;
-      }
-      return null;
+    if (prop === 'from') {
+      return (table: string) => new LocalSupabaseBuilder(table);
     }
-    const value = (activeClient as any)[prop];
-    if (typeof value === 'function') {
-      return value.bind(activeClient);
+    if (prop === 'auth') {
+      return fakeAuth;
     }
-    return value;
+    return null;
   }
 });
 
-export const isSupabaseConfigured = () => !!activeClient;
+export const isSupabaseConfigured = () => false;
 
 // Dynamic client switcher
 export const switchSupabaseBackend = (stream: string) => {
   localStorage.setItem('active_stream', stream);
-  
-  if (useLocalServer) {
-    window.dispatchEvent(new Event('supabase_client_changed'));
-    return;
-  }
-
-  let url = supabaseUrl;
-  let key = supabaseAnonKey;
-  
-  if (stream === 'NEET UG') {
-    url = getEnv('NEET_SUPABASE_URL') || getEnv('VITE_NEET_SUPABASE_URL') || supabaseUrl;
-    key = getEnv('NEET_SUPABASE_ANON_KEY') || getEnv('VITE_NEET_SUPABASE_ANON_KEY') || supabaseAnonKey;
-  } else if (stream === 'KCET') {
-    url = getEnv('KCET_SUPABASE_URL') || getEnv('VITE_KCET_SUPABASE_URL') || supabaseUrl;
-    key = getEnv('KCET_SUPABASE_ANON_KEY') || getEnv('VITE_KCET_SUPABASE_ANON_KEY') || supabaseAnonKey;
-  } else if (stream === 'UPSC') {
-    url = getEnv('UPSC_SUPABASE_URL') || getEnv('VITE_UPSC_SUPABASE_URL') || supabaseUrl;
-    key = getEnv('UPSC_SUPABASE_ANON_KEY') || getEnv('VITE_UPSC_SUPABASE_ANON_KEY') || supabaseAnonKey;
-  }
-  
-  if (url && key) {
-    url = url.trim().replace(/\.\.co$/, '.supabase.co').replace(/\.supabase\.supabase\.co$/, '.supabase.co');
-    if (!url.startsWith('http')) {
-      url = `https://${url}`;
-    }
-    key = key.trim();
-    activeClient = createClient(url, key);
-  }
-  
   window.dispatchEvent(new Event('supabase_client_changed'));
 };
 
@@ -1318,42 +1248,19 @@ export const runAutomaticDailyQuestionSeeding = async (streamName: string = 'JEE
 
 export const getAllQuestionsFromDB = async (subjectFilter?: string, maxRecords: number = 15000): Promise<any[]> => {
   let allData: any[] = [];
-  if (isSupabaseConfigured()) {
-    try {
-      let from = 0;
-      const limit = 1000;
-      let keepFetching = true;
-
-      while (keepFetching && allData.length < maxRecords) {
-        let query = supabase
-          .from('questions')
-          .select('*');
-          
-        if (subjectFilter && subjectFilter !== 'All') {
-          query = query.ilike('subject', `%${subjectFilter}%`);
-        }
-
-        const { data, error } = await query
-          .range(from, from + limit - 1);
-
-        if (error) {
-          console.warn("Supabase range query warning:", error);
-          break;
-        }
-        if (!data || data.length === 0) {
-          keepFetching = false;
-        } else {
-          allData = [...allData, ...data];
-          if (data.length < limit) {
-            keepFetching = false;
-          } else {
-            from += limit;
-          }
-        }
+  try {
+    const { data, error } = await supabase.from('questions').select('*');
+    if (!error && data && data.length > 0) {
+      allData = data;
+      if (subjectFilter && subjectFilter !== 'All') {
+        allData = allData.filter((q: any) => q.subject && q.subject.toLowerCase().includes(subjectFilter.toLowerCase()));
       }
-    } catch (e) {
-      console.warn("Supabase fetch all questions warning, falling back to local dataset:", e);
+      if (allData.length > maxRecords) {
+        allData = allData.slice(0, maxRecords);
+      }
     }
+  } catch (e) {
+    console.warn("Local DB fetch all questions failed, falling back:", e);
   }
 
   // Fallback to officialJeePyqBank if database returned empty
