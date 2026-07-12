@@ -61,15 +61,12 @@ try {
         // Reset failed attempts on success
         $conn->prepare("UPDATE profiles SET failed_attempts = 0 WHERE email = ?")->execute([$email]);
         
+        $userData = $user;
+        unset($userData['password']);
+        
         echo json_encode([
             "success" => true,
-            "user" => [
-                "id" => $user['id'],
-                "email" => $user['email'],
-                "full_name" => $user['full_name'],
-                "role" => $user['role'],
-                "status" => $user['status']
-            ]
+            "user" => $userData
         ]);
         exit;
         

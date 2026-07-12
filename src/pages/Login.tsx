@@ -29,98 +29,21 @@ const Login = () => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
     try {
-      let user = null;
-
-      // 1. Try to fetch from Supabase backend
-      if (supabase) {
-        // Attempt real Supabase Auth sign in first (essential for RLS)
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: email,
-          password: password
-        });
-
-        if (!authError && authData.user) {
-          // Success! Now get the profile
-          const { data: dbUser } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', authData.user.id)
-            .single();
-          if (dbUser) user = dbUser;
-        } else {
-          console.warn("Supabase Auth failed, trying profile table fallback:", authError?.message);
-          const cleanEmail = email.toLowerCase().trim();
-          let { data: dbUser } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('email', cleanEmail)
-            .maybeSingle();
-          
-          if (!dbUser) {
-            const { data: altUser } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('full_name', email.trim())
-              .maybeSingle();
-            dbUser = altUser;
-          }
-          
-          if (dbUser) {
-            user = dbUser;
-          } else if (cleanEmail === 'satyu000@gmail.com') {
-            // Auto-bootstrap Super Admin if missing from cloud DB
-            const superAdminObj = {
-              id: '00000000-0000-0000-0000-000000000001',
-              email: 'satyu000@gmail.com',
-              full_name: 'Super Admin',
-              password: password || 'satyupassword',
-              role: 'super_admin',
-              status: 'approved',
-              created_at: new Date().toISOString()
-            };
-            try {
-              await supabase.from('profiles').upsert(superAdminObj);
-            } catch (e) {}
-            user = superAdminObj;
-          }
-        }
-      } else {
-        // Local XAMPP Auth Fallback
-        try {
-          const apiUrl = await getApiUrl();
-          const res = await fetch(`${apiUrl}/auth.php?action=login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-          });
-          const data = await res.json();
-          if (res.ok && data.success) {
-            user = data.user;
-          } else {
-            setError(data.error || "Invalid credentials.");
-            setIsLoading(false);
-            return;
-          }
-        } catch (e) {
-          setError("Local XAMPP authentication backend is unreachable.");
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      if (!user) {
-        setError("Invalid credentials.");
+      const apiUrl = await getApiUrl();
+      const res = await fetch(`${apiUrl}/auth.php?action=login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || "Invalid credentials.");
         setIsLoading(false);
         return;
       }
 
-      // Check password
-      if (user.password && user.password !== password) {
-        setError("Invalid credentials.");
-        setIsLoading(false);
-        return;
-      }
-
+      let user = data.user;
 
       // Auto-elevate satyu000@gmail.com to super_admin
       if (user.email === 'satyu000@gmail.com') {
@@ -131,11 +54,9 @@ const Login = () => {
       // Auto-approve independent students (no coaching admin attached)
       if (user.role === 'student' && !user.admin_id) {
         user.status = 'approved';
-        if (supabase) {
-          try {
-            await supabase.from('profiles').update({ status: 'approved' }).eq('id', user.id);
-          } catch (e) {}
-        }
+        try {
+          await supabase.from('profiles').update({ status: 'approved' }).eq('id', user.id);
+        } catch (e) {}
       }
 
       // Check subscription expiry
@@ -143,12 +64,10 @@ const Login = () => {
         const expiry = new Date(user.subscription_expires_at);
         if (expiry < new Date()) {
           user.status = 'frozen';
-          if (supabase) {
-            try {
-              await supabase.from('profiles').update({ status: 'frozen' }).eq('id', user.id);
-            } catch (e) {
-              console.error("Auto-freeze sync failed at login:", e);
-            }
+          try {
+            await supabase.from('profiles').update({ status: 'frozen' }).eq('id', user.id);
+          } catch (e) {
+            console.error("Auto-freeze sync failed at login:", e);
           }
         }
       }
@@ -165,8 +84,6 @@ const Login = () => {
         return;
       }
 
-      // In this version, we'll allow access if the user exists in either directory.
-      // For a real production app, we would use supabase.auth.signInWithPassword here.
       localStorage.removeItem('user_subscription_tier');
       localStorage.removeItem('user_subscription_expires_at');
       localStorage.removeItem('unlocked_pyq_papers');
@@ -182,14 +99,6 @@ const Login = () => {
         switchSupabaseBackend(user.selected_stream);
       }
       
-      // If we got here but didn't have a Supabase session, we should warn the user if they are an admin
-      if (user.role === 'admin' && supabase) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) {
-              console.warn("Admin logged in without Cloud Session. Cloud writes will be restricted.");
-          }
-      }
-
       if (user.role === 'super_admin') {
         navigate('/super-admin');
       } else if (user.role === 'admin') {
