@@ -37,8 +37,15 @@ foreach ($databases as $db_name) {
             admin_max_students INT DEFAULT 30,
             subscription_expires_at VARCHAR(50) NULL,
             gemini_api_key TEXT NULL,
+            failed_attempts INT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
+
+        // Add migration for existing installations
+        try {
+            $conn->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS failed_attempts INT DEFAULT 0");
+        } catch (Exception $e) {}
+
 
         // 2. Create exam_attempts table
         $conn->exec("CREATE TABLE IF NOT EXISTS exam_attempts (

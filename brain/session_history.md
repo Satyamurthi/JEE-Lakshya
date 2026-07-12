@@ -178,4 +178,16 @@ This file records the chronological history of tasks, major changes, and feature
     3.  Successfully pushed the latest database migration files (`api/`), environment rules (`netlify.toml`, `.gitignore`), and frontend interceptors (`src/supabase.ts`) to both `Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus` GitHub repositories using the secure `GITHUB_PAT` loaded dynamically.
     4.  Removed temporary git push settings, leaving the local `.git/config` and repositories 100% secure with no credentials exposed.
 
+---
+
+## Session 15: Brute Force Protection & Local Password Resets
+*   **Request**: Block brute force attempts by locking accounts, replace generic error prompts with "Invalid credentials.", and add a local password reset flow below the login button.
+*   **Work Done**:
+    1.  Altered the `profiles` database table schema across all targeted streams (`jee_nexus`, `neet_nexus`, `kcet_nexus`, `upsc_nexus`) to add the `failed_attempts` column.
+    2.  Refactored the authentication PHP handler (`api/auth.php`) to increment `failed_attempts` on credential failures. Accounts automatically lock and transition to `blocked` status upon reaching 5 consecutive failures.
+    3.  Harmonized error messaging inside `api/auth.php` and [Login.tsx](file:///d:/JEE/src/pages/Login.tsx) to return a generic `"Invalid credentials."` warning on failed logins, shielding the site from username enumeration.
+    4.  Created the `reset_password` action endpoint in `api/auth.php` to securely change the password and automatically lift the lockout for verified user accounts.
+    5.  Repositioned the "Forgot Password?" entry directly inside the login card below the "Authorize Access" button and upgraded the reset modal to present `New Password` inputs dynamically when offline/in local server mode.
+
+
 

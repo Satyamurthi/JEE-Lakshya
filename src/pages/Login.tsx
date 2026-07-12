@@ -12,8 +12,11 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotPasswordText, setForgotPasswordText] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+
 
   const isOffline = !isSupabaseConfigured();
 
@@ -93,7 +96,7 @@ const Login = () => {
           if (res.ok && data.success) {
             user = data.user;
           } else {
-            setError(data.error || "Local authentication failed.");
+            setError(data.error || "Invalid credentials.");
             setIsLoading(false);
             return;
           }
@@ -105,17 +108,18 @@ const Login = () => {
       }
 
       if (!user) {
-        setError("User not found in directory. Please enroll first.");
+        setError("Invalid credentials.");
         setIsLoading(false);
         return;
       }
 
       // Check password
       if (user.password && user.password !== password) {
-        setError("Invalid security key.");
+        setError("Invalid credentials.");
         setIsLoading(false);
         return;
       }
+
 
       // Auto-elevate satyu000@gmail.com to super_admin
       if (user.email === 'satyu000@gmail.com') {
@@ -207,6 +211,36 @@ const Login = () => {
     try {
       const cleanEmail = forgotEmail.toLowerCase().trim();
       
+      if (isOffline) {
+        if (forgotPasswordText !== forgotConfirmPassword) {
+          setForgotMessage("❌ Passwords do not match.");
+          setIsResetting(false);
+          return;
+        }
+        
+        try {
+          const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost/api';
+          const res = await fetch(`${apiUrl}/auth.php?action=reset_password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: cleanEmail, password: forgotPasswordText })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            setForgotMessage("🎉 Password successfully changed and account unlocked! You can now log in.");
+            setForgotEmail('');
+            setForgotPasswordText('');
+            setForgotConfirmPassword('');
+          } else {
+            setForgotMessage(`❌ Reset error: ${data.error || 'Failed to update password'}`);
+          }
+        } catch (e) {
+          setForgotMessage("❌ Local authentication backend is unreachable.");
+        }
+        setIsResetting(false);
+        return;
+      }
+      
       let fallbackPassword = null;
       if (supabase) {
         const { data } = await supabase
@@ -256,6 +290,7 @@ const Login = () => {
       setIsResetting(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-[#f8faff] flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -327,6 +362,22 @@ const Login = () => {
             </button>
           </form>
 
+          <div className="mt-4 text-center">
+            <button 
+              type="button"
+              onClick={() => {
+                setForgotEmail('');
+                setForgotPasswordText('');
+                setForgotConfirmPassword('');
+                setForgotMessage(null);
+                setShowForgotPassword(true);
+              }}
+              className="text-indigo-600 hover:underline text-[11px] font-black uppercase tracking-wider cursor-pointer border-none bg-transparent outline-none"
+            >
+              Forgot Password?
+            </button>
+          </div>
+
           {/* Error Message */}
           {error && (
             <div className="mt-6 flex items-center gap-3 bg-red-50 border border-red-100 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2">
@@ -343,17 +394,8 @@ const Login = () => {
             <p className="text-slate-400 font-bold text-xs tracking-tight">
               New Aspirant? <Link to="/signup" className="text-indigo-600 hover:underline font-extrabold">Enroll Now</Link>
             </p>
-            <button 
-              onClick={() => {
-                setForgotEmail('');
-                setForgotMessage(null);
-                setShowForgotPassword(true);
-              }}
-              className="text-indigo-600 hover:underline text-xs font-black uppercase tracking-wider cursor-pointer border-none bg-transparent outline-none"
-            >
-              Forgot Password?
-            </button>
           </div>
+
       </div>
 
       {/* Forgot Password Modal */}
@@ -372,7 +414,11 @@ const Login = () => {
                 <Mail className="w-8 h-8" />
               </div>
               <h3 className="text-2xl font-black text-slate-900 tracking-tight">Reset Password</h3>
-              <p className="text-slate-500 font-medium text-xs">Enter your registered email address and we'll dispatch a link or lookup your account key.</p>
+              <p className="text-slate-500 font-medium text-xs">
+                {isOffline 
+                  ? "Enter your registered email address and define a new security key to reset your account password and lift any lockout." 
+                  : "Enter your registered email address and we'll dispatch a link to reset your password."}
+              </p>
             </div>
 
             <form onSubmit={handleForgotPassword} className="space-y-4">
@@ -388,14 +434,42 @@ const Login = () => {
                 />
               </div>
 
+              {isOffline && (
+                <>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 font-mono">New Password</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={forgotPasswordText}
+                      onChange={(e) => setForgotPasswordText(e.target.value)}
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 font-mono">Confirm New Password</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={forgotConfirmPassword}
+                      onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                </>
+              )}
+
               <button
                 type="submit"
                 disabled={isResetting}
                 className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 h-14"
               >
-                {isResetting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Reset Link"}
+                {isResetting ? <Loader2 className="w-4 h-4 animate-spin" /> : (isOffline ? "Update Password & Unlock" : "Send Reset Link")}
               </button>
             </form>
+
 
             {forgotMessage && (
               <div className="p-4 rounded-2xl text-xs font-bold bg-slate-50 border border-slate-100 text-indigo-700 text-center leading-relaxed">

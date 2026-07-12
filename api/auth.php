@@ -17,20 +17,38 @@ try {
             exit;
         }
         
-        
         $stmt = $conn->prepare("SELECT * FROM profiles WHERE email = ?");
         $stmt->execute([$email]);
         $user = $stmt->fetch();
         
         if (!$user) {
-            http_response_code(404);
-            echo json_encode(["error" => "User not found in directory. Please enroll first."]);
+            http_response_code(401);
+            echo json_encode(["error" => "Invalid credentials."]);
+            exit;
+        }
+        
+        // Brute force lockout check
+        if ($user['status'] === 'blocked' || (isset($user['failed_attempts']) && $user['failed_attempts'] >= 5)) {
+            if ($user['status'] !== 'blocked') {
+                $conn->prepare("UPDATE profiles SET status = 'blocked' WHERE email = ?")->execute([$email]);
+            }
+            http_response_code(403);
+            echo json_encode(["error" => "Account locked due to multiple failed login attempts. Please verify with your Email ID and reset your password."]);
             exit;
         }
         
         if ($user['password'] !== $password) {
-            http_response_code(401);
-            echo json_encode(["error" => "Invalid security key."]);
+            $newAttempts = ($user['failed_attempts'] ?? 0) + 1;
+            $conn->prepare("UPDATE profiles SET failed_attempts = ? WHERE email = ?")->execute([$newAttempts, $email]);
+            
+            if ($newAttempts >= 5) {
+                $conn->prepare("UPDATE profiles SET status = 'blocked' WHERE email = ?")->execute([$email]);
+                http_response_code(403);
+                echo json_encode(["error" => "Account locked due to multiple failed login attempts. Please verify with your Email ID and reset your password."]);
+            } else {
+                http_response_code(401);
+                echo json_encode(["error" => "Invalid credentials."]);
+            }
             exit;
         }
         
@@ -39,6 +57,9 @@ try {
             echo json_encode(["error" => "Your account is pending approval from the administrator."]);
             exit;
         }
+        
+        // Reset failed attempts on success
+        $conn->prepare("UPDATE profiles SET failed_attempts = 0 WHERE email = ?")->execute([$email]);
         
         echo json_encode([
             "success" => true,
@@ -50,6 +71,37 @@ try {
                 "status" => $user['status']
             ]
         ]);
+        exit;
+        
+    } elseif ($action === 'reset_password') {
+        $email = isset($input['email']) ? strtolower(trim($input['email'])) : '';
+        $newPassword = isset($input['password']) ? $input['password'] : '';
+        
+        if (empty($email) || empty($newPassword)) {
+            http_response_code(400);
+            echo json_encode(["error" => "Email and new password are required."]);
+            exit;
+        }
+        
+        $stmt = $conn->prepare("SELECT * FROM profiles WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+        
+        if (!$user) {
+            http_response_code(404);
+            echo json_encode(["error" => "Email address not found."]);
+            exit;
+        }
+        
+        $stmt = $conn->prepare("UPDATE profiles SET password = ?, status = 'approved', failed_attempts = 0 WHERE email = ?");
+        $stmt->execute([$newPassword, $email]);
+        
+        echo json_encode([
+            "success" => true,
+            "message" => "Password changed and account unlocked successfully!"
+        ]);
+        exit;
+
         
     } elseif ($action === 'signup') {
         $fullName = isset($input['fullName']) ? trim($input['fullName']) : '';
