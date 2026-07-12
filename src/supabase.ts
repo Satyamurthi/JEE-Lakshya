@@ -16,6 +16,34 @@ const getEnv = (key: string) => {
   return '';
 };
 
+let resolvedApiUrl = '';
+
+export const getApiUrl = async (): Promise<string> => {
+  if (resolvedApiUrl) return resolvedApiUrl;
+  
+  // Try to load dynamic backend URL from GitHub raw content
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/Satyamurthi/JEE-Lakshya/main/backend_url.txt');
+    if (res.ok) {
+      const text = (await res.text()).trim();
+      if (text && text.startsWith('http')) {
+        resolvedApiUrl = text;
+        console.log("Dynamically resolved backend URL:", resolvedApiUrl);
+        return resolvedApiUrl;
+      }
+    }
+  } catch (e) {
+    console.warn("Could not fetch remote dynamic backend URL, using env default:", e);
+  }
+
+  // Fallback to static env configuration
+  resolvedApiUrl = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
+  return resolvedApiUrl;
+};
+
+// Eagerly resolve API URL on load
+getApiUrl();
+
 class LocalSupabaseBuilder {
   private table: string;
   private action: string = 'select';
@@ -131,7 +159,7 @@ class LocalSupabaseBuilder {
   async then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
     try {
       const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
-      const apiUrl = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
+      const apiUrl = await getApiUrl();
       const response = await fetch(`${apiUrl}/local_db.php`, {
         method: 'POST',
         headers: {
@@ -177,7 +205,7 @@ class LocalSupabaseBuilder {
 const fakeAuth = {
   signInWithPassword: async (credentials: any) => {
     try {
-      const apiUrl = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
+      const apiUrl = await getApiUrl();
       const res = await fetch(`${apiUrl}/auth.php?action=login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -194,7 +222,7 @@ const fakeAuth = {
   },
   signUp: async (credentials: any) => {
     try {
-      const apiUrl = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
+      const apiUrl = await getApiUrl();
       const res = await fetch(`${apiUrl}/auth.php?action=signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -317,7 +345,8 @@ export const saveQuestionsToDB = async (questions: any[]) => {
   if (!isSupabaseConfigured()) {
     try {
       const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
-      const res = await fetch('http://localhost/api/questions.php', {
+      const apiUrl = await getApiUrl();
+      const res = await fetch(`${apiUrl}/questions.php`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -370,7 +399,8 @@ export const fetchQuestionsFromDB = async (
   if (!isSupabaseConfigured()) {
     try {
       const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
-      let url = `http://localhost/api/questions.php?mcqCount=${mcqCount}&numericalCount=${numericalCount}&stream=${encodeURIComponent(activeStream)}`;
+      const apiUrl = await getApiUrl();
+      let url = `${apiUrl}/questions.php?mcqCount=${mcqCount}&numericalCount=${numericalCount}&stream=${encodeURIComponent(activeStream)}`;
       if (subject) url += `&subject=${encodeURIComponent(subject)}`;
       if (chapter) url += `&chapter=${encodeURIComponent(chapter)}`;
       if (difficulty) url += `&difficulty=${encodeURIComponent(difficulty)}`;
@@ -453,7 +483,8 @@ export const fetchQuestionsFromDB = async (
 export const submitExamAttempt = async (attempt: any) => {
   if (!isSupabaseConfigured()) {
     try {
-      const res = await fetch('http://localhost/api/exam_attempts.php', {
+      const apiUrl = await getApiUrl();
+      const res = await fetch(`${apiUrl}/exam_attempts.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(attempt)
@@ -511,7 +542,8 @@ export const createDraftPaidAttempt = async (attemptId: string, userId: string, 
 export const getUserExamAttempts = async (userId: string) => {
   if (!isSupabaseConfigured()) {
     try {
-      const res = await fetch(`http://localhost/api/exam_attempts.php?user_id=${encodeURIComponent(userId)}`);
+      const apiUrl = await getApiUrl();
+      const res = await fetch(`${apiUrl}/exam_attempts.php?user_id=${encodeURIComponent(userId)}`);
       return await res.json() || [];
     } catch (e) {
       return [];
@@ -960,8 +992,8 @@ export const saveSystemStreams = async (streams: string[]): Promise<string | nul
 
 export const getPaymentApiUrl = (endpoint: string) => {
   const isDev = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (isDev || useLocalServer) {
-    const apiUrl = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
+  if (isDev || isSupabaseConfigured() === false) {
+    const apiUrl = resolvedApiUrl || getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
     return `${apiUrl}/${endpoint}.php`;
   }
   return `/.netlify/functions/${endpoint}`;

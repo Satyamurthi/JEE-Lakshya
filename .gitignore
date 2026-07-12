@@ -33,4 +33,11 @@ git_portable/
 PortableGit2.exe
 scratch/
 
+# Cloudflare Tunnel
+cloudflared.exe
+cloudflared_run.log
+
+# Database Folder
+DB/
+
 

@@ -1,7 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Brain, Sparkles, Database, Mail, Lock, ChevronRight, AlertCircle, X, Loader2 } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '../supabase';
+import { supabase, isSupabaseConfigured, getApiUrl } from '../supabase';
 import { APP_NAME } from '../constants';
 
 const Login = () => {
@@ -87,7 +87,8 @@ const Login = () => {
       } else {
         // Local XAMPP Auth Fallback
         try {
-          const res = await fetch('http://localhost/api/auth.php?action=login', {
+          const apiUrl = await getApiUrl();
+          const res = await fetch(`${apiUrl}/auth.php?action=login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -219,7 +220,7 @@ const Login = () => {
         }
         
         try {
-          const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost/api';
+          const apiUrl = await getApiUrl();
           const res = await fetch(`${apiUrl}/auth.php?action=reset_password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
