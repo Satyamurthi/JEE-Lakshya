@@ -91,8 +91,9 @@ Ensure the MariaDB and PHP built-in servers are running. They are registered as 
 
 ## 9. Current Operational State
 
-The platform is configured to run in **Local Server Mode** by default.
+The platform is configured to run in a hybrid **Cloudfront/Local Server Mode** permanently.
 *   **PHP & MariaDB Hosting**: Fully hosted on this local server PC. PHP 8.3 and MariaDB Server are configured as Windows Scheduled Tasks (`MariaDBServer` and `PHPServer`) running under the `SYSTEM` account, serving the API on Port 80 and launching on system startup.
-*   **Database**: All local API requests dynamically connect to local MySQL/MariaDB schemas (`jee_nexus`, `neet_nexus`, `kcet_nexus`, `upsc_nexus`) mapped via the `X-Active-Stream` header.
-*   **Routing proxy**: Supabase library (`@supabase/supabase-js`) is completely removed from dependencies. Frontend calls are intercepted via `LocalSupabaseBuilder` and `fakeAuth` inside `src/supabase.ts` and redirected to local endpoints `api/local_db.php` and `api/auth.php`. No external Supabase network connections or WebAuthn credentials prompts occur.
+*   **Database Directory**: MariaDB data directory (`datadir`) is relocated to `d:/JEE/DB`. All user profiles, log-in credentials, subscription plans, and exam states are stored inside the `d:\JEE\DB` folder.
+*   **Cloudflare Tunnel**: Cloudflare Tunnel is running 24/7 on the local PC via the `CloudflareTunnel` Windows Scheduled Task. It starts the tunnel at system boot using `scripts/run_tunnel.ps1`, parses the dynamic public HTTPS URL of the tunnel, and publishes it automatically to `backend_url.txt` in the GitHub repository.
+*   **Routing proxy**: Supabase library (`@supabase/supabase-js`) is completely removed. All query and auth calls are intercepted inside `src/supabase.ts` and `Login.tsx` and dynamically routed to the active public tunnel URL fetched at runtime from GitHub. This links the Netlify production website directly to this local PC backend 24/7.
 *   **Production Environment**: Pushed `netlify.toml` which forces Netlify builds to use `VITE_USE_LOCAL_SERVER = true` and `VITE_API_URL = http://localhost/api`, meaning that in both local and remote deployments, the database points to the local MariaDB server running on the student's/admin's local machine.
