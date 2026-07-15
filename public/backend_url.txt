@@ -1,1 +1,1 @@
-https://starring-replied-depot-identify.trycloudflare.com
+https://api.trycloudflare.com
