@@ -104,6 +104,8 @@ try {
         $fullName = isset($input['fullName']) ? trim($input['fullName']) : '';
         $email = isset($input['email']) ? strtolower(trim($input['email'])) : '';
         $password = isset($input['password']) ? $input['password'] : '';
+        $status = isset($input['status']) ? trim($input['status']) : (isset($input['isIndependent']) && $input['isIndependent'] === false ? 'pending' : 'approved');
+        $adminId = isset($input['adminId']) ? trim($input['adminId']) : null;
         
         if (empty($fullName) || empty($email) || empty($password)) {
             http_response_code(400);
@@ -125,10 +127,9 @@ try {
         $userId = substr($userId, 0, 8) . '-' . substr($userId, 8, 4) . '-' . substr($userId, 12, 4) . '-' . substr($userId, 16, 4) . '-' . substr($userId, 20, 12);
         
         $role = 'student';
-        $status = 'pending'; // Requires admin approval
         
-        $stmt = $conn->prepare("INSERT INTO profiles (id, email, full_name, password, role, status) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$userId, $email, $fullName, $password, $role, $status]);
+        $stmt = $conn->prepare("INSERT INTO profiles (id, email, full_name, password, role, status, admin_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$userId, $email, $fullName, $password, $role, $status, $adminId]);
         
         echo json_encode([
             "success" => true,

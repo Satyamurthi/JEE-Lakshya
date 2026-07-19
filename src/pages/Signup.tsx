@@ -122,7 +122,9 @@ const Signup = () => {
               mobile_number: mobileNumber,
               college_name: collegeName,
               college_address: collegeAddress,
-              stream: selectedStream
+              stream: selectedStream,
+              status: isIndependent ? 'approved' : 'pending',
+              admin_id: isIndependent ? null : selectedAdminId
             }
           }
         });

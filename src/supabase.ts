@@ -234,7 +234,9 @@ const fakeAuth = {
         body: JSON.stringify({
           fullName: credentials.options?.data?.full_name || credentials.email,
           email: credentials.email,
-          password: credentials.password
+          password: credentials.password,
+          status: credentials.options?.data?.status || 'approved',
+          adminId: credentials.options?.data?.admin_id || null
         })
       });
       const data = await res.json();
