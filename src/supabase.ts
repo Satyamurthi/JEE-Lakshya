@@ -459,16 +459,29 @@ export const submitExamAttempt = async (attempt: any) => {
         return v.toString(16);
       }));
     }
+    
+    // Save to local storage backup
+    try {
+      const storageKey = `local_exam_attempts_${attempt.user_id}`;
+      const existingRaw = localStorage.getItem(storageKey);
+      const existingList = existingRaw ? JSON.parse(existingRaw) : [];
+      const updatedList = [attempt, ...existingList.filter((a: any) => a.id !== attempt.id)];
+      localStorage.setItem(storageKey, JSON.stringify(updatedList.slice(0, 100)));
+    } catch (localErr) {
+      console.warn("Failed to write attempt to local backup:", localErr);
+    }
+
     const { data, error } = await supabase.from('exam_attempts').upsert(attempt).select().single();
     if (error && error.message && error.message.includes("paid")) {
       console.warn("Schema cache missing 'paid' column, retrying upsert without 'paid' field...");
       const attemptCopy = { ...attempt };
       delete attemptCopy.paid;
-      return await supabase.from('exam_attempts').upsert(attemptCopy).select().single();
+      const retryRes = await supabase.from('exam_attempts').upsert(attemptCopy).select().single();
+      return { data: retryRes.data || attempt, error: null };
     }
-    return { data, error };
+    return { data: data || attempt, error: null };
   } catch (e: any) {
-    return { data: null, error: e };
+    return { data: attempt, error: null };
   }
 };
 
@@ -503,12 +516,28 @@ export const createDraftPaidAttempt = async (attemptId: string, userId: string, 
 };
 
 export const getUserExamAttempts = async (userId: string) => {
+  let dbAttempts: any[] = [];
   try {
     const { data, error } = await supabase.from('exam_attempts').select('*').eq('user_id', userId).order('submitted_at', { ascending: false });
-    if (error) return [];
-    return data;
+    if (!error && data) {
+      dbAttempts = data;
+    }
   } catch (e) {
-    return [];
+    console.warn("Error fetching exam attempts from database:", e);
+  }
+
+  // Merge with local storage backup
+  try {
+    const storageKey = `local_exam_attempts_${userId}`;
+    const rawLocal = localStorage.getItem(storageKey);
+    const localAttempts = rawLocal ? JSON.parse(rawLocal) : [];
+    
+    const dbIds = new Set(dbAttempts.map(a => a.id));
+    const uniqueLocal = localAttempts.filter((a: any) => !dbIds.has(a.id));
+    const combined = [...dbAttempts, ...uniqueLocal].sort((a, b) => new Date(b.submitted_at || 0).getTime() - new Date(a.submitted_at || 0).getTime());
+    return combined;
+  } catch (localErr) {
+    return dbAttempts;
   }
 };
 

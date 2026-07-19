@@ -171,6 +171,8 @@ const Results = () => {
         <head>
           <title>${result.config?.type || 'JEE Main Exam'} - Official Answer Sheet & Solutions</title>
           <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+          <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+          <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
             body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 40px; }
@@ -208,6 +210,25 @@ const Results = () => {
             <h2 style="font-size:18px; font-weight:900; margin-bottom:20px; color:#1e293b;">Question Paper, Marked Responses & Solutions</h2>
             ${questionsHTML}
           </div>
+          <script>
+            function renderMath() {
+              if (window.renderMathInElement) {
+                window.renderMathInElement(document.body, {
+                  delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                  ],
+                  throwOnError: false
+                });
+              }
+            }
+            document.addEventListener("DOMContentLoaded", renderMath);
+            window.onload = renderMath;
+            setTimeout(renderMath, 300);
+            setTimeout(renderMath, 800);
+          </script>
         </body>
       </html>
     `);
