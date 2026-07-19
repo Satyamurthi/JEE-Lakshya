@@ -54,11 +54,13 @@ foreach ($databases as $db_name) {
             current_exam_started_at VARCHAR(50) NULL,
             gemini_api_key TEXT NULL,
             failed_attempts INT DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at VARCHAR(50) NULL
         )");
 
         // Add migration for existing installations
         $profile_migrations = [
+            "ALTER TABLE profiles MODIFY COLUMN created_at VARCHAR(50) NULL",
+            "ALTER TABLE profiles MODIFY COLUMN subscription_expires_at VARCHAR(50) NULL",
             "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS failed_attempts INT DEFAULT 0",
             "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS selected_stream VARCHAR(100) NULL",
             "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_exam_token VARCHAR(255) NULL",

@@ -214,6 +214,9 @@ try {
                         $processed_row[$k] = 1;
                     } elseif ($v === false) {
                         $processed_row[$k] = 0;
+                    } elseif (is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $v)) {
+                        $ts = strtotime($v);
+                        $processed_row[$k] = ($ts !== false) ? date('Y-m-d H:i:s', $ts) : $v;
                     } else {
                         $processed_row[$k] = $v;
                     }
