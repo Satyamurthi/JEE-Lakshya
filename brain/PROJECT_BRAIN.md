@@ -609,9 +609,9 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 - ✅ SSH Serveo Tunnel: Active, URL in `public/backend_url.txt`
 - ✅ Netlify: Auto-deploying from `Satyamurthi/JEE-Lakshya` main branch
 - ✅ MariaDB: Running, all 4 schemas initialized with **9 tables each**
-- ✅ Question Synchronization: Dynamic SQLite streaming sync implemented & executed
-  - JEE Main & Advanced (`jee_nexus`): **22,377** questions synchronized (after deduplication)
-  - NEET UG (`neet_nexus`): **60,000** questions synchronized (100% database population)
+- ✅ Question Synchronization: Dynamic SQLite streaming clean sync implemented & executed (database cleared before sync)
+  - JEE Main & Advanced (`jee_nexus`): **14,159** questions synchronized (matches local SQLite exactly)
+  - NEET UG (`neet_nexus`): **60,000** questions synchronized (matches local SQLite exactly)
 - ✅ Super Admin: `satyu000@gmail.com` seeded in all schemas
 - ✅ CORS: Wildcard headers, OPTIONS preflight handled
 - ✅ Freeze/Unfreeze: Working, cascades to students
