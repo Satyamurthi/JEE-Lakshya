@@ -603,7 +603,94 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 
 ---
 
-## 20. CURRENT OPERATIONAL STATE (as of Session 39)
+## 20. CURRENT OPERATIONAL STATE (as of Session 40)
+
+- ✅ PHP CLI server: 8 workers, port 8080
+- ✅ SSH Serveo Tunnel: Active, URL in `public/backend_url.txt`
+- ✅ Netlify: Auto-deploying from `Satyamurthi/JEE-Lakshya` main branch
+- ✅ MariaDB: Running, all 4 schemas initialized with **9 tables each**
+- ✅ Super Admin: `satyu000@gmail.com` seeded in all schemas
+- ✅ CORS: Wildcard headers, OPTIONS preflight handled
+- ✅ Freeze/Unfreeze: Working, cascades to students
+- ✅ Grant/Revoke All: Working, cascades to students
+- ✅ Exam History: Visible after refresh (localStorage backup + DB merge)
+- ✅ LaTeX Rendering: Working in exam, results, and PDF export
+- ✅ Payment Logging: Every Razorpay payment saved to `payment_logs` table with Payment ID, amount, user, plan
+- ✅ Activity Logging: Login, exam_submit, daily_submit events saved to `activity_log` table
+- ✅ System Streams: Config stored in `system_config` DB (not localStorage-only)
+- ✅ Question Count Today: `gte` filter now works, shows real count
+- ✅ Revenue Calculation: Primary source = `payment_logs.amount_rupees` SUM (not ×10 hack)
+- ✅ `gte/lte/gt/lt` filters: Supported in `local_db.php`
+- ⚠️ Tunnel URL changes every time `run_tunnel.ps1` is run — normal behavior
+- ⚠️ Must run `run_tunnel.ps1` after every PC restart to restore connectivity
+
+## 21. ALL 9 DATABASE TABLES (per schema)
+
+| Table | Purpose |
+|---|---|
+| `profiles` | All users — students, admins, super admin |
+| `exam_attempts` | Full mock exam results |
+| `daily_challenges` | Daily challenge questions published by admins |
+| `daily_attempts` | Student submissions for daily challenges |
+| `system_config` | Platform-wide key-value config (streams, settings) |
+| `subscription_plans` | Premium plan definitions |
+| `questions` | AI-generated + PYQ question bank |
+| `payment_logs` | **NEW** — Every Razorpay payment: payment_id, order_id, user_id, amount, plan, verified_at |
+| `activity_log` | **NEW** — User actions: login, exam_start, exam_submit, daily_submit, practice_start |
+
+## 22. NEW API ENDPOINT: `api/activity_log.php`
+
+**Purpose**: Write-only endpoint for audit trail. Called fire-and-forget from frontend.
+
+**POST body**:
+```json
+{
+  "user_id":    "uuid",
+  "user_email": "email",
+  "user_name":  "name",
+  "event_type": "login|exam_submit|daily_submit|practice_start|signup|logout",
+  "stream":     "JEE Main & Advanced",
+  "metadata":   { "score": 120, "accuracy": 85 }
+}
+```
+
+## 23. PAYMENT FLOW (Complete)
+
+```
+Frontend (Pricing.tsx / ExamPortal.tsx)
+  │
+  ├─ POST /api/create-order.php
+  │    Body: { amount, receipt, user_id, user_email, user_name, plan_id, plan_name, stream }
+  │    Returns: { order_id, key_id, ...metadata echoed back }
+  │
+  ├─ Razorpay Checkout Modal opens
+  │
+  └─ POST /api/verify-payment.php (on payment success)
+       Body: { razorpay_payment_id, razorpay_order_id, razorpay_signature, user_id, user_email, amount, plan_id, stream }
+       ─── Verifies HMAC signature ──────────────────────────────────────────
+       ─── Writes to payment_logs table ─────────────────────────────────────
+       ─── Updates profiles.subscription_tier + subscription_expires_at ─────
+       Returns: { status: 'success', payment_log_id, amount_rupees }
+```
+
+## 24. REVENUE DASHBOARD QUERY
+
+To get real revenue from the DB:
+```sql
+-- Total revenue
+SELECT SUM(amount_rupees) AS total_revenue FROM payment_logs WHERE status = 'verified';
+
+-- Revenue per plan
+SELECT plan_name, COUNT(*) AS transactions, SUM(amount_rupees) AS revenue
+FROM payment_logs GROUP BY plan_name ORDER BY revenue DESC;
+
+-- Revenue per student
+SELECT user_email, user_name, COUNT(*) AS payments, SUM(amount_rupees) AS total_paid
+FROM payment_logs GROUP BY user_email ORDER BY total_paid DESC;
+```
+
+The `getActualTotalRevenue()` function in `supabase.ts` queries `payment_logs` as primary source and returns `{ total: number, breakdown: any[] }`.
+
 
 - ✅ PHP CLI server: 8 workers, port 8080
 - ✅ SSH Serveo Tunnel: Active, URL in `public/backend_url.txt`
