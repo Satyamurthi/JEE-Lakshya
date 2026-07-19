@@ -293,6 +293,6 @@ This file records the chronological history of tasks, major changes, and feature
 *   **Work Done**:
     1.  **Configured System-Wide PHP Thread Count**: Set `PHP_CLI_SERVER_WORKERS = 8` as a system-wide machine-level environment variable to ensure concurrent requests are processed with 8 worker threads automatically.
     2.  **Registered PHP Auto-Startup Task**: Created a Windows Scheduled Task `PHPBackendServer` configured to run at system startup (`AtStartup`) under the `SYSTEM` account with Highest privileges, pointing to `d:\JEE` with the multi-threaded router script.
-    3.  **Installed Cloudflare Tunnel Service**: Installed the user's permanent Cloudflare Tunnel connector (`Cloudflared`) as a Windows service configured to start automatically on system boot.
+    3.  **Installed Cloudflare Tunnel Service**: Installed the user's permanent Cloudflare Tunnel connector (`Cloudflared`) as a Windows service configured to start automatically on system boot. Reconfigured it with the correct token (`eyJhIjoiOWIwNT...`) provided by the user to connect successfully.
     4.  **Hardened Tunnel Script**: Modified `scripts/run_tunnel.ps1` to use robust `Start-Process` calls with explicit working directories for Git operations, preventing TTY/console piping hangs when run inside background scheduled tasks.
 
