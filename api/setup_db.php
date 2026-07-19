@@ -1,6 +1,13 @@
 <?php
 header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Active-Stream, apikey, prefer, Range");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
+
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit(0);
+}
 
 $host = "127.0.0.1";
 $username = "root";
@@ -37,24 +44,37 @@ foreach ($databases as $db_name) {
             has_used_free_test TINYINT(1) DEFAULT 0,
             admin_max_students INT DEFAULT 30,
             subscription_expires_at VARCHAR(50) NULL,
+            subscription_tier VARCHAR(100) DEFAULT 'free',
+            is_frozen TINYINT(1) DEFAULT 0,
+            super_admin_permission TINYINT(1) DEFAULT 0,
+            can_access_daily TINYINT(1) DEFAULT 1,
+            can_access_full_exam TINYINT(1) DEFAULT 1,
+            can_access_practice TINYINT(1) DEFAULT 1,
+            current_exam_token VARCHAR(255) NULL,
+            current_exam_started_at VARCHAR(50) NULL,
             gemini_api_key TEXT NULL,
             failed_attempts INT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 
         // Add migration for existing installations
-        try {
-            $conn->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS failed_attempts INT DEFAULT 0");
-        } catch (Exception $e) {}
-        try {
-            $conn->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS selected_stream VARCHAR(100) NULL");
-        } catch (Exception $e) {}
-        try {
-            $conn->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_exam_token VARCHAR(255) NULL");
-        } catch (Exception $e) {}
-        try {
-            $conn->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_exam_started_at VARCHAR(50) NULL");
-        } catch (Exception $e) {}
+        $profile_migrations = [
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS failed_attempts INT DEFAULT 0",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS selected_stream VARCHAR(100) NULL",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_exam_token VARCHAR(255) NULL",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_exam_started_at VARCHAR(50) NULL",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(100) DEFAULT 'free'",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS admin_max_students INT DEFAULT 30",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_expires_at VARCHAR(50) NULL",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_frozen TINYINT(1) DEFAULT 0",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS super_admin_permission TINYINT(1) DEFAULT 0",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS can_access_daily TINYINT(1) DEFAULT 1",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS can_access_full_exam TINYINT(1) DEFAULT 1",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS can_access_practice TINYINT(1) DEFAULT 1"
+        ];
+        foreach ($profile_migrations as $mig) {
+            try { $conn->exec($mig); } catch (Exception $e) {}
+        }
 
 
         // 2. Create exam_attempts table

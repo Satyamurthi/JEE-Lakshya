@@ -220,6 +220,21 @@ try {
                 }
             }
             
+            // Filter $processed_row against actual table columns in MariaDB to prevent Unknown Column errors
+            try {
+                $cols_query = $conn->query("SHOW COLUMNS FROM `$table`")->fetchAll(PDO::FETCH_COLUMN);
+                if ($cols_query) {
+                    $valid_cols = array_flip($cols_query);
+                    $filtered_row = [];
+                    foreach ($processed_row as $k => $v) {
+                        if (isset($valid_cols[$k])) {
+                            $filtered_row[$k] = $v;
+                        }
+                    }
+                    $processed_row = $filtered_row;
+                }
+            } catch (Exception $e) {}
+
             // Check if record exists for upsert/update
             $pk_val = (isset($processed_row[$primary_key]) && !empty($processed_row[$primary_key])) ? $processed_row[$primary_key] : null;
             if ($pk_val === null && $primary_key === 'id') {
