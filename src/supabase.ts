@@ -468,11 +468,11 @@ export const fetchQuestionsFromDB = async (
   difficulty?: string
 ) => {
   try {
-    const { filterUniqueQuestions, recordSeenQuestions } = await import('./utils/questionTracker');
+    const { getSeenQuestionHashes, getQuestionHash, recordSeenQuestions } = await import('./utils/questionTracker');
     
     const fetchByType = async (type: string, count: number) => {
         if (count <= 0) return [];
-        let query = supabase.from('questions').select('id').eq('type', type);
+        let query = supabase.from('questions').select('id, statement').eq('type', type);
         if (subject) query = query.eq('subject', subject);
         if (chapter) query = query.eq('chapter', chapter);
         if (topics && topics.length > 0) query = query.in('concept', topics);
@@ -483,7 +483,7 @@ export const fetchQuestionsFromDB = async (
         
         // If strict difficulty query returned empty, fall back to any difficulty for this subject/chapter
         if (!idData || idData.length === 0) {
-          let fallbackQuery = supabase.from('questions').select('id').eq('type', type);
+          let fallbackQuery = supabase.from('questions').select('id, statement').eq('type', type);
           if (subject) fallbackQuery = fallbackQuery.eq('subject', subject);
           if (chapter) fallbackQuery = fallbackQuery.eq('chapter', chapter);
           const { data: fbData } = await fallbackQuery;
@@ -492,21 +492,36 @@ export const fetchQuestionsFromDB = async (
         
         if (!idData || idData.length === 0) return [];
         
-        // Pick random set of IDs
-        const shuffledIds = idData
-          .map((x: any) => x.id)
-          .sort(() => Math.random() - 0.5);
+        const globalHistory = getSeenQuestionHashes();
+        const freshList: any[] = [];
+        const seenList: any[] = [];
         
-        if (shuffledIds.length === 0) return [];
+        for (const q of idData) {
+          const h = getQuestionHash(q);
+          if (h && globalHistory.has(h)) {
+            seenList.push(q);
+          } else {
+            freshList.push(q);
+          }
+        }
         
-        const { data, error } = await supabase.from('questions').select('*').in('id', shuffledIds.slice(0, Math.min(count * 3, shuffledIds.length)));
+        // Shuffle both lists
+        const shuffledFresh = freshList.sort(() => Math.random() - 0.5);
+        const shuffledSeen = seenList.sort(() => Math.random() - 0.5);
+        
+        // Prefer fresh questions, then recycle already seen questions
+        const selectedList = [...shuffledFresh, ...shuffledSeen].slice(0, count);
+        
+        if (selectedList.length === 0) return [];
+        
+        const selectedIds = selectedList.map(q => q.id);
+        const { data, error } = await supabase.from('questions').select('*').in('id', selectedIds);
         if (error) throw error;
         
         const fetchedList = data || [];
-        // Filter out previously seen questions to guarantee no repetition until pool exhaustion
-        const uniqueFetched = filterUniqueQuestions(fetchedList, count);
-        recordSeenQuestions(uniqueFetched);
-        return uniqueFetched;
+        // Update history
+        recordSeenQuestions(fetchedList);
+        return fetchedList;
     };
 
     const [mcqs, numericals] = await Promise.all([
@@ -518,6 +533,7 @@ export const fetchQuestionsFromDB = async (
     let resultQuestions = [...mcqs, ...numericals];
     if (resultQuestions.length === 0) {
       try {
+        const { filterUniqueQuestions } = await import('./utils/questionTracker');
         const { OFFICIAL_JEE_PYQ_BANK } = await import('./data/officialJeePyqBank');
         let filtered = OFFICIAL_JEE_PYQ_BANK || [];
         if (subject) filtered = filtered.filter((q: any) => q.subject && q.subject.toLowerCase().includes(subject.toLowerCase()));
