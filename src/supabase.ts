@@ -934,13 +934,9 @@ export const saveSystemStreams = async (streams: string[]): Promise<string | nul
   }
 };
 
-export const getPaymentApiUrl = (endpoint: string) => {
-  const isDev = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (isDev || isSupabaseConfigured() === false) {
-    const apiUrl = resolvedApiUrl || getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
-    return `${apiUrl}/${endpoint}.php`;
-  }
-  return `/.netlify/functions/${endpoint}`;
+export const getPaymentApiUrl = async (endpoint: string): Promise<string> => {
+  const apiUrl = await getApiUrl();
+  return `${apiUrl}/${endpoint}.php`;
 };
 
 export const getQuestionsCountFromDB = async (): Promise<number> => {

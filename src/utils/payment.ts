@@ -52,7 +52,8 @@ export const initiateRazorpayPayment = async (
       let orderId: string | undefined;
       let serverKeyId: string | undefined;
       try {
-        const orderRes = await fetch(getPaymentApiUrl('create-order'), {
+        const paymentUrl = await getPaymentApiUrl('create-order');
+        const orderRes = await fetch(paymentUrl, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -112,7 +113,8 @@ export const initiateRazorpayPayment = async (
           // Step 3: Attempt backend signature verification if order_id exists
           if (response.razorpay_order_id && response.razorpay_signature) {
             try {
-              const verifyRes = await fetch(getPaymentApiUrl('verify-payment'), {
+              const verifyUrl = await getPaymentApiUrl('verify-payment');
+              const verifyRes = await fetch(verifyUrl, {
                 method: 'POST',
                 headers: { 
                   'Content-Type': 'application/json',
