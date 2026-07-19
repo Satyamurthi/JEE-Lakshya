@@ -333,7 +333,11 @@ try {
         echo json_encode(["error" => "Action '$action' not supported."]);
     }
 } catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode(["data" => null, "error" => ["message" => $e->getMessage()]]);
+    http_response_code(400);
+    $msg = $e->getMessage();
+    if (strpos($msg, 'Duplicate entry') !== false) {
+        $msg = "An account with this email address already exists.";
+    }
+    echo json_encode(["data" => null, "error" => ["message" => $msg]]);
 }
 ?>

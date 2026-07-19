@@ -185,11 +185,13 @@ class LocalSupabaseBuilder {
         })
       });
 
+      const result = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errMsg = result?.error?.message || `HTTP error! status: ${response.status}`;
+        const errObj = { data: null, error: { message: errMsg }, count: 0 };
+        return onfulfilled ? onfulfilled(errObj) : errObj;
       }
 
-      const result = await response.json();
       if (onfulfilled) {
         return onfulfilled(result);
       }
