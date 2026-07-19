@@ -603,12 +603,13 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 
 ---
 
-## 20. CURRENT OPERATIONAL STATE (as of Session 41)
+## 20. CURRENT OPERATIONAL STATE (as of Session 42)
 
-- ✅ PHP CLI server: 8 workers, port 8080 (PDO SQLite extension enabled)
-- ✅ SSH Serveo Tunnel: Active, URL in `public/backend_url.txt`
+- ✅ PHP CLI server: 8 workers, port 8080 (PDO SQLite extension enabled, configured as auto-startup task)
+- ✅ Cloudflare Tunnel: Installed as `Cloudflared` Windows service, starts automatically on PC boot
+- ✅ SSH Serveo Tunnel: Fallback/dynamic script `run_tunnel.ps1` hardened with `Start-Process`
 - ✅ Netlify: Auto-deploying from `Satyamurthi/JEE-Lakshya` main branch
-- ✅ MariaDB: Running, all 4 schemas initialized with **9 tables each**
+- ✅ MariaDB: Running, all 4 schemas initialized with **9 tables each** (configured as auto-startup task)
 - ✅ Question Synchronization: Dynamic SQLite streaming clean sync implemented & executed (database cleared before sync)
   - JEE Main & Advanced (`jee_nexus`): **14,159** questions synchronized (matches local SQLite exactly)
   - NEET UG (`neet_nexus`): **60,000** questions synchronized (matches local SQLite exactly)
@@ -624,8 +625,8 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 - ✅ Question Count Today: `gte` filter now works, shows real count
 - ✅ Revenue Calculation: Primary source = `payment_logs.amount_rupees` SUM
 - ✅ `gte/lte/gt/lt` filters: Supported in `local_db.php`
-- ⚠️ Tunnel URL changes every time `run_tunnel.ps1` is run — normal behavior
-- ⚠️ Must run `run_tunnel.ps1` after every PC restart to restore connectivity
+- ⚠️ Cloudflare Tunnel routes public traffic directly to local PHP backend on port 8080
+- ✅ PC Auto-Startup: Both database, PHP server, and Cloudflare Tunnel start automatically on PC restart without user interaction
 
 ## 21. ALL 9 DATABASE TABLES (per schema)
 

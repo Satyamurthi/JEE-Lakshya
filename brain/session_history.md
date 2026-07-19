@@ -287,3 +287,12 @@ This file records the chronological history of tasks, major changes, and feature
     4.  **Interactive Super Admin UI (`src/pages/SuperAdmin.tsx`)**: Replaced the static database cards under the **Question Bank Manager** with a dynamic card displaying the number of questions available locally, complete with an interactive "Sync with Local SQLite" button and loaders/toasts.
     5.  **Executed Multi-Stream Clean Sync**: Configured the synchronization to clear existing MariaDB questions before starting import. Re-ran sync to populate exactly 14,159 unique JEE Main & Advanced questions and 60,000 NEET UG questions, aligning live database numbers exactly to the local SQLite question banks.
     6.  Committed and pushed updates to remote GitHub repositories. Staged, committed, and pushed the updated `public/backend_url.txt` file which was missed in the initial push, fixing the 502 Bad Gateway CORS errors by resolving Netlify's backend URL mapping to the active Serveo tunnel.
+
+## Session 42: Auto-Startup Configuration via Scheduled Tasks & Cloudflare Windows Service
+*   **Request**: Configure the PC to automatically start the backend services on restart.
+*   **Work Done**:
+    1.  **Configured System-Wide PHP Thread Count**: Set `PHP_CLI_SERVER_WORKERS = 8` as a system-wide machine-level environment variable to ensure concurrent requests are processed with 8 worker threads automatically.
+    2.  **Registered PHP Auto-Startup Task**: Created a Windows Scheduled Task `PHPBackendServer` configured to run at system startup (`AtStartup`) under the `SYSTEM` account with Highest privileges, pointing to `d:\JEE` with the multi-threaded router script.
+    3.  **Installed Cloudflare Tunnel Service**: Installed the user's permanent Cloudflare Tunnel connector (`Cloudflared`) as a Windows service configured to start automatically on system boot.
+    4.  **Hardened Tunnel Script**: Modified `scripts/run_tunnel.ps1` to use robust `Start-Process` calls with explicit working directories for Git operations, preventing TTY/console piping hangs when run inside background scheduled tasks.
+
