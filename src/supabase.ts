@@ -887,18 +887,28 @@ export const toggleAdminModuleAccess = async (adminId: string, currentAccess: bo
 export const updateAdminModulePermissions = async (adminId: string, perms: { can_access_daily: boolean, can_access_full_exam: boolean, can_access_practice: boolean }) => {
   try {
     const hasAny = perms.can_access_daily || perms.can_access_full_exam || perms.can_access_practice;
-    const { error: fullErr } = await supabase.from('profiles').update({ 
-      super_admin_permission: hasAny,
-      can_access_daily: perms.can_access_daily,
-      can_access_full_exam: perms.can_access_full_exam,
-      can_access_practice: perms.can_access_practice
-    }).eq('id', adminId);
+    const updateData = {
+      super_admin_permission: hasAny ? true : false,
+      can_access_daily: perms.can_access_daily ? true : false,
+      can_access_full_exam: perms.can_access_full_exam ? true : false,
+      can_access_practice: perms.can_access_practice ? true : false
+    };
+
+    const { error: fullErr } = await supabase.from('profiles').update(updateData).eq('id', adminId);
 
     if (fullErr) {
       console.warn("Full column update warning, falling back to master column update:", fullErr);
-      const { error: masterErr } = await supabase.from('profiles').update({ super_admin_permission: hasAny }).eq('id', adminId);
+      const { error: masterErr } = await supabase.from('profiles').update({ super_admin_permission: hasAny ? true : false }).eq('id', adminId);
       if (masterErr) return masterErr.message;
     }
+
+    // Cascade permissions to students assigned to this admin
+    try {
+      await supabase.from('profiles').update(updateData).eq('admin_id', adminId);
+    } catch (sErr) {
+      console.warn("Student module permission cascade warning:", sErr);
+    }
+
     return null;
   } catch (e: any) {
     return e.message || "Error updating module permissions";
@@ -930,8 +940,18 @@ export const deleteAdminAndStudents = async (adminId: string) => {
 export const toggleAdminFreezeStatus = async (adminId: string, isCurrentlyFrozen: boolean) => {
   try {
     const newStatus = isCurrentlyFrozen ? 'approved' : 'frozen';
-    const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', adminId);
-    if (error) return error.message;
+    const newIsFrozen = isCurrentlyFrozen ? false : true;
+
+    const { error: adminErr } = await supabase.from('profiles').update({ status: newStatus, is_frozen: newIsFrozen }).eq('id', adminId);
+    if (adminErr) return adminErr.message;
+
+    // Cascade freeze status to assigned students
+    try {
+      await supabase.from('profiles').update({ status: newStatus, is_frozen: newIsFrozen }).eq('admin_id', adminId);
+    } catch (sErr) {
+      console.warn("Student freeze cascade warning:", sErr);
+    }
+
     return null;
   } catch (e: any) {
     return e.message || "Error toggling freeze status";
