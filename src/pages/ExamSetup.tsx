@@ -160,14 +160,23 @@ const ExamSetup = () => {
           }
         }
 
-        // 3. Fallback to Synthesized Offline Bank if still empty
-        if (!questions || questions.length === 0) {
+        // 3. Fallback / Top-Up to ensure exact question count
+        if (!questions || questions.length < totalPerSubject) {
           try {
             const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
             const service = await getStreamGeminiService(activeStream);
-            source = "Synthesized Exam Bank";
-            questions = service.generateFallbackQuestions(sub, questionCounts.mcq, questionCounts.numerical);
-            await saveQuestionsToDB(questions);
+            source = questions && questions.length > 0 ? "Database + Top-up Bank" : "Synthesized Exam Bank";
+            
+            const currentMcqs = (questions || []).filter((q: any) => q.type !== 'Numerical');
+            const currentNums = (questions || []).filter((q: any) => q.type === 'Numerical');
+            
+            const neededMcq = Math.max(0, questionCounts.mcq - currentMcqs.length);
+            const neededNum = Math.max(0, questionCounts.numerical - currentNums.length);
+            
+            if (neededMcq > 0 || neededNum > 0) {
+              const fallbackQs = service.generateFallbackQuestions(sub, neededMcq, neededNum);
+              questions = [...(questions || []), ...fallbackQs];
+            }
           } catch (fbErr) {
             console.error(`[ExamSetup] Offline fallback synthesis failed for ${sub}:`, fbErr);
           }
@@ -203,7 +212,7 @@ const ExamSetup = () => {
     let finalQuestions = preparedQuestions;
     try {
       const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
-      finalQuestions = filterUniqueQuestions(preparedQuestions);
+      finalQuestions = filterUniqueQuestions(preparedQuestions, preparedQuestions.length);
       recordSeenQuestions(finalQuestions);
     } catch (trackerErr) {
       console.warn("Question tracker error in launchExam, proceeding with prepared questions:", trackerErr);

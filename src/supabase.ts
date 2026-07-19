@@ -453,6 +453,12 @@ export const fetchQuestionsFromDB = async (
 
 export const submitExamAttempt = async (attempt: any) => {
   try {
+    if (!attempt.id) {
+      attempt.id = attempt.config?.draftAttemptId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      }));
+    }
     const { data, error } = await supabase.from('exam_attempts').upsert(attempt).select().single();
     if (error && error.message && error.message.includes("paid")) {
       console.warn("Schema cache missing 'paid' column, retrying upsert without 'paid' field...");

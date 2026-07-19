@@ -221,8 +221,11 @@ try {
             }
             
             // Check if record exists for upsert/update
-            $exists = false;
-            $pk_val = isset($processed_row[$primary_key]) ? $processed_row[$primary_key] : null;
+            $pk_val = (isset($processed_row[$primary_key]) && !empty($processed_row[$primary_key])) ? $processed_row[$primary_key] : null;
+            if ($pk_val === null && $primary_key === 'id') {
+                $pk_val = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x', mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0x0fff) | 0x4000, mt_rand(0, 0x3fff) | 0x8000, mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff));
+                $processed_row['id'] = $pk_val;
+            }
             
             if ($pk_val !== null) {
                 $check_stmt = $conn->prepare("SELECT COUNT(*) FROM `$table` WHERE `$primary_key` = ?");
