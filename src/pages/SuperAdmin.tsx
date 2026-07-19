@@ -11,7 +11,8 @@ import {
   getAdminStudentCount, updateAdminDetails, toggleAdminModuleAccess, updateAdminModulePermissions,
   getSystemStreams, saveSystemStreams, deleteAdminAndStudents, toggleAdminFreezeStatus,
   getQuestionsCountFromDB, seedMassiveQuestionsToDB, getAllQuestionsFromDB, getActualTotalRevenue,
-  getSubscriptionPlans, saveSubscriptionPlan, deleteSubscriptionPlan, grantFreePremiumAccess
+  getSubscriptionPlans, saveSubscriptionPlan, deleteSubscriptionPlan, grantFreePremiumAccess,
+  getSQLiteQuestionsCount, syncSQLiteQuestions
 } from '../supabase';
 import MathText, { renderMathInText } from '../components/MathText';
 import YearWisePYQ from './YearWisePYQ';
@@ -80,7 +81,9 @@ const SuperAdmin = () => {
 
   // Question Bank Seeder State
   const [dbQuestionCount, setDbQuestionCount] = useState<number>(0);
+  const [sqliteQuestionCount, setSqliteQuestionCount] = useState<number>(0);
   const [isSeedingDb, setIsSeedingDb] = useState<boolean>(false);
+  const [isSyncingSqlite, setIsSyncingSqlite] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportType, setExportType] = useState<'JS' | 'JSON' | 'SQL' | 'DOC' | null>(null);
   const [exportSubject, setExportSubject] = useState<'All' | 'Physics' | 'Chemistry' | 'Mathematics'>('All');
@@ -158,13 +161,15 @@ const SuperAdmin = () => {
       const indStudents = allUsers.filter((u: any) => u.role === 'student' && !u.admin_id);
       setIndependentStudents(indStudents);
 
-      // Fetch Live Question Count, Actual Revenue & Plans
-      const [qCount, rev, dbPlans] = await Promise.all([
+      // Fetch Live Question Count, SQLite Count, Actual Revenue & Plans
+      const [qCount, sqCount, rev, dbPlans] = await Promise.all([
         getQuestionsCountFromDB(),
+        getSQLiteQuestionsCount(),
         getActualTotalRevenue(),
         getSubscriptionPlans()
       ]);
       setDbQuestionCount(qCount);
+      setSqliteQuestionCount(sqCount);
       setTotalRevenue(rev.total);
       setPlansList(dbPlans || []);
 
@@ -191,6 +196,28 @@ const SuperAdmin = () => {
       setToast({ message: err.message || "Error seeding questions", type: 'error' });
     } finally {
       setIsSeedingDb(false);
+    }
+  };
+
+  const handleSyncSQLiteQuestions = async () => {
+    setIsSyncingSqlite(true);
+    try {
+      const result = await syncSQLiteQuestions();
+      if (result.success) {
+        setToast({ 
+          message: result.message || `🎉 Successfully synchronized database! ${result.inserted} questions imported.`, 
+          type: 'success' 
+        });
+        setDbQuestionCount(result.new_total);
+        const sqCount = await getSQLiteQuestionsCount();
+        setSqliteQuestionCount(sqCount);
+      } else {
+        setToast({ message: result.message || "Failed to sync SQLite questions.", type: 'error' });
+      }
+    } catch (err: any) {
+      setToast({ message: err.message || "Error syncing SQLite questions.", type: 'error' });
+    } finally {
+      setIsSyncingSqlite(false);
     }
   };
 
@@ -1764,29 +1791,29 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
             <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4 flex flex-col justify-between">
               <div className="space-y-4">
                 <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-indigo-500" />
-                  {activeStream.toLowerCase().includes('neet') ? 'Massive 60,000+ NEET Database' : 'Massive 1,500+ JEE SQL Script'}
+                  <Database className="w-4 h-4 text-indigo-500" />
+                  Local SQLite Question Bank Sync
                 </h4>
                 <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                  {activeStream.toLowerCase().includes('neet') ? (
-                    <>
-                      A massive standalone database containing 60,000+ NEET medical questions (15,000 per subject across Physics, Chemistry, Botany, Zoology) has been compiled and saved locally at <code className="bg-white px-2 py-1 rounded text-indigo-600 font-mono font-bold">neetdb/schema.sql</code>.
-                    </>
-                  ) : (
-                    <>
-                      A massive standalone SQL seeding script containing 1,500+ JEE questions has been compiled and saved locally at <code className="bg-white px-2 py-1 rounded text-indigo-600 font-mono font-bold">scratch/seed_thousands_questions.sql</code>.
-                    </>
-                  )}
-                </p>
-              </div>
-              <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 text-emerald-800 text-xs font-bold mt-auto">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>
                   {activeStream.toLowerCase().includes('neet')
-                    ? 'Run or manage active NEET question sets in your Supabase SQL Editor anytime for bulk imports.'
-                    : 'Run the generated script in your Supabase SQL Editor anytime for bulk imports.'}
-                </span>
+                    ? `A local SQLite database containing 60,000+ NEET medical questions (Physics, Chemistry, Botany, Zoology) is ready to sync.`
+                    : `A local SQLite database containing 14,000+ authentic JEE questions (Physics, Chemistry, Mathematics) is ready to sync.`}
+                </p>
+                <div className="p-3 bg-indigo-50/50 border border-indigo-100/50 rounded-xl flex items-center justify-between text-xs font-bold text-slate-700">
+                  <span>Available locally:</span>
+                  <span className="font-black text-indigo-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+                    {sqliteQuestionCount.toLocaleString()} Qs
+                  </span>
+                </div>
               </div>
+              <button
+                onClick={handleSyncSQLiteQuestions}
+                disabled={isSyncingSqlite || sqliteQuestionCount === 0}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-auto"
+              >
+                {isSyncingSqlite ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {isSyncingSqlite ? 'Syncing SQLite Questions...' : '🔄 Sync with Local SQLite'}
+              </button>
             </div>
 
             <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4 flex flex-col justify-between col-span-1 md:col-span-2 lg:col-span-3">

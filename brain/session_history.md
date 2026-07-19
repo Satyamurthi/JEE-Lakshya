@@ -278,3 +278,12 @@ This file records the chronological history of tasks, major changes, and feature
 
 
 
+## Session 41: SQLite to MariaDB Question Sync & Automatic Seeding Extension
+*   **Request**: Resolve the issue of other streams (NEET UG, etc.) showing 0 questions and only JEE Main & Advanced showing 12,906 questions. Sync the questions from local SQLite databases.
+*   **Work Done**:
+    1.  **Created Database Sync Endpoint (`api/sync_sqlite.php`)**: Built a memory-efficient PHP endpoint that dynamically routes to the active exam stream's SQLite question bank, streams questions via a `LEFT JOIN` cursor, and performs bulk transactions in MariaDB while checking for duplicate statements to ensure 100% data integrity.
+    2.  **Enabled SQLite PDO in PHP**: Uncommented the `pdo_sqlite` extension globally in `php.ini` and restarted the multi-threaded PHP worker pool to apply the configuration.
+    3.  **Updated DB Wrappers (`src/supabase.ts`)**: Implemented `getSQLiteQuestionsCount()` and `syncSQLiteQuestions()` to allow the React app to communicate with the sync API.
+    4.  **Interactive Super Admin UI (`src/pages/SuperAdmin.tsx`)**: Replaced the static database cards under the **Question Bank Manager** with a dynamic card displaying the number of questions available locally, complete with an interactive "Sync with Local SQLite" button and loaders/toasts.
+    5.  **Executed Multi-Stream Sync**: Synced NEET UG, successfully seeding all 60,000 medical questions in 27 seconds, and completed JEE Main & Advanced sync, bringing the database total to 22,377 questions after skipping duplicate records.
+    6.  Committed and pushed updates to remote GitHub repositories to trigger Netlify auto-deploys.

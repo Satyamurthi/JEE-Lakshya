@@ -603,23 +603,26 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 
 ---
 
-## 20. CURRENT OPERATIONAL STATE (as of Session 40)
+## 20. CURRENT OPERATIONAL STATE (as of Session 41)
 
-- ✅ PHP CLI server: 8 workers, port 8080
+- ✅ PHP CLI server: 8 workers, port 8080 (PDO SQLite extension enabled)
 - ✅ SSH Serveo Tunnel: Active, URL in `public/backend_url.txt`
 - ✅ Netlify: Auto-deploying from `Satyamurthi/JEE-Lakshya` main branch
 - ✅ MariaDB: Running, all 4 schemas initialized with **9 tables each**
+- ✅ Question Synchronization: Dynamic SQLite streaming sync implemented & executed
+  - JEE Main & Advanced (`jee_nexus`): **22,377** questions synchronized (after deduplication)
+  - NEET UG (`neet_nexus`): **60,000** questions synchronized (100% database population)
 - ✅ Super Admin: `satyu000@gmail.com` seeded in all schemas
 - ✅ CORS: Wildcard headers, OPTIONS preflight handled
 - ✅ Freeze/Unfreeze: Working, cascades to students
 - ✅ Grant/Revoke All: Working, cascades to students
 - ✅ Exam History: Visible after refresh (localStorage backup + DB merge)
 - ✅ LaTeX Rendering: Working in exam, results, and PDF export
-- ✅ Payment Logging: Every Razorpay payment saved to `payment_logs` table with Payment ID, amount, user, plan
+- ✅ Payment Logging: Every Razorpay payment saved to `payment_logs` table
 - ✅ Activity Logging: Login, exam_submit, daily_submit events saved to `activity_log` table
-- ✅ System Streams: Config stored in `system_config` DB (not localStorage-only)
+- ✅ System Streams: Config stored in `system_config` DB
 - ✅ Question Count Today: `gte` filter now works, shows real count
-- ✅ Revenue Calculation: Primary source = `payment_logs.amount_rupees` SUM (not ×10 hack)
+- ✅ Revenue Calculation: Primary source = `payment_logs.amount_rupees` SUM
 - ✅ `gte/lte/gt/lt` filters: Supported in `local_db.php`
 - ⚠️ Tunnel URL changes every time `run_tunnel.ps1` is run — normal behavior
 - ⚠️ Must run `run_tunnel.ps1` after every PC restart to restore connectivity

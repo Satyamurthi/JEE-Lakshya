@@ -1464,3 +1464,39 @@ export const grantFreePremiumAccess = async (email: string, tier: string, expire
   }
 };
 
+export const getSQLiteQuestionsCount = async (): Promise<number> => {
+  try {
+    const apiUrl = await getApiUrl();
+    const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
+    const response = await fetch(`${apiUrl}/sync_sqlite.php?action=count`, {
+      headers: { 'X-Active-Stream': activeStream }
+    });
+    if (!response.ok) return 0;
+    const res = await response.json();
+    return res.success ? res.sqlite_count : 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const syncSQLiteQuestions = async (): Promise<{ success: boolean; inserted: number; skipped: number; new_total: number; message: string }> => {
+  try {
+    const apiUrl = await getApiUrl();
+    const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
+    const response = await fetch(`${apiUrl}/sync_sqlite.php`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Active-Stream': activeStream 
+      },
+      body: JSON.stringify({ action: 'sync' })
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const res = await response.json();
+    return res;
+  } catch (e: any) {
+    return { success: false, inserted: 0, skipped: 0, new_total: 0, message: e.message || 'Sync failed.' };
+  }
+};
+
+
