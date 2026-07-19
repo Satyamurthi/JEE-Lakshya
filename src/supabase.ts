@@ -23,7 +23,7 @@ export const getApiUrl = async (): Promise<string> => {
   
   // Try to load dynamic backend URL from public file hosted on the same domain
   try {
-    const res = await fetch('/backend_url.txt');
+    const res = await fetch('/backend_url.txt?t=' + Date.now());
     if (res.ok) {
       let text = (await res.text()).trim();
       if (text && text.startsWith('http')) {
