@@ -1,16 +1,16 @@
 $Cwd = "d:\JEE"
-$LogPath = "$Cwd\cloudflared_run.log"
+$LogPath = "$Cwd\serveo_run.log"
 $UrlFile = "$Cwd\public\backend_url.txt"
 $Pat = "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"
 
-# 1. Kill any existing cloudflared process
-Stop-Process -Name "cloudflared" -Force -ErrorAction SilentlyContinue
+# 1. Kill any existing ssh processes running serveo
+Get-Process -Name "ssh" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 # 2. Delete old log file
 Remove-Item -Path $LogPath -Force -ErrorAction SilentlyContinue
 
-# 3. Start cloudflared tunnel
-Start-Process -FilePath "$Cwd\cloudflared.exe" -ArgumentList "tunnel", "--url", "http://localhost" -RedirectStandardError $LogPath -WindowStyle Hidden -PassThru
+# 3. Start SSH serveo tunnel
+Start-Process -FilePath "C:\Windows\System32\OpenSSH\ssh.exe" -ArgumentList "-o", "StrictHostKeyChecking=no", "-o", "ServerAliveInterval=30", "-R", "80:127.0.0.1:8080", "serveo.net" -RedirectStandardOutput $LogPath -RedirectStandardError "$Cwd\serveo_err.log" -WindowStyle Hidden -PassThru
 
 # 4. Wait for the URL to be generated (up to 20 seconds)
 $Url = ""
@@ -18,8 +18,7 @@ for ($i = 0; $i -lt 20; $i++) {
     Start-Sleep -Seconds 1
     if (Test-Path $LogPath) {
         $LogContent = Get-Content -Path $LogPath -Raw
-        # Extract trycloudflare URL
-        if ($LogContent -match '(https://[a-zA-Z0-9\-]+\.trycloudflare\.com)') {
+        if ($LogContent -match '(https://[a-zA-Z0-9\-]+\.serveousercontent\.com)') {
             $Url = $Matches[1]
             break
         }
@@ -51,7 +50,7 @@ if ($Url -ne $CurrentUrl) {
     git config user.email "satyu000@gmail.com"
     
     git add public/backend_url.txt
-    git commit -m "chore: update dynamic backend tunnel URL [skip ci]"
+    git commit -m "chore: update dynamic backend tunnel URL"
     
     # Push to repositories
     git push "https://$($Pat)@github.com/Satyamurthi/JEE-Lakshya.git" main --force
