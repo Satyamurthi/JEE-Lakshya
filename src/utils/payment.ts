@@ -56,9 +56,7 @@ export const initiateRazorpayPayment = async (
         const orderRes = await fetch(paymentUrl, {
           method: 'POST',
           headers: { 
-            'Content-Type': 'application/json',
-            'apikey': (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '',
-            'Authorization': `Bearer ${(import.meta as any).env.VITE_SUPABASE_ANON_KEY || ''}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({ amount: amountInPaise, receipt: sanitizedReceipt })
         });
@@ -117,9 +115,7 @@ export const initiateRazorpayPayment = async (
               const verifyRes = await fetch(verifyUrl, {
                 method: 'POST',
                 headers: { 
-                  'Content-Type': 'application/json',
-                  'apikey': (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '',
-                  'Authorization': `Bearer ${(import.meta as any).env.VITE_SUPABASE_ANON_KEY || ''}`
+                  'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                   razorpay_payment_id: response.razorpay_payment_id,
