@@ -165,7 +165,7 @@ const SuperAdmin = () => {
         getSubscriptionPlans()
       ]);
       setDbQuestionCount(qCount);
-      setTotalRevenue(rev);
+      setTotalRevenue(rev.total);
       setPlansList(dbPlans || []);
 
     } catch (err: any) {
