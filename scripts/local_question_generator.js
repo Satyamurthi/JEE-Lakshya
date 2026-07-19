@@ -1,11 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 // Load environment variables manually from .env
 const envPath = resolve('.env');
-let supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-let supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+let apiUrl = 'http://localhost/api';
 let geminiApiKey = process.env.GEMINI_API_KEY;
 
 if (existsSync(envPath)) {
@@ -17,10 +15,30 @@ if (existsSync(envPath)) {
     const key = parts[0].trim();
     const val = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, '');
     
-    if (key === 'SUPABASE_URL' || key === 'VITE_SUPABASE_URL') supabaseUrl = val;
-    if (key === 'SUPABASE_ANON_KEY' || key === 'VITE_SUPABASE_ANON_KEY') supabaseKey = val;
+    if (key === 'VITE_API_URL') apiUrl = val;
     if (key === 'GEMINI_API_KEY') geminiApiKey = val;
   });
+}
+
+async function callLocalDB(action, table, payload = null, filters = []) {
+  const activeStream = 'JEE Main & Advanced';
+  const response = await fetch(`${apiUrl}/local_db.php`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Active-Stream': activeStream
+    },
+    body: JSON.stringify({
+      table,
+      action,
+      payload,
+      filters
+    })
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  return await response.json();
 }
 
 // Configuration options
@@ -200,18 +218,12 @@ async function run() {
   console.log(`Successfully generated: ${successCount}/${CONFIG.count} questions.`);
   console.log(`Total questions in local archive: ${archive.length}`);
 
-  // Optional: Upload archive to Supabase
-  if (supabaseUrl && supabaseKey) {
-    console.log('\nDo you want to upload local questions to Supabase? (To run upload, call "node scripts/local_question_generator.js upload")');
-  }
+  // Optional: Upload archive to Local DB
+  console.log('\nDo you want to upload local questions to Local DB? (To run upload, call "node scripts/local_question_generator.js upload")');
 }
 
-async function uploadToSupabase() {
-  console.log(`=== Uploading Local Archive to Supabase ===`);
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('Error: Supabase credentials are not configured in your env.');
-    process.exit(1);
-  }
+async function uploadToLocalDB() {
+  console.log(`=== Uploading Local Archive to Local DB ===`);
 
   if (!existsSync(CONFIG.outputFile)) {
     console.error(`Error: Local archive file ${CONFIG.outputFile} does not exist.`);
@@ -221,7 +233,6 @@ async function uploadToSupabase() {
   const archive = JSON.parse(readFileSync(CONFIG.outputFile, 'utf8'));
   console.log(`Found ${archive.length} questions in local archive to upload.`);
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
   const batchSize = 100;
   let successCount = 0;
 
@@ -229,12 +240,14 @@ async function uploadToSupabase() {
     const batch = archive.slice(i, i + batchSize);
     console.log(`Uploading batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(archive.length / batchSize)}...`);
     
-    const { error } = await supabase.from('questions').upsert(batch, { onConflict: 'statement' });
+    const result = await callLocalDB('upsert', 'questions', batch);
+    const error = result.error;
     if (error) {
-      console.error(`Failed to upload batch. Error:`, error.message);
+      console.error(`Failed to upload batch. Error:`, error.message || JSON.stringify(error));
       // Sequentially insert fallback
       for (const item of batch) {
-        const { error: singleErr } = await supabase.from('questions').insert([item]);
+        const singleResult = await callLocalDB('insert', 'questions', [item]);
+        const singleErr = singleResult.error;
         if (!singleErr) {
           successCount++;
         }
@@ -250,7 +263,7 @@ async function uploadToSupabase() {
 // Parse CLI command
 const args = process.argv.slice(2);
 if (args[0] === 'upload') {
-  uploadToSupabase();
+  uploadToLocalDB();
 } else {
   run();
 }

@@ -1,17 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const apiUrl = process.env.VITE_API_URL || 'http://localhost/api';
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase configuration in environment variables');
-  process.exit(1);
+async function callLocalDB(action, table, payload = null, filters = []) {
+  const activeStream = 'JEE Main & Advanced';
+  const response = await fetch(`${apiUrl}/local_db.php`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Active-Stream': activeStream
+    },
+    body: JSON.stringify({
+      table,
+      action,
+      payload,
+      filters
+    })
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  return await response.json();
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 function normalize(str) {
   if (!str) return '';
@@ -20,14 +32,12 @@ function normalize(str) {
 
 async function run() {
   try {
-    console.log('--- Phase 1: Fetching existing questions from Supabase ---');
-    const { data: existingQs, error: fetchErr } = await supabase
-      .from('questions')
-      .select('subject, type, statement');
+    console.log('--- Phase 1: Fetching existing questions from Local DB ---');
+    const result = await callLocalDB('select', 'questions', null, []);
+    if (result.error) throw new Error(result.error.message || JSON.stringify(result.error));
+    const existingQs = result.data || [];
 
-    if (fetchErr) throw fetchErr;
-
-    console.log(`Found ${existingQs.length} existing questions in Supabase.`);
+    console.log(`Found ${existingQs.length} existing questions in local DB.`);
     
     // Store normalized statements for deduplication
     const seenStatements = new Set();
@@ -218,13 +228,13 @@ async function run() {
     console.log('Final target distribution inside upload queue:', counts);
     console.log(`Total questions scheduled for bulk upload: ${uploadQueue.length}`);
 
-    // --- Phase 4: Bulk upload to Supabase in batches of 500 ---
+    // --- Phase 4: Bulk upload to Local DB in batches of 500 ---
     if (uploadQueue.length === 0) {
       console.log('\nAll subject/type targets are already fully satisfied. No uploads needed.');
       return;
     }
 
-    console.log('\n--- Phase 4: Uploading questions to Supabase ---');
+    console.log('\n--- Phase 4: Uploading questions to Local DB ---');
     const batchSize = 500;
     let uploadedCount = 0;
 
@@ -232,16 +242,20 @@ async function run() {
       const batch = uploadQueue.slice(i, i + batchSize);
       console.log(`Uploading batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(uploadQueue.length / batchSize)} (${batch.length} items)...`);
       
-      const { error: uploadErr } = await supabase.from('questions').insert(batch);
+      const result = await callLocalDB('insert', 'questions', batch);
+      const uploadErr = result.error;
+      
       if (uploadErr) {
-        console.error('Batch upload failed. Retrying sequentially...', uploadErr.message);
+        console.error('Batch upload failed. Retrying sequentially...', uploadErr.message || JSON.stringify(uploadErr));
         // Fallback: try inserting one-by-one to bypass individual constraint violations
         for (const item of batch) {
-          const { error: singleErr } = await supabase.from('questions').insert([item]);
+          const singleResult = await callLocalDB('insert', 'questions', [item]);
+          const singleErr = singleResult.error;
           if (singleErr) {
             // Log constraint error but keep going
-            if (!singleErr.message.includes('duplicate')) {
-              console.warn(`[Seeder] Could not insert question:`, singleErr.message);
+            const errMsg = singleErr.message || JSON.stringify(singleErr);
+            if (!errMsg.includes('duplicate') && !errMsg.includes('Duplicate')) {
+              console.warn(`[Seeder] Could not insert question:`, errMsg);
             }
           } else {
             uploadedCount++;
