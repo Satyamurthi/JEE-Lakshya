@@ -1,7 +1,7 @@
 /**
  * Question & Math Sanitizer Utility
  * Cleans up raw text, decodes HTML entities, strips internal tags like [JEE Hard #123],
- * strips malformed/pre-rendered HTML tags, and fixes KaTeX formatting & brace errors.
+ * strips malformed/pre-rendered HTML tags, and fixes KaTeX formatting & fraction syntax errors.
  */
 
 const PUA_MAP: Record<string, string> = {
@@ -60,18 +60,14 @@ export const fixTeXBraces = (tex: string): string => {
   if (!tex) return '';
   let t = tex;
 
-  // 1. Fix corrupted \frac syntax with excess braces or parens e.g. \frac{((309)}{{22}} or \frac{((135)}{{2}}
-  t = t.replace(/\\frac\{\s*\(\(\s*([^()]+)\s*\)\s*\}\}\{\{\s*([^}]+)\s*\}\}/g, '\\frac{$1}{$2}');
-  t = t.replace(/\\frac\{\s*\(\(\s*([^()]+)\s*\)\s*\}/g, '\\frac{$1}');
-  t = t.replace(/\\frac\{\s*([^}]+)\s*\}\}\{\{\s*([^}]+)\s*\}\}/g, '\\frac{$1}{$2}');
-  t = t.replace(/\\frac\{\s*\{([^}]+)\}\s*\}\{\s*\{([^}]+)\}\s*\}/g, '\\frac{$1}{$2}');
-  t = t.replace(/\\frac\{\s*([^}]+)\}\s*\}\{\s*\{([^}]+)\}\s*\}/g, '\\frac{$1}{$2}');
-  t = t.replace(/\\frac\{\s*\{([^}]+)\}\s*\}\{\s*([^}]+)\s*\}/g, '\\frac{$1}{$2}');
+  // 1. Clean up corrupted fractions with parens/braces like \frac{((309)}{{22}} or \frac{((135)}{{2}} or \frac{((135)}{(2)}
+  t = t.replace(/\\frac\s*\{\s*[\(\{\s]*([^()\{\}\s]+)[\)\}\s]*\}\s*\{\s*[\(\{\s]*([^()\{\}\s]+)[\)\}\s]*\}/gi, '\\frac{$1}{$2}');
+  t = t.replace(/\\frac\s*\{\s*[\(\{\s]*([^{}]+?)[\)\}\s]*\}\s*\{\s*[\(\{\s]*([^{}]+?)[\)\}\s]*\}/gi, '\\frac{$1}{$2}');
 
-  // 2. Fix nested double braces in fractions \frac{{A}}{{B}} -> \frac{A}{B}
-  t = t.replace(/\\frac\{\{+([^}]+)\}+\}/g, '\\frac{$1}');
-  t = t.replace(/\\frac\{([^}]+)\}\{\{+([^}]+)\}+\}/g, '\\frac{$1}{$2}');
-  t = t.replace(/\\frac\{\{+([^}]+)\}+\}\{([^}]+)\}/g, '\\frac{$1}{$2}');
+  // 2. Clean up double parentheses inside math expressions: ((A)) -> (A), ((A) -> (A)
+  t = t.replace(/\(\(\s*([^()]+)\s*\)\)/gi, '($1)');
+  t = t.replace(/\(\(\s*([^()]+)\s*\)/gi, '($1)');
+  t = t.replace(/\(\s*([^()]+)\s*\)\)/gi, '($1)');
 
   // 3. Balance unclosed braces if any
   let openCount = (t.match(/\{/g) || []).length;
@@ -121,19 +117,7 @@ export const cleanQuestionText = (text: string): string => {
 
   let cleaned = String(text);
 
-  // 0. Extract raw TeX from embedded annotation blocks (<annotation ...>TeX</annotation>) if present
-  if (/<[\s]*annotation/i.test(cleaned)) {
-    cleaned = cleaned.replace(/<\s*annotation[^>]*>([\s\S]*?)<\s*\/\s*annotation\s*>/gi, ' $$$$ $1 $$$$ ');
-  }
-
-  // 1. Strip ALL HTML-like tags (including malformed tags with spaces like < spanclass = ... >, < / span >, < mathxmlns = ... >)
-  cleaned = cleaned.replace(/<\s*\/?[^>]+>/gi, ' ');
-
-  // 2. Strip internal identification tags like [JEE Hard #771], [NEET Medium #3015], [#507]
-  cleaned = cleaned.replace(/\[\s*(JEE|NEET|KCET|UPSC)?\s*(Hard|Medium|Easy|Advanced|Main)?\s*#\d+\s*\]/gi, '');
-  cleaned = cleaned.replace(/\[\s*#\d+\s*\]/gi, '');
-
-  // 3. Decode common HTML entities that break math rendering
+  // 1. FIRST decode HTML entities (&lt; -> <, &gt; -> >, &amp; -> &, &quot; -> ", &#39; -> ', &nbsp; -> ' ')
   cleaned = cleaned
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -142,19 +126,31 @@ export const cleanQuestionText = (text: string): string => {
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, ' ');
 
-  // 4. Replace Private Use Area (PUA) font glyphs from PDF extraction
+  // 2. Extract raw TeX from embedded annotation blocks (<annotation ...>TeX</annotation>) if present
+  if (/<[\s]*annotation/i.test(cleaned)) {
+    cleaned = cleaned.replace(/<\s*annotation[^>]*>([\s\S]*?)<\s*\/\s*annotation\s*>/gi, ' $$$$ $1 $$$$ ');
+  }
+
+  // 3. Strip ALL HTML-like tags (including malformed tags with spaces like < spanclass = ... >, < / span >, < mathxmlns = ... >)
+  cleaned = cleaned.replace(/<\s*\/?[^>]+>/gi, ' ');
+
+  // 4. Strip internal identification tags like [JEE Hard #771], [NEET Medium #3015], [#507]
+  cleaned = cleaned.replace(/\[\s*(JEE|NEET|KCET|UPSC)?\s*(Hard|Medium|Easy|Advanced|Main)?\s*#\d+\s*\]/gi, '');
+  cleaned = cleaned.replace(/\[\s*#\d+\s*\]/gi, '');
+
+  // 5. Replace Private Use Area (PUA) font glyphs from PDF extraction
   cleaned = cleaned.replace(/[\uf000-\uf0ff]/g, (char) => PUA_MAP[char] || '');
 
-  // 5. Preprocess TeX macros (\matrix, \over, \cr, \left\{ ... \right., brace fixes)
+  // 6. Preprocess TeX macros (\matrix, \over, \cr, \left\{ ... \right., brace fixes)
   cleaned = preprocessTeXMacros(cleaned);
 
-  // 6. Clean up corrupted greatest integer notation artifacts like [ ]≡ or [ ]⋅
+  // 7. Clean up corrupted greatest integer notation artifacts like [ ]≡ or [ ]⋅
   cleaned = cleaned.replace(/\[\s*\]\s*≡/g, '[·]').replace(/\[\s*\]\s*⋅/g, '[·]');
 
-  // 7. Clean up KaTeX formatting issues (e.g. {\rho _{oil}} formatting)
+  // 8. Clean up KaTeX formatting issues (e.g. {\rho _{oil}} formatting)
   cleaned = cleaned.replace(/\{\s*\\rho\s*_\{([^}]+)\}\s*\}/g, '\\rho_{$1}');
 
-  // 8. Normalize contiguous whitespace
+  // 9. Normalize contiguous whitespace
   cleaned = cleaned.replace(/\s+/g, ' ');
 
   return cleaned.trim();
