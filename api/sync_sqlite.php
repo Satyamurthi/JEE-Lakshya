@@ -75,14 +75,9 @@ try {
             $chapter_map[$ch['id']] = $ch['name'];
         }
 
-        // Fetch existing question statement hashes from MariaDB to prevent duplicates
+        // Clear existing questions in MariaDB to perform a clean sync
+        $conn->exec("TRUNCATE TABLE questions");
         $existing_hashes = [];
-        $maria_stmt = $conn->query("SELECT statement FROM questions");
-        while ($row = $maria_stmt->fetch(PDO::FETCH_ASSOC)) {
-            $normalized = strtolower(preg_replace('/[^a-z0-9]/', '', $row['statement']));
-            $existing_hashes[md5($normalized)] = true;
-        }
-        $maria_stmt = null;
 
         // Setup PDO Transaction for fast batch inserts
         $conn->beginTransaction();
