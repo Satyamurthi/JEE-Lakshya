@@ -217,3 +217,29 @@ This file records the chronological history of tasks, major changes, and feature
     8.  Updated all query endpoints and authentication hooks in `src/supabase.ts` and [Login.tsx](file:///d:/JEE/src/pages/Login.tsx) to resolve URL routes via `getApiUrl()` rather than hardcoding to local machine `localhost`.
     9.  Cleaned up the authentication process in `Login.tsx` and `api/auth.php` to bypass all remaining Supabase fallback functions, directly validating credentials locally and returning the full user catalog securely (unsetting password details).
     10. Committed changes and pushed updates to `JEE-Lakshya` and `JEE-Nexus` GitHub repositories to redeploy the Netlify client.
+
+
+---
+
+## Session 32: HTML Entity Pre-Decoding & Fraction Parens Repair
+*   **Request**: Eliminate persistent `< spanclass = "katex - display" >` raw HTML text strings on Results page.
+*   **Work Done**:
+    1.  **Identified Order-of-Operations Bug**: Discovered that HTML entities (`&lt;`, `&gt;`) were being decoded *after* the HTML tag stripper ran, causing `&lt; spanclass = ... &gt;` to bypass tag stripping and display as raw text `< spanclass ... >` after decoding.
+    2.  **Order-of-Operations Fix**: Reordered `cleanQuestionText` in [src/utils/sanitizer.ts](file:///d:/JEE/src/utils/sanitizer.ts) to decode HTML entities as **Step 1** before tag stripping. All malformed HTML tags are now 100% stripped.
+    3.  **Enhanced Fraction Parens Repair**: Updated `fixTeXBraces()` to clean double-bracket fractions (`\frac{((309)}{{22}}` $\rightarrow$ `\frac{309}{22}` and `\frac{((135)}{(2)}` $\rightarrow$ `\frac{135}{2}`), eliminating KaTeX red error rendering.
+    4.  Committed and pushed updates to GitHub (`Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus`).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
