@@ -1,7 +1,7 @@
 /**
  * Question & Math Sanitizer Utility
  * Cleans up raw text, decodes HTML entities, strips internal tags like [JEE Hard #123],
- * extracts math from pre-rendered/malformed KaTeX HTML, and converts legacy TeX macros to KaTeX.
+ * strips malformed/pre-rendered HTML tags, and fixes KaTeX formatting & brace errors.
  */
 
 const PUA_MAP: Record<string, string> = {
@@ -60,14 +60,20 @@ export const fixTeXBraces = (tex: string): string => {
   if (!tex) return '';
   let t = tex;
 
-  // Fix malformed \frac formatting with double parentheses or excess braces e.g. \frac{((309)}{{22}}
+  // 1. Fix corrupted \frac syntax with excess braces or parens e.g. \frac{((309)}{{22}} or \frac{((135)}{{2}}
   t = t.replace(/\\frac\{\s*\(\(\s*([^()]+)\s*\)\s*\}\}\{\{\s*([^}]+)\s*\}\}/g, '\\frac{$1}{$2}');
   t = t.replace(/\\frac\{\s*\(\(\s*([^()]+)\s*\)\s*\}/g, '\\frac{$1}');
+  t = t.replace(/\\frac\{\s*([^}]+)\s*\}\}\{\{\s*([^}]+)\s*\}\}/g, '\\frac{$1}{$2}');
   t = t.replace(/\\frac\{\s*\{([^}]+)\}\s*\}\{\s*\{([^}]+)\}\s*\}/g, '\\frac{$1}{$2}');
   t = t.replace(/\\frac\{\s*([^}]+)\}\s*\}\{\s*\{([^}]+)\}\s*\}/g, '\\frac{$1}{$2}');
   t = t.replace(/\\frac\{\s*\{([^}]+)\}\s*\}\{\s*([^}]+)\s*\}/g, '\\frac{$1}{$2}');
-  
-  // Balance unclosed braces if any
+
+  // 2. Fix nested double braces in fractions \frac{{A}}{{B}} -> \frac{A}{B}
+  t = t.replace(/\\frac\{\{+([^}]+)\}+\}/g, '\\frac{$1}');
+  t = t.replace(/\\frac\{([^}]+)\}\{\{+([^}]+)\}+\}/g, '\\frac{$1}{$2}');
+  t = t.replace(/\\frac\{\{+([^}]+)\}+\}\{([^}]+)\}/g, '\\frac{$1}{$2}');
+
+  // 3. Balance unclosed braces if any
   let openCount = (t.match(/\{/g) || []).length;
   let closeCount = (t.match(/\}/g) || []).length;
   while (openCount > closeCount) {
@@ -83,21 +89,21 @@ export const preprocessTeXMacros = (tex: string): string => {
 
   // Fix double parentheses or corrupted braces first
   m = fixTeXBraces(m);
-  
+
   // 1. Convert TeX \over fraction notation: { A \over B } -> \frac{A}{B}
   for (let i = 0; i < 5; i++) {
     if (!m.includes('\\over')) break;
     m = m.replace(/\{\s*([^{}]+?)\s+\\over\s+([^{}]+?)\s*\}/g, '\\frac{$1}{$2}');
     m = m.replace(/([a-zA-Z0-9_\{\}\(\)\|]+)\s+\\over\s+([a-zA-Z0-9_\{\}\(\)\|]+)/g, '\\frac{$1}{$2}');
   }
-  
+
   // 2. Convert TeX \matrix notation: {\matrix{ A & B \cr C & D }} or \matrix{ A & B \cr C & D }
   m = m.replace(/\{\s*\\matrix\s*\{([\s\S]*?)\}\s*\}/g, '\\begin{matrix}$1\\end{matrix}');
   m = m.replace(/\\matrix\s*\{([\s\S]*?)\}/g, '\\begin{matrix}$1\\end{matrix}');
-  
+
   // 3. Convert TeX \cr line breaks to KaTeX \\ line breaks
   m = m.replace(/\\cr\b/g, '\\\\');
-  
+
   // 4. Convert \left\{ \begin{matrix} ... \end{matrix} \right. to \begin{cases} ... \end{cases}
   m = m.replace(/\\left\\\{\s*\\begin\{matrix\}([\s\S]*?)\\end\{matrix\}\s*\\right\./g, '\\begin{cases}$1\\end{cases}');
   m = m.replace(/\\left\\\{\s*([\s\S]*?)\\right\./g, (match, inner) => {
@@ -115,20 +121,19 @@ export const cleanQuestionText = (text: string): string => {
 
   let cleaned = String(text);
 
-  // 0. Extract math from embedded pre-rendered / malformed KaTeX HTML tags
-  if (/katex|mathml|mathxmlns|spanclass|annotation/i.test(cleaned)) {
-    // Extract raw TeX from annotation block if present (even if HTML tags have weird spaces like < \s* annotation >)
+  // 0. Extract raw TeX from embedded annotation blocks (<annotation ...>TeX</annotation>) if present
+  if (/<[\s]*annotation/i.test(cleaned)) {
     cleaned = cleaned.replace(/<\s*annotation[^>]*>([\s\S]*?)<\s*\/\s*annotation\s*>/gi, ' $$$$ $1 $$$$ ');
-    
-    // Strip all katex / mathml / spanclass / math / semantics / mrow / mo / strut HTML elements
-    cleaned = cleaned.replace(/<\s*\/?\s*(spanclass|span|mathxmlns|math|semantics|annotation|mrow|mo|annotationencoding|annotation-xml|annotation)[^>]*>/gi, '');
   }
 
-  // 1. Strip internal identification tags like [JEE Hard #771], [NEET Medium #3015], [#507]
+  // 1. Strip ALL HTML-like tags (including malformed tags with spaces like < spanclass = ... >, < / span >, < mathxmlns = ... >)
+  cleaned = cleaned.replace(/<\s*\/?[^>]+>/gi, ' ');
+
+  // 2. Strip internal identification tags like [JEE Hard #771], [NEET Medium #3015], [#507]
   cleaned = cleaned.replace(/\[\s*(JEE|NEET|KCET|UPSC)?\s*(Hard|Medium|Easy|Advanced|Main)?\s*#\d+\s*\]/gi, '');
   cleaned = cleaned.replace(/\[\s*#\d+\s*\]/gi, '');
 
-  // 2. Decode common HTML entities that break math rendering
+  // 3. Decode common HTML entities that break math rendering
   cleaned = cleaned
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -137,13 +142,10 @@ export const cleanQuestionText = (text: string): string => {
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, ' ');
 
-  // 3. Clean up bad HTML breaks inside or outside math blocks
-  cleaned = cleaned.replace(/<\s*br\s*\/?>/gi, ' ');
-
   // 4. Replace Private Use Area (PUA) font glyphs from PDF extraction
   cleaned = cleaned.replace(/[\uf000-\uf0ff]/g, (char) => PUA_MAP[char] || '');
 
-  // 5. Preprocess TeX macros (\matrix, \over, \cr, \left\{ ... \right.)
+  // 5. Preprocess TeX macros (\matrix, \over, \cr, \left\{ ... \right., brace fixes)
   cleaned = preprocessTeXMacros(cleaned);
 
   // 6. Clean up corrupted greatest integer notation artifacts like [ ]≡ or [ ]⋅
@@ -151,6 +153,9 @@ export const cleanQuestionText = (text: string): string => {
 
   // 7. Clean up KaTeX formatting issues (e.g. {\rho _{oil}} formatting)
   cleaned = cleaned.replace(/\{\s*\\rho\s*_\{([^}]+)\}\s*\}/g, '\\rho_{$1}');
+
+  // 8. Normalize contiguous whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ');
 
   return cleaned.trim();
 };
