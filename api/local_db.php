@@ -238,13 +238,28 @@ try {
                 }
             } catch (Exception $e) {}
 
+            // Extract filters for UPDATE/UPSERT
+            $filters = isset($input['filters']) ? $input['filters'] : [];
+
             // Check if record exists for upsert/update
             $pk_val = (isset($processed_row[$primary_key]) && !empty($processed_row[$primary_key])) ? $processed_row[$primary_key] : null;
-            if ($pk_val === null && $primary_key === 'id') {
+
+            // If $pk_val is missing from payload, check if it exists in $filters
+            if ($pk_val === null && !empty($filters)) {
+                foreach ($filters as $f) {
+                    if (isset($f['column']) && $f['column'] === $primary_key && isset($f['value'])) {
+                        $pk_val = $f['value'];
+                        break;
+                    }
+                }
+            }
+            
+            if ($pk_val === null && $primary_key === 'id' && $action !== 'update') {
                 $pk_val = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x', mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0x0fff) | 0x4000, mt_rand(0, 0x3fff) | 0x8000, mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff));
                 $processed_row['id'] = $pk_val;
             }
             
+            $exists = false;
             if ($pk_val !== null) {
                 $check_stmt = $conn->prepare("SELECT COUNT(*) FROM `$table` WHERE `$primary_key` = ?");
                 $check_stmt->execute([$pk_val]);
@@ -252,24 +267,43 @@ try {
             }
             
             if ($action === 'update' || ($action === 'upsert' && $exists)) {
-                // Run UPDATE
-                if ($pk_val === null) {
-                    throw new Exception("Primary key value is missing for update.");
+                // Build WHERE clause from PK or filters
+                $where_clauses = [];
+                $where_params = [];
+
+                if ($pk_val !== null) {
+                    $where_clauses[] = "`$primary_key` = :pk_where_val";
+                    $where_params[":pk_where_val"] = $pk_val;
+                }
+
+                if (!empty($filters) && is_array($filters)) {
+                    foreach ($filters as $f_idx => $f) {
+                        $f_col = preg_replace('/[^a-zA-Z0-9_]/', '', $f['column']);
+                        $f_param = ":w_" . $f_col . "_" . $f_idx;
+                        $where_clauses[] = "`$f_col` = $f_param";
+                        $where_params[$f_param] = $f['value'];
+                    }
+                }
+
+                if (count($where_clauses) === 0) {
+                    throw new Exception("WHERE clause filters or primary key is required for update.");
                 }
                 
                 $set_parts = [];
-                $params = [];
+                $set_params = [];
                 foreach ($processed_row as $k => $v) {
-                    if ($k !== $primary_key) {
-                        $set_parts[] = "`$k` = :$k";
-                        $params[":$k"] = $v;
+                    if ($k !== $primary_key || count($set_parts) === 0) {
+                        $set_param = ":s_" . $k;
+                        $set_parts[] = "`$k` = $set_param";
+                        $set_params[$set_param] = $v;
                     }
                 }
-                $params[":pk_val"] = $pk_val;
                 
-                $sql = "UPDATE `$table` SET " . implode(", ", $set_parts) . " WHERE `$primary_key` = :pk_val";
-                $stmt = $conn->prepare($sql);
-                $stmt->execute($params);
+                if (count($set_parts) > 0) {
+                    $sql = "UPDATE `$table` SET " . implode(", ", $set_parts) . " WHERE " . implode(" AND ", $where_clauses);
+                    $stmt = $conn->prepare($sql);
+                    $stmt->execute(array_merge($set_params, $where_params));
+                }
                 
             } else {
                 // Run INSERT
@@ -358,7 +392,7 @@ try {
         echo json_encode(["error" => "Action '$action' not supported."]);
     }
 } catch (Throwable $e) {
-    http_response_code(400);
+    http_response_code(200);
     $msg = $e->getMessage();
     if (strpos($msg, 'Duplicate entry') !== false) {
         $msg = "An account with this email address already exists.";

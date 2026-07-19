@@ -27,23 +27,17 @@ export const getISTDateString = (dateInput?: string | number | Date): string => 
 export const calculateDailyStreak = (allHistory: any[]): number => {
   if (!allHistory || !Array.isArray(allHistory) || allHistory.length === 0) return 0;
 
-  // 1. Filter ONLY Daily Challenge attempts
-  const dailyAttempts = allHistory.filter((item: any) => {
-    const typeStr = String(item.type || item.exam_type || item.source || '').toLowerCase();
-    return typeStr.includes('daily') || item.is_daily_challenge || item.challenge_id;
-  });
-
-  if (dailyAttempts.length === 0) return 0;
-
-  // 2. Extract distinct IST calendar dates where Daily Challenge was submitted
+  // Extract distinct IST calendar dates where ANY test session or daily challenge was submitted
   const istDatesSet = new Set<string>();
-  dailyAttempts.forEach((item: any) => {
+  allHistory.forEach((item: any) => {
     const d = item.completedAt || item.submitted_at || item.date || item.created_at;
     if (d) {
       const istStr = getISTDateString(d);
       if (istStr) istDatesSet.add(istStr);
     }
   });
+
+  if (istDatesSet.size === 0) return 0;
 
   const now = new Date();
   const todayIST = getISTDateString(now);
@@ -56,11 +50,10 @@ export const calculateDailyStreak = (allHistory: any[]): number => {
   } else if (istDatesSet.has(yesterdayIST)) {
     anchorDateStr = yesterdayIST;
   } else {
-    // Neither today nor yesterday had a Daily Challenge -> Streak Broken!
     return 0;
   }
 
-  // 3. Count consecutive preceding IST calendar days
+  // Count consecutive preceding IST calendar days
   let streak = 0;
   let checkDate = new Date(anchorDateStr + 'T12:00:00+05:30'); // Anchor at noon IST
   

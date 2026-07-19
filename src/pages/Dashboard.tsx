@@ -115,12 +115,16 @@ const Dashboard = () => {
             if (typeof questionsList === 'string') {
               try { questionsList = JSON.parse(questionsList); } catch (e) { questionsList = []; }
             }
+            if (questionsList && typeof questionsList === 'object' && !Array.isArray(questionsList)) {
+              questionsList = Object.values(questionsList);
+            }
             if (Array.isArray(questionsList)) {
                 questionsList.forEach((q: any) => {
                     const key = q.chapter || q.concept || q.subject || "General Concepts";
                     if (!conceptMap[key]) conceptMap[key] = { total: 0, correct: 0 };
                     conceptMap[key].total++;
-                    if (q.isCorrect) conceptMap[key].correct++;
+                    const isCorrect = q.isCorrect === true || (q.userAnswer !== undefined && q.correctAnswer !== undefined && String(q.userAnswer).trim().toLowerCase() === String(q.correctAnswer).trim().toLowerCase());
+                    if (isCorrect) conceptMap[key].correct++;
                 });
             }
         });
