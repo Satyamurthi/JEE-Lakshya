@@ -691,19 +691,3 @@ FROM payment_logs GROUP BY user_email ORDER BY total_paid DESC;
 
 The `getActualTotalRevenue()` function in `supabase.ts` queries `payment_logs` as primary source and returns `{ total: number, breakdown: any[] }`.
 
-
-- ✅ PHP CLI server: 8 workers, port 8080
-- ✅ SSH Serveo Tunnel: Active, URL in `public/backend_url.txt`
-- ✅ Netlify: Auto-deploying from `Satyamurthi/JEE-Lakshya` main branch
-- ✅ MariaDB: Running, all 4 schemas initialized
-- ✅ Super Admin: `satyu000@gmail.com` seeded in all schemas
-- ✅ CORS: Wildcard headers, OPTIONS preflight handled
-- ✅ Freeze/Unfreeze: Working, cascades to students
-- ✅ Grant/Revoke All: Working, cascades to students
-- ✅ Exam History: Visible after refresh (localStorage backup + DB merge)
-- ✅ LaTeX Rendering: Working in exam, results, and PDF export
-- ✅ Math Sanitizer: HTML entity decoding + TeX brace fixing active
-- ✅ Streaks: Count any exam session on consecutive days (not just daily challenges)
-- ✅ AI Analytics: Weak areas calculated from all attempt types
-- ⚠️ Tunnel URL changes every time `run_tunnel.ps1` is run — normal behavior
-- ⚠️ Must run `run_tunnel.ps1` after every PC restart to restore connectivity

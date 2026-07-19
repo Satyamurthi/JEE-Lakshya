@@ -221,13 +221,48 @@ This file records the chronological history of tasks, major changes, and feature
 
 ---
 
-## Session 32: HTML Entity Pre-Decoding & Fraction Parens Repair
-*   **Request**: Eliminate persistent `< spanclass = "katex - display" >` raw HTML text strings on Results page.
+## Session 39: Multi-Threaded PHP Worker Scaling (502 Bad Gateway Elimination) & Netlify Architecture Explanation
+*   **Request**: Resolve 502 Bad Gateway / ERR_FAILED CORS errors caused by PHP single-thread connection blocking and explain Netlify connection credentials & workflow.
 *   **Work Done**:
-    1.  **Identified Order-of-Operations Bug**: Discovered that HTML entities (`&lt;`, `&gt;`) were being decoded *after* the HTML tag stripper ran, causing `&lt; spanclass = ... &gt;` to bypass tag stripping and display as raw text `< spanclass ... >` after decoding.
-    2.  **Order-of-Operations Fix**: Reordered `cleanQuestionText` in [src/utils/sanitizer.ts](file:///d:/JEE/src/utils/sanitizer.ts) to decode HTML entities as **Step 1** before tag stripping. All malformed HTML tags are now 100% stripped.
-    3.  **Enhanced Fraction Parens Repair**: Updated `fixTeXBraces()` to clean double-bracket fractions (`\frac{((309)}{{22}}` $\rightarrow$ `\frac{309}{22}` and `\frac{((135)}{(2)}` $\rightarrow$ `\frac{135}{2}`), eliminating KaTeX red error rendering.
-    4.  Committed and pushed updates to GitHub (`Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus`).
+    1.  **Multi-Threaded PHP CLI Worker Scaling ([scripts/run_tunnel.ps1](file:///d:/JEE/scripts/run_tunnel.ps1))**:
+        - Updated `run_tunnel.ps1` to launch the PHP CLI server with `PHP_CLI_SERVER_WORKERS=8`, enabling 8 concurrent worker threads on `127.0.0.1:8080`.
+        - Prevented single-thread blocking on parallel frontend requests, eliminating 502 Bad Gateway / CORS fallback failures.
+    2.  **Fresh SSH Serveo Tunnel Sync**: Generated active tunnel URL (`https://13e00fec05134152-49-37-169-92.serveousercontent.com`), updated `public/backend_url.txt`, and synced to GitHub (`Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus`).
+    3.  Committed and pushed updates to GitHub.
+
+---
+
+## Session 40: Complete Local-Only Dynamic Persistence (Payment Logs, Activity Audit Trail, TTL Cache & Self-Healing Tunnel Retry)
+*   **Request**: Store and fetch each and every piece of data locally on this PC (accounts, questions, student answers, streaks, payment logs, activity logs, system streams). Ensure frontend anywhere (Netlify, custom domain, mobile) is 100% dynamic and fetching data from this computer.
+*   **Work Done**:
+    1.  **Database Schema Expansion Across All 4 Schemas (`jee_nexus`, `neet_nexus`, `kcet_nexus`, `upsc_nexus`)**:
+        - Added `payment_logs` table: Stores `id`, `payment_id`, `order_id`, `user_id`, `user_email`, `user_name`, `amount_paise`, `amount_rupees`, `plan_id`, `plan_name`, `stream`, `status`, `verified_at`.
+        - Added `activity_log` table: Stores `user_id`, `user_email`, `user_name`, `event_type`, `metadata` JSON, `stream`, `ip_address`, `created_at`.
+    2.  **PHP Backend API Enhancements**:
+        - Updated [api/setup_db.php](file:///d:/JEE/api/setup_db.php) to automatically create and migrate all 9 tables across all 4 database schemas.
+        - Refactored [api/local_db.php](file:///d:/JEE/api/local_db.php) to support range filter operators (`gte`, `lte`, `gt`, `lt`), decode extended JSON fields (`options`, `markingScheme`, `metadata`), and allow access to `payment_logs` and `activity_log`.
+        - Updated [api/verify-payment.php](file:///d:/JEE/api/verify-payment.php) to write verified Razorpay payments to `payment_logs` and update user subscription tier + expiration on profile.
+        - Updated [api/create-order.php](file:///d:/JEE/api/create-order.php) to accept and forward user metadata (`user_id`, `user_email`, `plan_id`, `stream`).
+        - Created [api/activity_log.php](file:///d:/JEE/api/activity_log.php) as a dedicated write-only audit trail endpoint.
+    3.  **Frontend & Proxy Interceptor Upgrades**:
+        - Updated [src/supabase.ts](file:///d:/JEE/src/supabase.ts) to implement `logActivity()`, `getPaymentLogs()`, query-builder range methods (`gte`, `lte`, `gt`, `lt`), and updated `getActualTotalRevenue()` to sum real revenue from `payment_logs`.
+        - Fixed `getSystemStreams()`, `getQuestionsCountAddedToday()`, and `runAutomaticDailyQuestionSeeding()` by removing dead `!isSupabaseConfigured()` guards.
+        - Upgraded `getApiUrl()` to use a **5-minute TTL cache** with automatic `backend_url.txt` cache-busting instead of permanent session caching.
+        - Added **auto-retry with cache reset** inside `LocalSupabaseBuilder`: on network/CORS error or 502 Bad Gateway, it automatically resets the API URL cache, fetches the latest tunnel URL, and retries the request seamlessly.
+        - Updated [src/utils/payment.ts](file:///d:/JEE/src/utils/payment.ts) to pass full user and plan metadata through Razorpay order creation and verification.
+        - Added automatic activity logging (`logActivity`) to [Login.tsx](file:///d:/JEE/src/pages/Login.tsx) and [ExamPortal.tsx](file:///d:/JEE/src/pages/ExamPortal.tsx).
+    4.  **Database Migration & Deployment**:
+        - Executed `setup_db.php` via PHP CLI, verifying all 9 tables created and migrated across all 4 exam streams.
+        - Committed and pushed all changes to `Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus` main branches on GitHub.
+        - Updated project documentation ([brain/PROJECT_BRAIN.md](file:///d:/JEE/brain/PROJECT_BRAIN.md) and [brain/session_history.md](file:///d:/JEE/brain/session_history.md)).
+
+
+
+
+
+
+
+
 
 
 
