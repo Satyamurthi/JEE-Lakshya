@@ -17,13 +17,24 @@ const getEnv = (key: string) => {
 };
 
 let resolvedApiUrl = '';
+let resolvedApiUrlTimestamp = 0;
+const API_URL_TTL_MS = 5 * 60 * 1000; // Re-fetch backend URL every 5 minutes
+
+export const resetApiUrlCache = () => {
+  resolvedApiUrl = '';
+  resolvedApiUrlTimestamp = 0;
+};
 
 export const getApiUrl = async (): Promise<string> => {
-  if (resolvedApiUrl) return resolvedApiUrl;
-  
-  // Try to load dynamic backend URL from public file hosted on the same domain
+  const now = Date.now();
+  // Use cached URL only if it's less than 5 minutes old
+  if (resolvedApiUrl && (now - resolvedApiUrlTimestamp) < API_URL_TTL_MS) {
+    return resolvedApiUrl;
+  }
+
+  // Try to load dynamic backend URL from public file (cache-busted every call)
   try {
-    const res = await fetch('/backend_url.txt?t=' + Date.now());
+    const res = await fetch('/backend_url.txt?t=' + now, { cache: 'no-store' });
     if (res.ok) {
       let text = (await res.text()).trim();
       if (text && text.startsWith('http')) {
@@ -31,21 +42,25 @@ export const getApiUrl = async (): Promise<string> => {
           text = text.replace(/\/$/, '') + '/api';
         }
         resolvedApiUrl = text;
-        console.log("Dynamically resolved backend URL:", resolvedApiUrl);
+        resolvedApiUrlTimestamp = now;
+        console.log("[API] Backend URL resolved:", resolvedApiUrl);
         return resolvedApiUrl;
       }
     }
   } catch (e) {
-    console.warn("Could not fetch relative backend URL, using env default:", e);
+    console.warn("[API] Could not fetch backend_url.txt, using env/default:", e);
   }
 
   // Fallback to static env configuration
-  resolvedApiUrl = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost/api';
+  const fallback = getEnv('API_URL') || getEnv('VITE_API_URL') || 'http://localhost:8080/api';
+  resolvedApiUrl = fallback;
+  resolvedApiUrlTimestamp = now;
   return resolvedApiUrl;
 };
 
 // Eagerly resolve API URL on load
 getApiUrl();
+
 
 class LocalSupabaseBuilder {
   private table: string;
@@ -180,30 +195,48 @@ class LocalSupabaseBuilder {
   }
 
   async then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
-    try {
+    const doFetch = async () => {
       const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
       const apiUrl = await getApiUrl();
+      const body = JSON.stringify({
+        table: this.table,
+        action: this.action,
+        columns: this.columns,
+        payload: this.payload,
+        filters: this.filters,
+        orderCol: this.orderCol,
+        orderAsc: this.orderAsc,
+        limitVal: this.limitVal,
+        offsetVal: this.offsetVal,
+        isSingle: this.isSingle,
+        isMaybeSingle: this.isMaybeSingle,
+        countOption: this.countOption
+      });
       const response = await fetch(`${apiUrl}/local_db.php`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Active-Stream': activeStream
-        },
-        body: JSON.stringify({
-          table: this.table,
-          action: this.action,
-          columns: this.columns,
-          payload: this.payload,
-          filters: this.filters,
-          orderCol: this.orderCol,
-          orderAsc: this.orderAsc,
-          limitVal: this.limitVal,
-          offsetVal: this.offsetVal,
-          isSingle: this.isSingle,
-          isMaybeSingle: this.isMaybeSingle,
-          countOption: this.countOption
-        })
+        headers: { 'Content-Type': 'application/json', 'X-Active-Stream': activeStream },
+        body
       });
+      return response;
+    };
+
+    try {
+      let response: Response;
+      try {
+        response = await doFetch();
+      } catch (networkErr: any) {
+        // Network/CORS failure — reset URL cache and retry once with fresh URL
+        console.warn("[LocalDB] Network error, resetting API URL cache and retrying:", networkErr.message);
+        resetApiUrlCache();
+        response = await doFetch();
+      }
+
+      // 502 Bad Gateway = tunnel is alive but PHP is temporarily down — retry once
+      if (response.status === 502 || response.status === 503) {
+        console.warn(`[LocalDB] Got ${response.status}, resetting API URL cache and retrying...`);
+        resetApiUrlCache();
+        try { response = await doFetch(); } catch (_) {}
+      }
 
       const result = await response.json().catch(() => null);
       if (!response.ok) {
@@ -226,6 +259,7 @@ class LocalSupabaseBuilder {
     }
   }
 }
+
 
 const fakeAuth = {
   signInWithPassword: async (credentials: any) => {
