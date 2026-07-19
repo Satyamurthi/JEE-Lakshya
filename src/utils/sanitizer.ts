@@ -1,7 +1,7 @@
 /**
  * Question & Math Sanitizer Utility
  * Cleans up raw text, decodes HTML entities, strips internal tags like [JEE Hard #123],
- * extracts math from pre-rendered KaTeX HTML, and converts legacy TeX macros to KaTeX.
+ * extracts math from pre-rendered/malformed KaTeX HTML, and converts legacy TeX macros to KaTeX.
  */
 
 const PUA_MAP: Record<string, string> = {
@@ -56,12 +56,35 @@ const PUA_MAP: Record<string, string> = {
   '\uf0ba': '≡',
 };
 
+export const fixTeXBraces = (tex: string): string => {
+  if (!tex) return '';
+  let t = tex;
+
+  // Fix malformed \frac formatting with double parentheses or excess braces e.g. \frac{((309)}{{22}}
+  t = t.replace(/\\frac\{\s*\(\(\s*([^()]+)\s*\)\s*\}\}\{\{\s*([^}]+)\s*\}\}/g, '\\frac{$1}{$2}');
+  t = t.replace(/\\frac\{\s*\(\(\s*([^()]+)\s*\)\s*\}/g, '\\frac{$1}');
+  t = t.replace(/\\frac\{\s*\{([^}]+)\}\s*\}\{\s*\{([^}]+)\}\s*\}/g, '\\frac{$1}{$2}');
+  t = t.replace(/\\frac\{\s*([^}]+)\}\s*\}\{\s*\{([^}]+)\}\s*\}/g, '\\frac{$1}{$2}');
+  t = t.replace(/\\frac\{\s*\{([^}]+)\}\s*\}\{\s*([^}]+)\s*\}/g, '\\frac{$1}{$2}');
+  
+  // Balance unclosed braces if any
+  let openCount = (t.match(/\{/g) || []).length;
+  let closeCount = (t.match(/\}/g) || []).length;
+  while (openCount > closeCount) {
+    t += '}';
+    closeCount++;
+  }
+  return t;
+};
+
 export const preprocessTeXMacros = (tex: string): string => {
   if (!tex) return '';
   let m = tex;
+
+  // Fix double parentheses or corrupted braces first
+  m = fixTeXBraces(m);
   
   // 1. Convert TeX \over fraction notation: { A \over B } -> \frac{A}{B}
-  // Repeat to handle nested \over
   for (let i = 0; i < 5; i++) {
     if (!m.includes('\\over')) break;
     m = m.replace(/\{\s*([^{}]+?)\s+\\over\s+([^{}]+?)\s*\}/g, '\\frac{$1}{$2}');
@@ -92,15 +115,13 @@ export const cleanQuestionText = (text: string): string => {
 
   let cleaned = String(text);
 
-  // 0. Extract math from embedded pre-rendered KaTeX HTML (<annotation encoding="application/x-tex">TeX</annotation>)
-  if (cleaned.includes('<annotation encoding="application/x-tex">') || cleaned.includes('<span class="katex">') || cleaned.includes('<math')) {
-    // Replace display KaTeX HTML blocks with extracted TeX
-    cleaned = cleaned.replace(/<span class="katex-display">[\s\S]*?<annotation encoding="application\/x-tex">([\s\S]*?)<\/annotation>[\s\S]*?<\/span>\s*<\/span>/gi, ' $$$$ $1 $$$$ ');
-    // Replace inline KaTeX HTML blocks with extracted TeX
-    cleaned = cleaned.replace(/<span class="katex">[\s\S]*?<annotation encoding="application\/x-tex">([\s\S]*?)<\/annotation>[\s\S]*?<\/span>/gi, ' $ $1 $ ');
-    // Strip leftover KaTeX HTML containers or math elements
-    cleaned = cleaned.replace(/<span class="katex[^"]*">[\s\S]*?<\/span>/gi, '');
-    cleaned = cleaned.replace(/<math[\s\S]*?<\/math>/gi, '');
+  // 0. Extract math from embedded pre-rendered / malformed KaTeX HTML tags
+  if (/katex|mathml|mathxmlns|spanclass|annotation/i.test(cleaned)) {
+    // Extract raw TeX from annotation block if present (even if HTML tags have weird spaces like < \s* annotation >)
+    cleaned = cleaned.replace(/<\s*annotation[^>]*>([\s\S]*?)<\s*\/\s*annotation\s*>/gi, ' $$$$ $1 $$$$ ');
+    
+    // Strip all katex / mathml / spanclass / math / semantics / mrow / mo / strut HTML elements
+    cleaned = cleaned.replace(/<\s*\/?\s*(spanclass|span|mathxmlns|math|semantics|annotation|mrow|mo|annotationencoding|annotation-xml|annotation)[^>]*>/gi, '');
   }
 
   // 1. Strip internal identification tags like [JEE Hard #771], [NEET Medium #3015], [#507]
