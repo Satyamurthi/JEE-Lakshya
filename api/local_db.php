@@ -288,7 +288,11 @@ try {
                         $updated_row['value'] = json_decode($updated_row['value'], true);
                     }
                     $results[] = $updated_row;
+                } else {
+                    $results[] = $processed_row;
                 }
+            } else {
+                $results[] = $processed_row;
             }
         }
         

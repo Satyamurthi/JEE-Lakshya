@@ -49,6 +49,12 @@ foreach ($databases as $db_name) {
         try {
             $conn->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS selected_stream VARCHAR(100) NULL");
         } catch (Exception $e) {}
+        try {
+            $conn->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_exam_token VARCHAR(255) NULL");
+        } catch (Exception $e) {}
+        try {
+            $conn->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_exam_started_at VARCHAR(50) NULL");
+        } catch (Exception $e) {}
 
 
         // 2. Create exam_attempts table
@@ -131,6 +137,21 @@ foreach ($databases as $db_name) {
             markingScheme JSON NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
+
+        // 8. Seed default Super Admin account if none exists
+        $checkAdmin = $conn->query("SELECT COUNT(*) FROM profiles WHERE role = 'super_admin'");
+        if ((int)$checkAdmin->fetchColumn() === 0) {
+            $adminId = '00000000-0000-0000-0000-000000000000';
+            $insertAdmin = $conn->prepare("INSERT INTO profiles (id, email, full_name, role, status, password) VALUES (?, ?, ?, ?, ?, ?)");
+            $insertAdmin->execute([
+                $adminId,
+                'satyu000@gmail.com',
+                'Super Admin',
+                'super_admin',
+                'approved',
+                'satyupassword'
+            ]);
+        }
 
         $results[$db_name] = "Success";
     } catch (PDOException $e) {
