@@ -20,11 +20,22 @@ const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
+/**
+ * Initiate a Razorpay payment flow.
+ * All payment details (user_id, user_email, plan_id, amount, stream) are
+ * sent to the backend so every transaction is persisted in payment_logs.
+ */
 export const initiateRazorpayPayment = async (
   amountRupees: number,
   userEmail: string,
   userName: string,
-  receipt: string
+  receipt: string,
+  options?: {
+    userId?: string;
+    planId?: string;
+    planName?: string;
+    stream?: string;
+  }
 ): Promise<boolean> => {
   return new Promise(async (resolve) => {
     try {
@@ -48,31 +59,54 @@ export const initiateRazorpayPayment = async (
         sanitizedReceipt = `${prefix}_${timePart}_${randomPart}`.substring(0, 40);
       }
 
-      // Step 1: Attempt backend order creation
+      // Resolve user profile for metadata
+      let userId = options?.userId || '';
+      try {
+        if (!userId) {
+          const profileRaw = localStorage.getItem('user_profile');
+          if (profileRaw) {
+            const p = JSON.parse(profileRaw);
+            userId = p.id || '';
+          }
+        }
+      } catch (_) {}
+
+      const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
+      const planId   = options?.planId   || '';
+      const planName = options?.planName || '';
+      const stream   = options?.stream   || activeStream;
+
+      // ── Step 1: Create Razorpay order on backend ──────────────────────────
       let orderId: string | undefined;
       let serverKeyId: string | undefined;
       try {
         const paymentUrl = await getPaymentApiUrl('create-order');
         const orderRes = await fetch(paymentUrl, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ amount: amountInPaise, receipt: sanitizedReceipt })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount:     amountInPaise,
+            receipt:    sanitizedReceipt,
+            // Metadata for DB logging
+            user_id:    userId,
+            user_email: userEmail,
+            user_name:  userName,
+            plan_id:    planId,
+            plan_name:  planName,
+            stream:     stream
+          })
         });
-        
+
         if (!orderRes.ok) {
           let errMsg = 'Failed to create order on server';
           let detailsMsg = '';
           try {
             const errData = await orderRes.json();
             if (errData.error) errMsg = errData.error;
-            if (errData.details) {
-              if (errData.details.error && errData.details.error.description) {
-                detailsMsg = ` Reason: ${errData.details.error.description}`;
-              } else {
-                detailsMsg = ` Details: ${JSON.stringify(errData.details)}`;
-              }
+            if (errData.details?.error?.description) {
+              detailsMsg = ` Reason: ${errData.details.error.description}`;
+            } else if (errData.details) {
+              detailsMsg = ` Details: ${JSON.stringify(errData.details)}`;
             }
           } catch (_) {}
           alert(`Order creation failed: ${errMsg}.${detailsMsg}`);
@@ -82,7 +116,7 @@ export const initiateRazorpayPayment = async (
 
         const orderData = await orderRes.json();
         if (orderData.order_id) {
-          orderId = orderData.order_id;
+          orderId     = orderData.order_id;
           serverKeyId = orderData.key_id;
         } else {
           alert("Payment gateway returned an invalid order ID. Please try again.");
@@ -96,31 +130,37 @@ export const initiateRazorpayPayment = async (
         return;
       }
 
-      // Step 2: Open Razorpay Standard Checkout Modal
-      const options: any = {
+      // ── Step 2: Open Razorpay Checkout Modal ─────────────────────────────
+      const rzpOptions: any = {
         key: serverKeyId || razorpayKey,
         amount: amountInPaise,
         currency: 'INR',
         name: 'JEE Nexus AI',
-        description: `Official JEE Paper Micro-Unlock (₹${amountRupees})`,
+        description: `${planName || 'Subscription'} (₹${amountRupees})`,
         image: 'https://cdn-icons-png.flaticon.com/512/2083/2083213.png',
-        ...(orderId ? { order_id: orderId } : {}),
+        order_id: orderId,
         handler: async function (response: RazorpayResponse) {
           console.log("Razorpay Payment Response Received:", response);
 
-          // Step 3: Attempt backend signature verification if order_id exists
+          // ── Step 3: Verify + log payment on backend ──────────────────────
           if (response.razorpay_order_id && response.razorpay_signature) {
             try {
               const verifyUrl = await getPaymentApiUrl('verify-payment');
               const verifyRes = await fetch(verifyUrl, {
                 method: 'POST',
-                headers: { 
-                  'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_signature: response.razorpay_signature
+                  razorpay_order_id:   response.razorpay_order_id,
+                  razorpay_signature:  response.razorpay_signature,
+                  // Full metadata for payment_logs table
+                  user_id:    userId,
+                  user_email: userEmail,
+                  user_name:  userName,
+                  amount:     amountInPaise,
+                  plan_id:    planId,
+                  plan_name:  planName,
+                  stream:     stream
                 })
               });
               const verifyData = await verifyRes.json();
@@ -129,6 +169,7 @@ export const initiateRazorpayPayment = async (
                 resolve(false);
                 return;
               }
+              console.log("[Payment] Logged to DB with ID:", verifyData.payment_log_id);
             } catch (vErr) {
               console.warn("Signature verification endpoint bypass:", vErr);
             }
@@ -143,20 +184,14 @@ export const initiateRazorpayPayment = async (
           }
         },
         prefill: {
-          name: userName || 'Student Aspirant',
-          email: userEmail || 'student@example.com',
+          name:    userName  || 'Student Aspirant',
+          email:   userEmail || 'student@example.com',
           contact: '9812345678'
         },
-        theme: {
-          color: '#4f46e5'
-        }
+        theme: { color: '#4f46e5' }
       };
 
-      if (orderId) {
-        options.order_id = orderId;
-      }
-
-      const rzp = new (window as any).Razorpay(options);
+      const rzp = new (window as any).Razorpay(rzpOptions);
       rzp.open();
     } catch (err: any) {
       console.error("Razorpay checkout launch error:", err);
@@ -186,7 +221,7 @@ export const checkSubscriptionActive = (profile: any): boolean => {
   }
 
   // 3. Check local storage overrides (fallback if schema sync hasn't run)
-  const localTier = localStorage.getItem('user_subscription_tier');
+  const localTier   = localStorage.getItem('user_subscription_tier');
   const localExpiry = localStorage.getItem('user_subscription_expires_at');
   if (localTier === 'premium' || localTier === 'ultimate') {
     if (localExpiry) {
@@ -197,4 +232,3 @@ export const checkSubscriptionActive = (profile: any): boolean => {
 
   return false;
 };
-

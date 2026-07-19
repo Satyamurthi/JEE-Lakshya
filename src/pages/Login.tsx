@@ -1,7 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Brain, Sparkles, Database, Mail, Lock, ChevronRight, AlertCircle, X, Loader2 } from 'lucide-react';
-import { supabase, isSupabaseConfigured, getApiUrl } from '../supabase';
+import { supabase, isSupabaseConfigured, getApiUrl, logActivity } from '../supabase';
 import { APP_NAME } from '../constants';
 
 const Login = () => {
@@ -45,12 +45,6 @@ const Login = () => {
 
       let user = data.user;
 
-      // Auto-elevate satyu000@gmail.com to super_admin
-      if (user.email === 'satyu000@gmail.com') {
-        user.role = 'super_admin';
-        user.status = 'approved';
-      }
-
       // Auto-approve independent students (no coaching admin attached)
       if (user.role === 'student' && !user.admin_id) {
         user.status = 'approved';
@@ -92,6 +86,9 @@ const Login = () => {
       localStorage.removeItem('active_exam_questions');
       localStorage.removeItem('active_exam_config');
       localStorage.setItem('user_profile', JSON.stringify(user));
+      
+      // Log login event to server activity_log table (fire-and-forget)
+      logActivity('login', { role: user.role, stream: user.selected_stream });
       
       // Auto-switch database instance to the user's selected stream
       if (user.selected_stream) {

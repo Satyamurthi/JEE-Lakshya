@@ -4,7 +4,7 @@ import {
   Clock, ChevronLeft, ChevronRight, CheckCircle2, Flag, 
   RotateCcw, Send, Menu, X, Brain, ShieldAlert, Lock
 } from 'lucide-react';
-import { submitExamAttempt, submitDailyAttempt, supabase } from '../supabase';
+import { submitExamAttempt, submitDailyAttempt, supabase, logActivity } from '../supabase';
 import MathText from '../components/MathText';
 import { cleanQuestionText } from '../utils/sanitizer';
 import { recordSeenQuestions } from '../utils/questionTracker';
@@ -228,6 +228,15 @@ const ExamPortal = () => {
         setIsSubmitting(false);
         return;
       }
+
+      // Log activity to server (fire-and-forget)
+      const eventType = isDailyChallenge ? 'daily_submit' : 'exam_submit';
+      logActivity(eventType, {
+        score:       results.totalScore,
+        total_marks: results.totalMarks,
+        accuracy:    results.accuracy,
+        attempt_id:  attemptData.id
+      });
       
       // Clear database session locks
       if (supabase && profile.id) {

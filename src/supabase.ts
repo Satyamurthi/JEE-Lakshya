@@ -132,6 +132,26 @@ class LocalSupabaseBuilder {
     return this;
   }
 
+  gte(column: string, value: any) {
+    this.filters.push({ column, op: 'gte', value });
+    return this;
+  }
+
+  lte(column: string, value: any) {
+    this.filters.push({ column, op: 'lte', value });
+    return this;
+  }
+
+  gt(column: string, value: any) {
+    this.filters.push({ column, op: 'gt', value });
+    return this;
+  }
+
+  lt(column: string, value: any) {
+    this.filters.push({ column, op: 'lt', value });
+    return this;
+  }
+
   order(column: string, options: { ascending?: boolean } = {}) {
     this.orderCol = column;
     this.orderAsc = options.ascending !== false;
@@ -286,6 +306,37 @@ export const supabase = new Proxy({} as any, {
 });
 
 export const isSupabaseConfigured = () => false;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Activity Logging — fire-and-forget, never blocks the UI
+// ─────────────────────────────────────────────────────────────────────────────
+export const logActivity = async (
+  eventType: 'login' | 'logout' | 'signup' | 'exam_start' | 'exam_submit' | 'daily_submit' | 'practice_start' | 'page_view',
+  metadata?: Record<string, any>
+): Promise<void> => {
+  try {
+    const profileRaw = localStorage.getItem('user_profile');
+    if (!profileRaw) return;
+    const profile = JSON.parse(profileRaw);
+    const apiUrl = await getApiUrl();
+    const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
+    // Fire and forget — don't await the response
+    fetch(`${apiUrl}/activity_log.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Active-Stream': activeStream },
+      body: JSON.stringify({
+        user_id:    profile.id,
+        user_email: profile.email,
+        user_name:  profile.full_name,
+        event_type: eventType,
+        stream:     activeStream,
+        metadata:   metadata || {}
+      })
+    }).catch(() => {}); // silently swallow network errors
+  } catch (_) {
+    // Never throw from activity logger
+  }
+};
 
 // Dynamic client switcher
 export const switchSupabaseBackend = (stream: string) => {
@@ -740,62 +791,56 @@ export const getDailyAttemptsByChallenge = async (challengeId: string) => {
   }
 };
 
-export const getActualTotalRevenue = async () => {
+export const getActualTotalRevenue = async (): Promise<{ total: number; breakdown: any[] }> => {
   try {
-    const { data: dailyPaid } = await supabase
-      .from('daily_attempts')
-      .select('score')
-      .eq('paid', true);
+    // Primary source: payment_logs table (actual Razorpay transactions)
+    const { data: paymentLogs, error: logError } = await supabase
+      .from('payment_logs')
+      .select('amount_rupees, amount_paise, payment_id, user_email, user_name, plan_id, plan_name, stream, verified_at')
+      .order('verified_at', { ascending: false });
 
-    let examCount = 0;
-    try {
-      const { data: examPaid } = await supabase
-        .from('exam_attempts')
-        .select('paid, config');
-      if (Array.isArray(examPaid)) {
-        examCount = examPaid.filter((item: any) => {
-          if (item.paid === true) return true;
-          if (item.config && typeof item.config === 'object') {
-            return item.config.paid === true;
-          }
-          try {
-            if (typeof item.config === 'string') {
-              const parsed = JSON.parse(item.config);
-              return parsed.paid === true;
-            }
-          } catch {}
-          return false;
-        }).length;
-      }
-    } catch (e) {
-      console.warn("Table exam_attempts does not support paid column directly, trying config fallback:", e);
-      try {
-        const { data: examPaidOnlyConfig } = await supabase
-          .from('exam_attempts')
-          .select('config');
-        if (Array.isArray(examPaidOnlyConfig)) {
-          examCount = examPaidOnlyConfig.filter((item: any) => {
-            if (item.config && typeof item.config === 'object') {
-              return item.config.paid === true;
-            }
-            try {
-              if (typeof item.config === 'string') {
-                const parsed = JSON.parse(item.config);
-                return parsed.paid === true;
-              }
-            } catch {}
-            return false;
-          }).length;
-        }
-      } catch (innerErr) {
-        console.error("Config fallback fetch failed:", innerErr);
-      }
+    if (!logError && Array.isArray(paymentLogs) && paymentLogs.length > 0) {
+      const total = paymentLogs.reduce((sum: number, row: any) => {
+        const amt = parseFloat(row.amount_rupees) || (parseInt(row.amount_paise) / 100) || 0;
+        return sum + amt;
+      }, 0);
+      return { total: Math.round(total * 100) / 100, breakdown: paymentLogs };
     }
-
-    const dailyCount = Array.isArray(dailyPaid) ? dailyPaid.length : 0;
-    return (dailyCount + examCount) * 10;
   } catch (e) {
-    return 0;
+    console.warn('[getActualTotalRevenue] payment_logs query failed, using fallback:', e);
+  }
+
+  // Fallback: count paid attempts × ₹10 (legacy behaviour)
+  try {
+    const { data: dailyPaid } = await supabase.from('daily_attempts').select('id').eq('paid', true);
+    const { data: examPaid }  = await supabase.from('exam_attempts').select('id, config').eq('paid', true);
+    const dailyCount = Array.isArray(dailyPaid) ? dailyPaid.length : 0;
+    let examCount = 0;
+    if (Array.isArray(examPaid)) {
+      examCount = examPaid.filter((item: any) => {
+        if (item.paid === true) return true;
+        const cfg = typeof item.config === 'string' ? JSON.parse(item.config || '{}') : (item.config || {});
+        return cfg.paid === true;
+      }).length;
+    }
+    return { total: (dailyCount + examCount) * 10, breakdown: [] };
+  } catch (e) {
+    return { total: 0, breakdown: [] };
+  }
+};
+
+// Fetch full payment history for the revenue dashboard
+export const getPaymentLogs = async (): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('payment_logs')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.warn('[getPaymentLogs] Failed:', e);
+    return [];
   }
 };
 
@@ -960,32 +1005,31 @@ export const toggleAdminFreezeStatus = async (adminId: string, isCurrentlyFrozen
 
 export const getSystemStreams = async (): Promise<string[]> => {
   const defaultStreams = ['JEE Main & Advanced', 'NEET UG', 'KCET', 'BITSAT', 'CUET'];
-  if (!isSupabaseConfigured()) {
-    const cached = localStorage.getItem('system_streams');
-    return cached ? JSON.parse(cached) : defaultStreams;
-  }
   try {
+    // Always read from the local DB first — never short-circuit to localStorage
     const { data, error } = await supabase.from('system_config').select('value').eq('key', 'system_streams').maybeSingle();
-    if (error || !data) {
-      const cached = localStorage.getItem('system_streams');
-      return cached ? JSON.parse(cached) : defaultStreams;
+    if (!error && data && data.value) {
+      // Keep localStorage in sync as a cache
+      localStorage.setItem('system_streams', JSON.stringify(data.value));
+      return data.value;
     }
-    return data.value || defaultStreams;
   } catch (e) {
-    const cached = localStorage.getItem('system_streams');
-    return cached ? JSON.parse(cached) : defaultStreams;
+    console.warn('[getSystemStreams] DB fetch failed, using localStorage cache:', e);
   }
+  // Fallback: localStorage cache or hardcoded defaults
+  const cached = localStorage.getItem('system_streams');
+  return cached ? JSON.parse(cached) : defaultStreams;
 };
 
 export const saveSystemStreams = async (streams: string[]): Promise<string | null> => {
+  // Always write to DB (primary) AND localStorage (cache)
   localStorage.setItem('system_streams', JSON.stringify(streams));
-  if (!isSupabaseConfigured()) return null;
   try {
     const { error } = await supabase.from('system_config').upsert({ key: 'system_streams', value: streams });
     if (error) return error.message;
     return null;
   } catch (e: any) {
-    return e.message || "Error saving streams";
+    return e.message || "Error saving streams to database";
   }
 };
 
@@ -1148,23 +1192,25 @@ export const seedMassiveQuestionsToDB = async (streamName: string = 'JEE'): Prom
 };
 
 export const getQuestionsCountAddedToday = async (): Promise<number> => {
-  if (!isSupabaseConfigured()) return 0;
   try {
     const todayStart = new Date();
-    todayStart.setHours(0,0,0,0);
-    const { count, error } = await supabase
+    todayStart.setHours(0, 0, 0, 0);
+    // Format as MySQL DATETIME string for the gte filter
+    const todayStr = todayStart.getFullYear() + '-'
+      + String(todayStart.getMonth() + 1).padStart(2, '0') + '-'
+      + String(todayStart.getDate()).padStart(2, '0') + ' 00:00:00';
+    const { data, error } = await supabase
       .from('questions')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayStart.toISOString());
+      .select('id')
+      .gte('created_at', todayStr);
     if (error) return 0;
-    return count || 0;
+    return Array.isArray(data) ? data.length : 0;
   } catch {
     return 0;
   }
 };
 
 export const runAutomaticDailyQuestionSeeding = async (streamName: string = 'JEE'): Promise<{ success: boolean, count: number, error?: string }> => {
-  if (!isSupabaseConfigured()) return { success: false, count: 0, error: "Supabase not configured." };
   
   try {
     const countToday = await getQuestionsCountAddedToday();
