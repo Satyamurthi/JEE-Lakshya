@@ -10,6 +10,70 @@ interface MathTextProps {
   inlineOnly?: boolean;
 }
 
+export const splitIntoSegments = (text: string): string[] => {
+  const segments: string[] = [];
+  let i = 0;
+  const len = text.length;
+  let lastIdx = 0;
+
+  while (i < len) {
+    if (text.startsWith('$$', i)) {
+      segments.push(text.substring(lastIdx, i));
+      const start = i;
+      i += 2;
+      let braceDepth = 0;
+      while (i < len) {
+        if (text[i] === '{') {
+          braceDepth++;
+        } else if (text[i] === '}') {
+          if (braceDepth > 0) braceDepth--;
+        } else if (text.startsWith('$$', i) && braceDepth === 0) {
+          break;
+        }
+        i++;
+      }
+      if (i < len) {
+        i += 2;
+        segments.push(text.substring(start, i));
+      } else {
+        segments.push(text.substring(start));
+      }
+      lastIdx = i;
+      continue;
+    }
+    
+    if (text[i] === '$') {
+      segments.push(text.substring(lastIdx, i));
+      const start = i;
+      i += 1;
+      let braceDepth = 0;
+      while (i < len) {
+        if (text[i] === '{') {
+          braceDepth++;
+        } else if (text[i] === '}') {
+          if (braceDepth > 0) braceDepth--;
+        } else if (text[i] === '$' && braceDepth === 0) {
+          break;
+        }
+        i++;
+      }
+      if (i < len) {
+        i += 1;
+        segments.push(text.substring(start, i));
+      } else {
+        segments.push(text.substring(start));
+      }
+      lastIdx = i;
+      continue;
+    }
+    
+    i++;
+  }
+  
+  segments.push(text.substring(lastIdx, i));
+  return segments;
+};
+
 export const renderMathInText = (rawText: string, inlineOnly = false): string => {
   if (!rawText) return '';
   
@@ -40,7 +104,7 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   }
 
   // 2. Process segments split by existing $...$ or $$...$$
-  const segments = text.split(/(\$\$[\s\S]*?\$\$|\$[^\$]+?\$)/g);
+  const segments = splitIntoSegments(text);
   const processedSegments = segments.map((part, idx) => {
     // odd indices are already delimited math blocks ($...$ or $$...$$)
     if (idx % 2 === 1) return part;

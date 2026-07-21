@@ -79,9 +79,77 @@ export const fixTeXBraces = (tex: string): string => {
   return t;
 };
 
+export const replaceRaiseLower = (text: string): string => {
+  if (!text) return '';
+  let result = '';
+  let i = 0;
+  const len = text.length;
+
+  while (i < len) {
+    if (text.startsWith('\\raise', i) || text.startsWith('\\lower', i)) {
+      const isRaise = text.startsWith('\\raise', i);
+      const startIdx = i;
+      i += 6;
+      
+      while (i < len && /\s/.test(text[i])) i++;
+      let dim = '';
+      while (i < len && /[0-9\.\-a-zA-Z]/.test(text[i])) {
+        dim += text[i];
+        i++;
+      }
+      
+      while (i < len && /\s/.test(text[i])) i++;
+      if (text.startsWith('\\hbox', i)) {
+        i += 5;
+        while (i < len && /\s/.test(text[i])) i++;
+        
+        if (i < len && text[i] === '{') {
+          i++;
+          let braceCount = 1;
+          let content = '';
+          
+          while (i < len && braceCount > 0) {
+            const char = text[i];
+            if (char === '{') {
+              braceCount++;
+            } else if (char === '}') {
+              braceCount--;
+            }
+            if (braceCount > 0) {
+              content += char;
+            }
+            i++;
+          }
+          
+          let cleanedContent = content.trim();
+          if (cleanedContent.startsWith('$') && cleanedContent.endsWith('$')) {
+            cleanedContent = cleanedContent.slice(1, -1).trim();
+          }
+          
+          const targetDim = isRaise ? dim : `-${dim}`;
+          const replacement = `\\raisebox{${targetDim}}{$${cleanedContent}$}`;
+          result += replacement;
+          continue;
+        }
+      }
+      
+      result += text.substring(startIdx, i);
+      continue;
+    }
+    
+    result += text[i];
+    i++;
+  }
+  
+  return result;
+};
+
 export const preprocessTeXMacros = (tex: string): string => {
   if (!tex) return '';
   let m = tex;
+
+  // 0. Replace Plain TeX \raise and \lower with LaTeX \raisebox
+  m = replaceRaiseLower(m);
 
   // Fix double parentheses or corrupted braces first
   m = fixTeXBraces(m);
@@ -108,6 +176,10 @@ export const preprocessTeXMacros = (tex: string): string => {
     }
     return match;
   });
+
+  // 5. Convert Plain TeX italic correction slashes to normal division slashes
+  m = m.replace(/\\\/([^\/a-zA-Z]|$)/g, '/$1');
+  m = m.replace(/\\\//g, '/');
 
   return m;
 };
