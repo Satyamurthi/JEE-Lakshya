@@ -1,9 +1,12 @@
 /**
  * Question & Math Sanitizer Utility
- * Cleans up raw text, decodes HTML entities, strips internal tags like [JEE Hard #123],
- * strips malformed/pre-rendered HTML tags, and fixes KaTeX formatting & fraction syntax errors.
+ * Cleans raw text, decodes HTML entities, strips internal tags like [JEE Hard #123],
+ * strips malformed/pre-rendered HTML, and fixes KaTeX/TeX formatting errors.
+ *
+ * This utility is the first line of defence before KaTeX rendering.
  */
 
+// ─── Private Use Area (PUA) glyph map — from PDF-extracted questions ──────────
 const PUA_MAP: Record<string, string> = {
   '\uf02d': '-',
   '\uf02b': '+',
@@ -54,31 +57,51 @@ const PUA_MAP: Record<string, string> = {
   '\uf0a5': '∞',
   '\uf0bc': '⋅',
   '\uf0ba': '≡',
+  // Additional common PUA glyphs
+  '\uf0b5': 'μ',
+  '\uf04e': 'N',
+  '\uf052': 'R',
+  '\uf04f': 'O',
+  '\uf041': 'A',
+  '\uf042': 'B',
+  '\uf043': 'C',
+  '\uf044': 'D',
+  '\uf045': 'E',
+  '\uf046': 'F',
+  '\uf047': 'G',
+  '\uf048': 'H',
 };
 
+// ─── Fix corrupted TeX fraction/brace syntax ──────────────────────────────────
 export const fixTeXBraces = (tex: string): string => {
   if (!tex) return '';
   let t = tex;
 
-  // 1. Clean up corrupted fractions with parens/braces like \frac{((309)}{{22}} or \frac{((135)}{{2}} or \frac{((135)}{(2)}
-  t = t.replace(/\\frac\s*\{\s*[\(\{\s]*([^()\{\}\s]+)[\)\}\s]*\}\s*\{\s*[\(\{\s]*([^()\{\}\s]+)[\)\}\s]*\}/gi, '\\frac{$1}{$2}');
+  // 1. Fix \\frac with extra parens/brackets: \\frac{((309)}{{22}} → \\frac{309}{22}
+  t = t.replace(/\\frac\s*\{\s*[\(\{\s]*([^\(\)\{\}\s]+)[\)\}\s]*\}\s*\{\s*[\(\{\s]*([^\(\)\{\}\s]+)[\)\}\s]*\}/gi, '\\frac{$1}{$2}');
   t = t.replace(/\\frac\s*\{\s*[\(\{\s]*([^{}]+?)[\)\}\s]*\}\s*\{\s*[\(\{\s]*([^{}]+?)[\)\}\s]*\}/gi, '\\frac{$1}{$2}');
 
-  // 2. Clean up double parentheses inside math expressions: ((A)) -> (A), ((A) -> (A)
+  // 2. Fix double parentheses: ((A)) → (A)
   t = t.replace(/\(\(\s*([^()]+)\s*\)\)/gi, '($1)');
   t = t.replace(/\(\(\s*([^()]+)\s*\)/gi, '($1)');
   t = t.replace(/\(\s*([^()]+)\s*\)\)/gi, '($1)');
 
-  // 3. Balance unclosed braces if any
+  // 3. Balance unclosed braces
   let openCount = (t.match(/\{/g) || []).length;
   let closeCount = (t.match(/\}/g) || []).length;
   while (openCount > closeCount) {
     t += '}';
     closeCount++;
   }
+  // Remove excess closing braces at end
+  while (closeCount > openCount + 1) {
+    t = t.replace(/\}$/, '');
+    closeCount--;
+  }
   return t;
 };
 
+// ─── Replace plain TeX \\raise / \\lower with KaTeX \\raisebox ───────────────
 export const replaceRaiseLower = (text: string): string => {
   if (!text) return '';
   let result = '';
@@ -90,143 +113,232 @@ export const replaceRaiseLower = (text: string): string => {
       const isRaise = text.startsWith('\\raise', i);
       const startIdx = i;
       i += 6;
-      
+
       while (i < len && /\s/.test(text[i])) i++;
       let dim = '';
       while (i < len && /[0-9\.\-a-zA-Z]/.test(text[i])) {
         dim += text[i];
         i++;
       }
-      
+
       while (i < len && /\s/.test(text[i])) i++;
       if (text.startsWith('\\hbox', i)) {
         i += 5;
         while (i < len && /\s/.test(text[i])) i++;
-        
+
         if (i < len && text[i] === '{') {
           i++;
           let braceCount = 1;
           let content = '';
-          
+
           while (i < len && braceCount > 0) {
             const char = text[i];
-            if (char === '{') {
-              braceCount++;
-            } else if (char === '}') {
-              braceCount--;
-            }
-            if (braceCount > 0) {
-              content += char;
-            }
+            if (char === '{') braceCount++;
+            else if (char === '}') braceCount--;
+            if (braceCount > 0) content += char;
             i++;
           }
-          
+
           let cleanedContent = content.trim();
-          while (cleanedContent.startsWith('$')) {
-            cleanedContent = cleanedContent.slice(1).trim();
-          }
-          while (cleanedContent.endsWith('$')) {
-            cleanedContent = cleanedContent.slice(0, -1).trim();
-          }
-          
+          while (cleanedContent.startsWith('$')) cleanedContent = cleanedContent.slice(1).trim();
+          while (cleanedContent.endsWith('$')) cleanedContent = cleanedContent.slice(0, -1).trim();
+
           const targetDim = isRaise ? dim : `-${dim}`;
-          const replacement = `\\raisebox{${targetDim}}{$${cleanedContent}$}`;
-          result += replacement;
+          result += `\\raisebox{${targetDim}}{$${cleanedContent}$}`;
           continue;
         }
       }
-      
+
       result += text.substring(startIdx, i);
       continue;
     }
-    
+
     result += text[i];
     i++;
   }
-  
+
   return result;
 };
 
+// ─── Full TeX macro preprocessing pipeline ────────────────────────────────────
 export const preprocessTeXMacros = (tex: string): string => {
   if (!tex) return '';
   let m = tex;
 
-  // 0. Replace Plain TeX \raise and \lower with LaTeX \raisebox
+  // 0. Replace Plain TeX \\raise/\\lower with \\raisebox
   m = replaceRaiseLower(m);
 
-  // Fix double parentheses or corrupted braces first
+  // Fix double-parentheses / corrupted braces first
   m = fixTeXBraces(m);
 
-  // 1. Convert TeX \over fraction notation: { A \over B } -> \frac{A}{B}
+  // 1. Convert TeX \\over to \\frac: { A \\over B } → \\frac{A}{B}
   for (let i = 0; i < 5; i++) {
     if (!m.includes('\\over')) break;
     m = m.replace(/\{\s*([^{}]+?)\s+\\over\s+([^{}]+?)\s*\}/g, '\\frac{$1}{$2}');
     m = m.replace(/([a-zA-Z0-9_\{\}\(\)\|]+)\s+\\over\s+([a-zA-Z0-9_\{\}\(\)\|]+)/g, '\\frac{$1}{$2}');
   }
 
-  // 2. Convert TeX \matrix notation: {\matrix{ A & B \cr C & D }} or \matrix{ A & B \cr C & D }
+  // 2. Convert plain TeX \\matrix notation
   m = m.replace(/\{\s*\\matrix\s*\{([\s\S]*?)\}\s*\}/g, '\\begin{matrix}$1\\end{matrix}');
   m = m.replace(/\\matrix\s*\{([\s\S]*?)\}/g, '\\begin{matrix}$1\\end{matrix}');
 
-  // 3. Convert TeX \cr line breaks to KaTeX \\ line breaks
+  // 3. Convert TeX \\cr line breaks → KaTeX \\\\
   m = m.replace(/\\cr\b/g, '\\\\');
 
-  // 4. Convert \left\{ \begin{matrix} ... \end{matrix} \right. to \begin{cases} ... \end{cases}
-  m = m.replace(/\\left\\\{\s*\\begin\{matrix\}([\s\S]*?)\\end\{matrix\}\s*\\right\./g, '\\begin{cases}$1\\end{cases}');
-  m = m.replace(/\\left\\\{\s*([\s\S]*?)\\right\./g, (match, inner) => {
+  // 4. Convert \\left\\{ \\begin{matrix}...\\end{matrix} \\right. → \\begin{cases}...\\end{cases}
+  m = m.replace(
+    /\\left\\?\{?\s*\\begin\{matrix\}([\s\S]*?)\\end\{matrix\}\s*\\right\./g,
+    '\\begin{cases}$1\\end{cases}'
+  );
+  m = m.replace(/\\left\\?\{?\s*([\s\S]*?)\\right\./g, (match, inner) => {
     if (inner.includes('&') || inner.includes('\\\\')) {
       return `\\begin{cases}${inner}\\end{cases}`;
     }
     return match;
   });
 
-  // 5. Convert Plain TeX italic correction slashes to normal division slashes
+  // 5. Fix \\left{ without proper backslash: \left{ → \left\{
+  m = m.replace(/\\left\{(?!\\)/g, '\\left\\{');
+  m = m.replace(/\\right\}(?!\\)/g, '\\right\\}');
+
+  // 6. Convert Plain TeX italic correction \/ → /
   m = m.replace(/\\\/([^\/a-zA-Z]|$)/g, '/$1');
   m = m.replace(/\\\//g, '/');
+
+  // 7. Fix unescaped % signs inside math (LaTeX comment char, but KaTeX doesn't allow it)
+  m = m.replace(/(?<!\\)%/g, '\\%');
+
+  // 8. Normalize \dfrac → \frac (KaTeX supports it but normalize for consistency)
+  // Keep as-is — KaTeX handles \dfrac natively.
+
+  // 9. Fix pmatrix / bmatrix if written as matrix
+  m = m.replace(/\\begin\{pmatrix\}/g, '\\begin{pmatrix}');
+  m = m.replace(/\\begin\{bmatrix\}/g, '\\begin{bmatrix}');
 
   return m;
 };
 
+// ─── Main text cleaning pipeline ─────────────────────────────────────────────
 export const cleanQuestionText = (text: string): string => {
   if (!text) return '';
 
   let cleaned = String(text);
 
-  // 1. FIRST decode HTML entities (&lt; -> <, &gt; -> >, &amp; -> &, &quot; -> ", &#39; -> ', &nbsp; -> ' ')
+  // 1. Decode HTML entities (&lt; → <, &gt; → >, &amp; → &, etc.)
   cleaned = cleaned
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ');
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 
-  // 2. Extract raw TeX from embedded annotation blocks (<annotation ...>TeX</annotation>) if present
+  // 2. Extract raw TeX from MathML <annotation> blocks if present
   if (/<[\s]*annotation/i.test(cleaned)) {
-    cleaned = cleaned.replace(/<\s*annotation[^>]*>([\s\S]*?)<\s*\/\s*annotation\s*>/gi, ' $$$$ $1 $$$$ ');
+    cleaned = cleaned.replace(
+      /<\s*annotation[^>]*>([\s\S]*?)<\s*\/\s*annotation\s*>/gi,
+      ' $$$$ $1 $$$$ '
+    );
   }
 
-  // 3. Strip ALL HTML-like tags (including malformed tags with spaces like < spanclass = ... >, < / span >, < mathxmlns = ... >)
+  // 3. Preserve TeX inside <math> tags before stripping HTML
+  // Replace <math>...</math> with $$...$$ preserving content
+  cleaned = cleaned.replace(/<math[^>]*>([\s\S]*?)<\/math>/gi, (_, inner) => {
+    // Strip remaining tags inside math block
+    const texContent = inner.replace(/<[^>]+>/g, '').trim();
+    return texContent ? ` $$${texContent}$$ ` : '';
+  });
+
+  // 4. Strip ALL HTML-like tags (including malformed tags)
   cleaned = cleaned.replace(/<\s*\/?[^>]+>/gi, ' ');
 
-  // 4. Strip internal identification tags like [JEE Hard #771], [NEET Medium #3015], [#507]
-  cleaned = cleaned.replace(/\[\s*(JEE|NEET|KCET|UPSC)?\s*(Hard|Medium|Easy|Advanced|Main)?\s*#\d+\s*\]/gi, '');
+  // 5. Strip internal exam identification tags like [JEE Hard #771], [#507]
+  cleaned = cleaned.replace(
+    /\[\s*(JEE|NEET|KCET|UPSC)?\s*(Hard|Medium|Easy|Advanced|Main)?\s*#\d+\s*\]/gi,
+    ''
+  );
   cleaned = cleaned.replace(/\[\s*#\d+\s*\]/gi, '');
 
-  // 5. Replace Private Use Area (PUA) font glyphs from PDF extraction
+  // 6. Replace Private Use Area (PUA) font glyphs from PDF extraction
   cleaned = cleaned.replace(/[\uf000-\uf0ff]/g, (char) => PUA_MAP[char] || '');
 
-  // 6. Preprocess TeX macros (\matrix, \over, \cr, \left\{ ... \right., brace fixes)
+  // 7. Preprocess TeX macros (\\matrix, \\over, \\cr, brace fixes, etc.)
   cleaned = preprocessTeXMacros(cleaned);
 
-  // 7. Clean up corrupted greatest integer notation artifacts like [ ]≡ or [ ]⋅
+  // 8. Fix corrupted greatest-integer notation artifacts
   cleaned = cleaned.replace(/\[\s*\]\s*≡/g, '[·]').replace(/\[\s*\]\s*⋅/g, '[·]');
 
-  // 8. Clean up KaTeX formatting issues (e.g. {\rho _{oil}} formatting)
+  // 9. Fix rho subscript formatting issues
   cleaned = cleaned.replace(/\{\s*\\rho\s*_\{([^}]+)\}\s*\}/g, '\\rho_{$1}');
 
-  // 9. Normalize contiguous whitespace
-  cleaned = cleaned.replace(/\s+/g, ' ');
+  // 10. Fix common Unicode math chars that should be TeX
+  cleaned = cleaned
+    .replace(/×/g, '\\times ')
+    .replace(/÷/g, '\\div ')
+    .replace(/≤/g, '\\leq ')
+    .replace(/≥/g, '\\geq ')
+    .replace(/≠/g, '\\neq ')
+    .replace(/≈/g, '\\approx ')
+    .replace(/∞/g, '\\infty ')
+    .replace(/∑/g, '\\sum ')
+    .replace(/∏/g, '\\prod ')
+    .replace(/∫/g, '\\int ')
+    .replace(/√/g, '\\sqrt ')
+    .replace(/π/g, '\\pi ')
+    .replace(/α/g, '\\alpha ')
+    .replace(/β/g, '\\beta ')
+    .replace(/γ/g, '\\gamma ')
+    .replace(/δ/g, '\\delta ')
+    .replace(/ε/g, '\\varepsilon ')
+    .replace(/θ/g, '\\theta ')
+    .replace(/λ/g, '\\lambda ')
+    .replace(/μ/g, '\\mu ')
+    .replace(/ν/g, '\\nu ')
+    .replace(/ξ/g, '\\xi ')
+    .replace(/ρ/g, '\\rho ')
+    .replace(/σ/g, '\\sigma ')
+    .replace(/τ/g, '\\tau ')
+    .replace(/φ/g, '\\phi ')
+    .replace(/χ/g, '\\chi ')
+    .replace(/ψ/g, '\\psi ')
+    .replace(/ω/g, '\\omega ')
+    .replace(/Δ/g, '\\Delta ')
+    .replace(/Ω/g, '\\Omega ')
+    .replace(/Σ/g, '\\Sigma ')
+    .replace(/Π/g, '\\Pi ')
+    .replace(/Γ/g, '\\Gamma ')
+    .replace(/Λ/g, '\\Lambda ')
+    .replace(/→/g, '\\rightarrow ')
+    .replace(/←/g, '\\leftarrow ')
+    .replace(/↔/g, '\\leftrightarrow ')
+    .replace(/⇒/g, '\\Rightarrow ')
+    .replace(/⇔/g, '\\Leftrightarrow ')
+    .replace(/∈/g, '\\in ')
+    .replace(/∉/g, '\\notin ')
+    .replace(/⊂/g, '\\subset ')
+    .replace(/⊃/g, '\\supset ')
+    .replace(/∪/g, '\\cup ')
+    .replace(/∩/g, '\\cap ')
+    .replace(/∅/g, '\\emptyset ')
+    .replace(/∂/g, '\\partial ')
+    .replace(/∇/g, '\\nabla ')
+    .replace(/±/g, '\\pm ')
+    .replace(/∓/g, '\\mp ')
+    .replace(/·/g, '\\cdot ')
+    .replace(/°/g, '^{\\circ}')
+    .replace(/²/g, '^{2}')
+    .replace(/³/g, '^{3}')
+    .replace(/¹/g, '^{1}')
+    .replace(/½/g, '\\frac{1}{2}')
+    .replace(/⅓/g, '\\frac{1}{3}')
+    .replace(/¼/g, '\\frac{1}{4}')
+    .replace(/¾/g, '\\frac{3}{4}');
+
+  // 11. Normalize contiguous whitespace (but preserve newlines for list detection)
+  cleaned = cleaned.replace(/[ \t]+/g, ' ');
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
 
   return cleaned.trim();
 };

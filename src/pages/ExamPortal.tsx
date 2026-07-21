@@ -979,10 +979,12 @@ const ExamPortal = () => {
               </div>
 
               <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-slate-200 space-y-10">
-                 <div className="prose prose-slate max-w-none">
-                    <MathText className="text-xl font-bold text-slate-800 leading-relaxed">
-                      {currentQuestion?.statement}
-                    </MathText>
+                 <div className="max-w-none overflow-x-auto">
+                    <div className="text-xl font-bold text-slate-800 leading-relaxed">
+                      <MathText>
+                        {currentQuestion?.statement}
+                      </MathText>
+                    </div>
                  </div>
 
                  {currentQuestion?.type === 'MCQ' ? (
@@ -1002,9 +1004,11 @@ const ExamPortal = () => {
                          }`}>
                            {key}
                          </div>
-                         <MathText inlineOnly className={`font-bold text-sm ${answers[currentIndex] === key ? 'text-indigo-900' : 'text-slate-600'}`}>
-                           {val}
-                         </MathText>
+                         <span className={`font-bold text-sm ${answers[currentIndex] === key ? 'text-indigo-900' : 'text-slate-600'} overflow-x-auto`}>
+                            <MathText inlineOnly>
+                              {val}
+                            </MathText>
+                          </span>
                        </button>
                      ))}
                    </div>

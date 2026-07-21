@@ -359,10 +359,12 @@ const Results = () => {
                     )}
                   </div>
 
-                  <div className="prose prose-slate max-w-none">
-                    <MathText className="text-lg font-bold text-slate-800 leading-relaxed">
-                      {q.statement}
-                    </MathText>
+                  <div className="max-w-none overflow-x-auto">
+                    <div className="text-lg font-bold text-slate-800 leading-relaxed">
+                      <MathText>
+                        {q.statement}
+                      </MathText>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -409,9 +411,11 @@ const Results = () => {
                        <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
                          <Brain className="w-3.5 h-3.5" /> Solution & Explanation
                        </h4>
-                       <MathText className="text-xs font-bold text-indigo-900/80 leading-relaxed">
-                         {q.explanation || q.solution}
-                       </MathText>
+                       <div className="text-sm font-medium text-indigo-900/80 leading-relaxed overflow-x-auto">
+                         <MathText>
+                           {q.explanation || q.solution}
+                         </MathText>
+                       </div>
                     </div>
                   )}
                 </div>
