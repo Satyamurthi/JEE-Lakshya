@@ -1499,4 +1499,18 @@ export const syncSQLiteQuestions = async (): Promise<{ success: boolean; inserte
   }
 };
 
+export const getSyncStatus = async (): Promise<any> => {
+  try {
+    const apiUrl = await getApiUrl();
+    const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
+    const response = await fetch(`${apiUrl}/sync_sqlite.php?action=status`, {
+      headers: { 'X-Active-Stream': activeStream }
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
 

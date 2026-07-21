@@ -12,7 +12,7 @@ import {
   getSystemStreams, saveSystemStreams, deleteAdminAndStudents, toggleAdminFreezeStatus,
   getQuestionsCountFromDB, seedMassiveQuestionsToDB, getAllQuestionsFromDB, getActualTotalRevenue,
   getSubscriptionPlans, saveSubscriptionPlan, deleteSubscriptionPlan, grantFreePremiumAccess,
-  getSQLiteQuestionsCount, syncSQLiteQuestions
+  getSQLiteQuestionsCount, syncSQLiteQuestions, getSyncStatus
 } from '../supabase';
 import MathText, { renderMathInText } from '../components/MathText';
 import YearWisePYQ from './YearWisePYQ';
@@ -203,20 +203,47 @@ const SuperAdmin = () => {
     setIsSyncingSqlite(true);
     try {
       const result = await syncSQLiteQuestions();
-      if (result.success) {
-        setToast({ 
-          message: result.message || `🎉 Successfully synchronized database! ${result.inserted} questions imported.`, 
-          type: 'success' 
-        });
-        setDbQuestionCount(result.new_total);
-        const sqCount = await getSQLiteQuestionsCount();
-        setSqliteQuestionCount(sqCount);
-      } else {
-        setToast({ message: result.message || "Failed to sync SQLite questions.", type: 'error' });
+      if (!result.success) {
+        setToast({ message: result.message || "Failed to start sync.", type: 'error' });
+        setIsSyncingSqlite(false);
+        return;
       }
+      
+      setToast({ message: "Sync started in background! Tracking progress...", type: 'success' });
+      
+      // Poll progress every 2 seconds
+      const pollInterval = setInterval(async () => {
+        try {
+          const progress = await getSyncStatus();
+          if (progress) {
+            if (progress.status === 'syncing') {
+              setToast({ 
+                message: `Syncing: ${progress.total_processed.toLocaleString()} / ${progress.total_sqlite.toLocaleString()} (${progress.percent}%) - Inserted: ${progress.inserted.toLocaleString()}`, 
+                type: 'success' 
+              });
+            } else if (progress.status === 'completed') {
+              clearInterval(pollInterval);
+              setToast({ 
+                message: `🎉 Synchronization completed! ${progress.inserted.toLocaleString()} questions synced successfully.`, 
+                type: 'success' 
+              });
+              setDbQuestionCount(progress.inserted);
+              const sqCount = await getSQLiteQuestionsCount();
+              setSqliteQuestionCount(sqCount);
+              setIsSyncingSqlite(false);
+            } else if (progress.status === 'failed') {
+              clearInterval(pollInterval);
+              setToast({ message: `Sync failed: ${progress.error}`, type: 'error' });
+              setIsSyncingSqlite(false);
+            }
+          }
+        } catch (e) {
+          console.error("Error polling sync status:", e);
+        }
+      }, 2000);
+
     } catch (err: any) {
       setToast({ message: err.message || "Error syncing SQLite questions.", type: 'error' });
-    } finally {
       setIsSyncingSqlite(false);
     }
   };
