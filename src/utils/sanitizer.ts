@@ -83,6 +83,22 @@ export const fixTeXBraces = (tex: string): string => {
   // Pattern: {{N}} double curly braces (not escaped) inside TeX → {N}
   t = t.replace(/\{\{([^{}]*)\}\}/g, '{$1}');
 
+  // 0b. Fix \frac with a triple-brace single arg containing two sub-groups:
+  //   \frac{{{A}{B}}} → \frac{A}{B}  (very common PDF extraction artifact)
+  //   Works for simple single-level inner groups like {1} and {\sqrt 3}
+  t = t.replace(
+    /\\frac\s*\{\s*\{\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*\}\s*\}/g,
+    '\\frac$1$2'
+  );
+  // Also handle \frac{{A}{B}} (double-braced, two inner groups) → \frac{A}{B}
+  t = t.replace(
+    /\\frac\s*\{\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*\}/g,
+    '\\frac$1$2'
+  );
+
+  // 0c. Strip redundant outer braces around trig functions: {\sin^{-1}} → \sin^{-1}
+  t = t.replace(/\{(\\(?:sin|cos|tan|cot|sec|csc|arcsin|arccos|arctan|log|ln|exp)(?:[^{}]|\{[^{}]*\})*)\}/g, '$1');
+
   // 1. Fix \frac with extra outer parens only (NOT when contents have TeX commands like \sqrt)
   // Only strip outer parens/braces if content doesn't contain backslash commands
   t = t.replace(
