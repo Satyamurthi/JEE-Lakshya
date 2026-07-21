@@ -322,3 +322,11 @@ This file records the chronological history of tasks, major changes, and feature
     2.  **Implemented Early Exit Logic**: Refactored the `select` action handler inside [api/local_db.php](file:///d:/JEE/api/local_db.php) to perform the `countOption === 'exact'` check at the very beginning of the block. It now executes a lightweight `SELECT COUNT(*)` query and exits immediately, completely bypassing the memory-heavy `SELECT *` command.
     3.  **Pushed updates**: Pushed optimized backend API updates to remote GitHub repositories. Netlify successfully rebuilt the frontend, restoring seamless data fetching.
 
+## Session 46: LaTeX Math Parsing & Plain TeX Macro Normalization Upgrades
+*   **Request**: Fix frontend issues where KaTeX equations, functions, and tables are showing up as raw text instead of rendering properly.
+*   **Work Done**:
+    1.  **Resolved Plain TeX raise/lower Incompatibility**: KaTeX strictly rejects plain TeX primitives like `\raise` and `\lower` followed by dimensions (e.g. `\raise0.5ex\hbox{...}`). Engineered a custom TypeScript brace-tracking parser `replaceRaiseLower()` in [src/utils/sanitizer.ts](file:///d:/JEE/src/utils/sanitizer.ts) to parse dimensions and content, converting them recursively to Standard LaTeX `\raisebox{dimen}{$content$}` expressions which KaTeX compiles perfectly.
+    2.  **Normalized Math Slashes**: Mapped plain TeX italic correction slashes `\/` to normal division slashes `/` inside `preprocessTeXMacros()`.
+    3.  **Engineered Delimiter Nesting Splitter**: Standard regex segment splitting on `$` breaks when math expressions contain nested `$` delimiters (e.g. inside `\raisebox` text blocks). Replaced the regex-based splitter inside [src/components/MathText.tsx](file:///d:/JEE/src/components/MathText.tsx) with a custom character-by-character scanner `splitIntoSegments()`. This scanner tracks curly brace depths (`{...}`) to ignore internal nested dollar signs, isolating complex equations into single, clean KaTeX render blocks.
+    4.  **Pushed updates**: Deployed and pushed changes to GitHub remotes to trigger Netlify auto-building.
+
