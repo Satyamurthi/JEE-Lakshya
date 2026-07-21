@@ -566,7 +566,7 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 
 ---
 
-## 18. KNOWN BUGS & FIXES APPLIED IN THIS SESSION
+## 18. KNOWN BUGS & FIXES APPLIED
 
 | Bug | Root Cause | Fix Applied |
 |---|---|---|
@@ -574,9 +574,10 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 | ISO date `2026-07-19T08:12:06.399Z` fails MySQL | DATETIME columns don't accept ISO 8601 format | `local_db.php` converts ISO → `YYYY-MM-DD HH:MM:SS` on insert/update |
 | `Unknown column` error on admin create | Payload included unmapped fields | `local_db.php` uses `SHOW COLUMNS FROM $table` to filter payload |
 | Exam history not visible after refresh | Remote DB only, no local backup | `submitExamAttempt` also backs up to `localStorage`, merged on load |
-| LaTeX not rendering in exported PDF | KaTeX not loaded in print window | `Results.tsx` injects KaTeX scripts into print window `<head>` |
+| LaTeX not rendering in exported PDF | KaTeX not loaded in print window | `Results.tsx` pre-renders math with `renderMathInText()` before injecting into PDF HTML |
 | LaTeX stripped incorrectly by sanitizer | HTML entity-encoded tags not decoded first | `sanitizer.ts` decodes entities before stripping tags |
-| `\frac{((309)}{{22}}` broken TeX | Double brackets in fraction | `fixTeXBraces()` strips extra brackets inside `\frac{}{}` |
+| `\frac{((309)}{{22}}` broken TeX | Double brackets in fraction | `fixTeXBraces()` strips extra parens only for simple expressions without nested TeX |
+| Raw LaTeX showing in result options | Unclosed `\[..\]` consumed rest-of-string; double-braces `\{\{N\}\}` from PDF | Added lookahead before math block parsing; added double-brace unescaping in `fixTeXBraces()` |
 | Admin freeze not working | `toggleAdminFreezeStatus` only updated `status`, not `is_frozen` | Updated to set both `status` + `is_frozen` + cascade to students |
 | Grant All not working | `updateAdminModulePermissions` not cascading to students | Updated to cascade `can_access_*` updates to all assigned students |
 | 500 Internal Server Error on UPDATE | PHP `local_db.php` couldn't find PK from filters | Updated to extract PK from both payload AND `$input['filters']` |

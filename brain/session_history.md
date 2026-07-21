@@ -344,3 +344,37 @@ This file records the chronological history of tasks, major changes, and feature
     2.  **Implemented Direct Segment Rendering**: Refactored `renderMathInText()` in [src/components/MathText.tsx](file:///d:/JEE/src/components/MathText.tsx) to render math blocks directly during array mapping instead of joining and re-executing `replace(/\$([^\$]+?)\$/g)` on `fullText`. This prevents post-processing regexes from splitting math blocks containing internal `$` delimiters inside `\raisebox` text boxes.
     3.  **Pushed updates**: Deployed and pushed changes to GitHub remotes.
 
+## Session 49: Comprehensive KaTeX Math Rendering Overhaul
+*   **Request**: Make the frontend properly handle ALL KaTeX JEE/NEET content — equations, tables, formulas — and make it look properly rendered.
+*   **Root Cause Identified**: 
+    - `splitIntoSegments()` used broken `idx % 2 === 1` parity to identify math blocks — this broke whenever `$$` and `$` were mixed.
+    - Many question bank entries contain raw Unicode math symbols (×, ≤, α, π, etc.) that were not converted to TeX.
+    - HTML entity variants like `&#8734;` and `&#x3B1;` were not decoded.
+    - Bare TeX macros (without dollar delimiters) in plain text segments were not being rendered.
+    - Display-mode equations inside `<span>` couldn't render block-style.
+    - Explanation text had raw TeX source instead of rendered math.
+*   **Work Done**:
+    1.  **Rewrote `MathText.tsx`**: Replaced broken idx-parity segment approach with typed `Segment` objects (`display/inline/text`). Each segment is now correctly tagged during parsing so rendering is deterministic regardless of delimiter mix.
+    2.  **Added bare-TeX auto-detection**: Detects entire-formula text with no delimiters and auto-wraps in `$$` or `$` based on content complexity.
+    3.  **Added inline TeX macro scanning**: Scans plain-text segments for bare macros like `\frac`, `\sqrt`, `\alpha` and renders them inline without requiring `$` wrapping.
+    4.  **Added list/bullet formatting**: Explanation blocks with numbered/bullet lists now render as proper HTML `<ol>/<ul>`.
+    5.  **Enhanced `sanitizer.ts`**: Added comprehensive Unicode → TeX conversion (α→\alpha, ×→\times, ≤→\leq, °→^{\\circ}, ²→^{2}, etc.). Added numeric HTML entity decoding (`&#8734;` etc.). Added MathML annotation block extraction. Fixed `\left{` → `\left\{` brace correction. Added `%` sign escaping in TeX contexts.
+    6.  **Added KaTeX custom macros**: `\degree`, `\Celsius`, `\eps`, `\d` for common physics/chemistry notation.
+    7.  **Wrapped question statements in block-level divs** in `ExamPortal.tsx` and `Results.tsx` so display-mode equations render on their own line with proper centering.
+    8.  **Updated `index.css`**: Comprehensive KaTeX styles — display centering, table support (for property tables in explanations), error fallback styling, mobile responsive scaling, print-safe rules.
+    9.  **Pushed updates**: Deployed changes to both GitHub remotes, triggering Netlify auto-deploy.
+
+---
+
+## Session 44: KaTeX Comprehensive Fix — All Pages
+*   **Problem**: Raw LaTeX code appearing in exam portal, results, and history pages. Root causes: unclosed delimiters consuming entire rest-of-string, double-escaped braces `\{\{N\}\}` from PDF extraction, `fixTeXBraces()` over-stripping `\frac{}{}` args with nested commands, PDF export using raw TeX strings, `\left\{` double-escaping conflict.
+*   **Files**: `src/components/MathText.tsx`, `src/utils/sanitizer.ts`, `src/pages/Results.tsx`
+*   **Work Done**:
+    1. **MathText.tsx — Unclosed delimiter safety**: Added lookahead for `\[`, `\(`, `$$`, `$` — if no matching close exists, treat opening as plain text instead of consuming rest-of-string.
+    2. **sanitizer.ts — Double-brace unescaping**: Step 0 in `fixTeXBraces()` strips `\{\{N\}\}` → `N` and `{{N}}` → `{N}` (PDF extraction artifacts). Second pass in `preprocessTeXMacros()`.
+    3. **sanitizer.ts — Safer `\frac` fix**: Only strips outer parens from `\frac` args when they contain no backslash commands (preserves `\frac{\sqrt{3}}{2}`).
+    4. **sanitizer.ts — Deduplicated `\left\{` handling**: Both `fixTeXBraces()` and `preprocessTeXMacros()` now safe-guard against double-escaping.
+    5. **sanitizer.ts — % sign fix**: Replaced lookbehind assertion with two-step replace (broader JS engine compatibility).
+    6. **Results.tsx — PDF pre-rendering**: `handleExportPDF()` now calls `renderMathInText()` on all question text, options, and explanations before injecting into PDF HTML — math renders as KaTeX HTML spans, not raw LaTeX.
+    7. **Pushed**: commit `ab23da6` to both remotes, Netlify auto-deploys.
+
