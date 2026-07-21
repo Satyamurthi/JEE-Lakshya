@@ -91,7 +91,7 @@ try {
         // Trigger CLI script in background
         $cli_path = "d:\\JEE\\scripts\\sync_jee_mariadb.php";
         $php_path = "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\php.exe";
-        $cmd = 'cmd /c start /B "" "' . $php_path . '" "' . $cli_path . '" ' . escapeshellarg($active_stream);
+        $cmd = 'cmd /c start /B "" "' . $php_path . '" "' . $cli_path . '" ' . escapeshellarg($active_stream) . ' > "d:\\JEE\\sync_debug.log" 2>&1';
         pclose(popen($cmd, "r"));
 
         $est_count = (strpos($active_stream, 'jee') !== false) ? 18014173 : (int)$sdb->query("SELECT COUNT(*) FROM questions")->fetchColumn();
