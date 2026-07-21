@@ -315,3 +315,10 @@ This file records the chronological history of tasks, major changes, and feature
     5.  **Created Live Progress UI Polling**: Updated the Super Admin React panel (`src/pages/SuperAdmin.tsx` and `src/supabase.ts`) to trigger the sync in the background and poll the status endpoint every 2 seconds, displaying a live progress bar showing completed question counts, total count, and percentages to prevent timeouts and provide instant visual feedback.
     6.  **Pushed changes**: Pushed all code modifications to GitHub main branches.
 
+## Session 45: Out-of-Memory DB Query Crash Resolution in local_db.php
+*   **Request**: Resolve the HTTP 500 (Internal Server Error) thrown by the local backend on `/api/local_db.php`.
+*   **Work Done**:
+    1.  **Diagnosed Fatal Memory Exhaustion**: Discovered that as the synced question bank grows, querying the questions count (`select('*', { count: 'exact' })`) was executing the main query (`SELECT * FROM questions`) before checking the count option. This buffered all columns of 600,000+ rows into PHP memory, causing a fatal out-of-memory error (exceeding 512MB RAM limit).
+    2.  **Implemented Early Exit Logic**: Refactored the `select` action handler inside [api/local_db.php](file:///d:/JEE/api/local_db.php) to perform the `countOption === 'exact'` check at the very beginning of the block. It now executes a lightweight `SELECT COUNT(*)` query and exits immediately, completely bypassing the memory-heavy `SELECT *` command.
+    3.  **Pushed updates**: Pushed optimized backend API updates to remote GitHub repositories. Netlify successfully rebuilt the frontend, restoring seamless data fetching.
+
