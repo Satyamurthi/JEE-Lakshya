@@ -201,9 +201,6 @@ try {
             }
         }
 
-        $stmt = $conn->prepare($sql);
-        $stmt->execute($params);
-
         $isSingle      = isset($input['isSingle'])      ? (bool)$input['isSingle']      : false;
         $isMaybeSingle = isset($input['isMaybeSingle']) ? (bool)$input['isMaybeSingle'] : false;
         $countOption   = isset($input['countOption'])   ? $input['countOption']          : null;
@@ -219,6 +216,9 @@ try {
             echo json_encode(["data" => [], "error" => null, "count" => $totalCount]);
             exit;
         }
+
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
 
         $rows = $stmt->fetchAll();
 
