@@ -73,9 +73,10 @@ const PUA_MAP: Record<string, string> = {
 };
 
 /**
- * Collapse {{ ... }} → { ... } using a character-level scanner that properly
- * handles arbitrarily nested braces inside the double-brace groups.
- * Runs up to 4 passes to handle multiple levels of double-wrapping.
+ * Collapse {{ ... }} → { ... } using a character-level scanner.
+ * Tracks depth from the OUTER { so that patterns like {{A}{B}} and
+ * {{{\frac{a}{b}}}} all correctly collapse, regardless of nesting depth.
+ * Runs up to 4 passes for multiple levels of double-wrapping.
  */
 const collapseDoubleBraces = (tex: string): string => {
   let t = tex;
@@ -84,27 +85,27 @@ const collapseDoubleBraces = (tex: string): string => {
     let i = 0;
     let changed = false;
     while (i < t.length) {
-      // Detect {{ (not escaped)
-      if (
-        t[i] === '{' && t[i + 1] === '{' &&
-        (i === 0 || t[i - 1] !== '\\')
-      ) {
-        // Track depth from the SECOND { to find the matching }}
-        let depth = 1; // depth counts from the inner {
-        let j = i + 2;
-        while (j < t.length && depth > 0) {
-          if (t[j] === '{' && t[j - 1] !== '\\') depth++;
-          else if (t[j] === '}' && t[j - 1] !== '\\') depth--;
+      // Detect {{ (unescaped)
+      if (t[i] === '{' && i + 1 < t.length && t[i + 1] === '{' &&
+          (i === 0 || t[i - 1] !== '\\')) {
+        // Track from the OUTER { until its matching }
+        let depth = 0;
+        let j = i;
+        while (j < t.length) {
+          if (t[j] === '{' && (j === 0 || t[j - 1] !== '\\')) depth++;
+          else if (t[j] === '}' && (j === 0 || t[j - 1] !== '\\')) {
+            depth--;
+            if (depth === 0) { j++; break; }
+          }
           j++;
         }
-        // j now points just after the closing } of the inner group
-        // Check if the very next char is also } (closing the outer {)
-        if (j < t.length && t[j] === '}') {
-          // We have {{ innerContent }}
-          // Replace with { innerContent }
-          const inner = t.substring(i + 2, j - 1);
-          result += '{' + inner + '}';
-          i = j + 1;
+        // segment = t[i..j) is the full outer group
+        const segment = t.substring(i, j);
+        if (segment.startsWith('{{') && segment.endsWith('}}')) {
+          // Strip one outer brace layer: {{ X }} → { X }
+          // slice(1,-1) removes the outermost { and }
+          result += segment.slice(1, -1);
+          i = j;
           changed = true;
           continue;
         }
@@ -115,6 +116,9 @@ const collapseDoubleBraces = (tex: string): string => {
     t = result;
     if (!changed) break;
   }
+  // Final pass: handle remaining unbalanced double-open {{simple}
+  // (outer } is missing — just strip the extra leading {)
+  t = t.replace(/\{\{([^{}]*)\}/g, '{$1}');
   return t;
 };
 
@@ -123,15 +127,14 @@ export const fixTeXBraces = (tex: string): string => {
   if (!tex) return '';
   let t = tex;
 
-  // 0. Fix double-escaped braces from PDF extraction: \{\{N\}\} → N
-  t = t.replace(/\\\\\{\\\\{([^{}\\]*)\\\\\}\\\\}/g, '$1');
+  // 0. Fix double-escaped braces from PDF extraction: \\{\\{N\\}\\} → N
+  t = t.replace(/\\\{\\\{([^{}\\]*)\\\}\\\}/g, '$1');
 
   // 0a. Collapse {{ ... }} → { ... } with full nested-brace support
   t = collapseDoubleBraces(t);
 
-  // 0b. Fix \frac with a single outer-braced arg containing two sub-groups:
-  //   \frac{{A}{B}} or \frac{{{A}{B}}} → \frac{A}{B}
-  //   (very common PDF extraction artifact, run AFTER collapseDoubleBraces)
+  // 0b. Fix \frac whose first brace-arg contains two sub-groups (missing split):
+  //   \frac{{A}{B}} → \frac{A}{B}  (run AFTER collapseDoubleBraces)
   t = t.replace(
     /\\frac\s*\{\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*\}/g,
     '\\frac$1$2'
@@ -140,27 +143,39 @@ export const fixTeXBraces = (tex: string): string => {
   // 0c. Strip redundant outer braces around trig functions: {\sin^{-1}} → \sin^{-1}
   t = t.replace(/\{(\\(?:sin|cos|tan|cot|sec|csc|arcsin|arccos|arctan|log|ln|exp)(?:[^{}]|\{[^{}]*\})*)\}/g, '$1');
 
-  // 0d. Recover \frac with missing denominator by inserting {1}:
-  //   \frac{X} followed by non-{ character → \frac{X}{1}
+  // 0d. Recover \frac with missing denominator: \frac{X}nonBrace → \frac{X}{1}
   t = t.replace(/\\frac(\{(?:[^{}]|\{[^{}]*\})*\})(?!\s*\{)/g, '\\frac$1{1}');
 
-  // 1. Fix \frac with extra outer parens only (NOT when contents have TeX commands like \sqrt)
-  // Only strip outer parens/braces if content doesn't contain backslash commands
+  // 0e. Fix spaces inside superscripts/subscripts: ^{ - 1} → ^{-1}, ^{ 2 } → ^{2}
+  t = t.replace(/\^\{\s*(-?\s*\d+)\s*\}/g, (_, n) => `^{${n.replace(/\s+/g, '')}}`);
+  t = t.replace(/_\{\s*(\w+)\s*\}/g, (_, n) => `_{${n.trim()}}`);
+
+  // 0f. Fix bare superscripts without braces on multi-char exponents: x^-1 → x^{-1}
+  t = t.replace(/(\^)(-[0-9]+)/g, '$1{$2}');
+
+  // 1. Fix \frac with extra outer parens only
   t = t.replace(
     /\\frac\s*\{\s*\(\s*([^(){}\\]+)\s*\)\s*\}\s*\{\s*\(?\s*([^(){}\\]+)\s*\)?\s*\}/gi,
     '\\frac{$1}{$2}'
   );
 
-  // 2. Fix double parentheses around simple expressions: ((A)) → (A)
+  // 2. Fix double parentheses: ((A)) → (A)
   t = t.replace(/\(\(\s*([^()]+)\s*\)\)/gi, '($1)');
 
-  // 3. Fix \left{ without backslash before brace: \left{ → \left\{
-  //    but don't double-escape if already \left\{
+  // 3. Fix \left{/\right} without backslash
   t = t.replace(/\\left\{(?!\\|\s*\\)/g, '\\left\\{');
-  // Fix \right} → \right\} same way
   t = t.replace(/\\right\}(?!\\|\s*\\)/g, '\\right\\}');
 
-  // 4. Balance unclosed braces (only if difference is small, don't over-pad)
+  // 4. Ensure \left[ has matching \right] and \left( has matching \right)
+  //    If \left[ exists without \right], fix \right. → \right]
+  if ((t.match(/\\left\[/g) || []).length !== (t.match(/\\right\]/g) || []).length) {
+    t = t.replace(/\\right\./g, '\\right]');
+  }
+  if ((t.match(/\\left\(/g) || []).length !== (t.match(/\\right\)/g) || []).length) {
+    t = t.replace(/\\right\./g, '\\right)');
+  }
+
+  // 5. Balance unclosed braces (only if difference is small)
   let openCount = 0;
   let closeCount = 0;
   for (let ci = 0; ci < t.length; ci++) {
@@ -168,9 +183,8 @@ export const fixTeXBraces = (tex: string): string => {
     else if (t[ci] === '}' && (ci === 0 || t[ci - 1] !== '\\')) closeCount++;
   }
   const diff = openCount - closeCount;
-  if (diff > 0 && diff <= 5) {
-    t += '}'.repeat(diff);
-  }
+  if (diff > 0 && diff <= 5) t += '}'.repeat(diff);
+  else if (diff < 0 && diff >= -5) t = '{'.repeat(-diff) + t;
   return t;
 };
 

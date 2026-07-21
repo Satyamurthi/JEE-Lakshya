@@ -130,17 +130,70 @@ export const splitIntoSegments = (text: string): Segment[] => {
 /** Fix common corruption patterns before KaTeX rendering */
 const fixCorruptedTeX = (tex: string): string => {
   let t = tex;
-  // Fix \azin → \sin (common PDF extraction corruption of \sin^{-1})
-  t = t.replace(/\\azin/g, '\\sin');
-  // Fix \acos → \cos, \atan → \tan corruptions
+
+  // ── Corrupted command names (PDF extraction artifacts) ──────────────────
+  t = t.replace(/\\azin\b/g, '\\sin');   // \azin → \sin
+  t = t.replace(/\\asin\b/g, '\\sin');   // \asin → \sin (non-standard)
   t = t.replace(/\\acos\b/g, '\\cos');
   t = t.replace(/\\atan\b/g, '\\tan');
-  // Fix missing braces: \sin ^4 → \sin^{4}
-  t = t.replace(/\\(sin|cos|tan|cot|sec|csc|log|ln|exp)\s+\^(\s*)(\d)/g, '\\$1^{$3}');
-  // Fix )( without operator: )(N) → ) \cdot (N)
+  t = t.replace(/\\acot\b/g, '\\cot');
+  t = t.replace(/\\tg\b/g, '\\tan');     // Russian notation
+  t = t.replace(/\\ctg\b/g, '\\cot');
+
+  // ── Superscript/subscript spaces ─────────────────────────────────────────
+  // ^{ - 1} → ^{-1},  ^{ 2 } → ^{2},  ^{-   1} → ^{-1}
+  t = t.replace(/\^\{(\s*-?\s*\d+\s*)\}/g, (_, n) => `^{${n.replace(/\s+/g, '')}}`);
+  t = t.replace(/\^\{\s*(-\s*)/g, '^{-');
+  // x^-1 (no braces on negative exponent) → x^{-1}
+  t = t.replace(/(\^)(-\d+)(?!\})/g, '$1{$2}');
+  // x^n where n is multi-char but no braces: ^12 → ^{12}
+  t = t.replace(/\^(\d{2,})/g, '^{$1}');
+
+  // ── Trig functions with space before ^ ───────────────────────────────────
+  // \sin ^{ - 1} → \sin^{-1}
+  t = t.replace(/\\(sin|cos|tan|cot|sec|csc|log|ln|exp)\s+\^/g, '\\$1^');
+
+  // ── \left / \right mismatches ─────────────────────────────────────────────
+  // \left[ without matching \right] → fix \right. or \right) to \right]
+  const leftBracket = (t.match(/\\left\[/g) || []).length;
+  const rightBracket = (t.match(/\\right\]/g) || []).length;
+  if (leftBracket > rightBracket) {
+    // Replace the first unmatched \right. or \right) with \right]
+    let replaced = 0;
+    const needed = leftBracket - rightBracket;
+    t = t.replace(/\\right[.)](?!\])/g, (m) => {
+      if (replaced < needed) { replaced++; return '\\right]'; }
+      return m;
+    });
+  }
+  // \left( without matching \right)
+  const leftParen = (t.match(/\\left\(/g) || []).length;
+  const rightParen = (t.match(/\\right\)/g) || []).length;
+  if (leftParen > rightParen) {
+    let replaced = 0;
+    const needed = leftParen - rightParen;
+    t = t.replace(/\\right[.\]](?!\))/g, (m) => {
+      if (replaced < needed) { replaced++; return '\\right)'; }
+      return m;
+    });
+  }
+
+  // ── Other common JEE/NEET corruption patterns ─────────────────────────────
+  // \times written as x or ×
+  t = t.replace(/\btimes\b(?!\\)/g, '\\times');
+  // Extra space before/after _ or ^
+  t = t.replace(/\s+([_^])\s*\{/g, '$1{');
+  // \cdot written without backslash between numbers: 3 . 5 → 3 \cdot 5
+  // Fix )( without operator
   t = t.replace(/\)\s*\((?!\s*[)\]}])/g, ') \\cdot (');
-  // Fix leading )) or extra closing parens that break parse
+  // Fix leading )) that break parse
   t = t.replace(/^\s*\)\s*\)/g, '');
+  // Fix \\over not converted: a \\over b → \\frac{a}{b}  (handled in preprocessTeXMacros too)
+  // Fix double backslash at end of env lines (\\\\) being misread
+  // Remove orphan \right or \left with nothing
+  t = t.replace(/\\right\s*$/g, '');
+  t = t.replace(/\\left\s*$/g, '');
+
   return t;
 };
 
