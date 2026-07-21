@@ -40,4 +40,20 @@ cloudflared_run.log
 # Database Folder
 DB/
 
+# Large binary / local-only files
+Android.zip
+Qp/
+*.db
+*.db-shm
+*.db-wal
+
+# Local runtime / scratch files
+sync_progress.json
+scratch_inspect_tables.php
+scratch_query.php
+qc
+query
+start
+stop
+
 
