@@ -127,11 +127,29 @@ export const splitIntoSegments = (text: string): Segment[] => {
   return segments;
 };
 
-/** KaTeX render helper — returns HTML string or fallback raw text */
+/** Fix common corruption patterns before KaTeX rendering */
+const fixCorruptedTeX = (tex: string): string => {
+  let t = tex;
+  // Fix \azin → \sin (common PDF extraction corruption of \sin^{-1})
+  t = t.replace(/\\azin/g, '\\sin');
+  // Fix \acos → \cos, \atan → \tan corruptions
+  t = t.replace(/\\acos\b/g, '\\cos');
+  t = t.replace(/\\atan\b/g, '\\tan');
+  // Fix missing braces: \sin ^4 → \sin^{4}
+  t = t.replace(/\\(sin|cos|tan|cot|sec|csc|log|ln|exp)\s+\^(\s*)(\d)/g, '\\$1^{$3}');
+  // Fix )( without operator: )(N) → ) \cdot (N)
+  t = t.replace(/\)\s*\((?!\s*[)\]}])/g, ') \\cdot (');
+  // Fix leading )) or extra closing parens that break parse
+  t = t.replace(/^\s*\)\s*\)/g, '');
+  return t;
+};
+
+/** KaTeX render helper — returns rendered HTML or a styled fallback (never raw TeX) */
 const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
   try {
-    const cleaned = preprocessTeXMacros(mathContent.trim());
-    return katex.renderToString(cleaned, {
+    const fixed = fixCorruptedTeX(mathContent.trim());
+    const cleaned = preprocessTeXMacros(fixed);
+    const result = katex.renderToString(cleaned, {
       displayMode,
       throwOnError: false,
       strict: false,
@@ -143,9 +161,15 @@ const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
         '\\d': '\\mathrm{d}',
       },
     });
+    return result;
   } catch (e) {
-    console.warn('KaTeX render error:', e);
-    return mathContent;
+    console.warn('KaTeX render error:', e, 'Content:', mathContent);
+    // Return a safely escaped version styled as math-like text instead of raw LaTeX
+    const safe = mathContent
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    return `<span class="katex" style="font-style:italic;color:inherit;">${safe}</span>`;
   }
 };
 
