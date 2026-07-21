@@ -198,7 +198,8 @@ const ExamPortal = () => {
       };
 
       let submitResult;
-      if (config && config.type === 'Daily Challenge') {
+      const isDailyChallenge = !!(config && config.type === 'Daily Challenge');
+      if (isDailyChallenge) {
         const dailyAttemptData = {
           user_id: profile.id,
           challenge_id: config.challenge_id,
@@ -232,9 +233,9 @@ const ExamPortal = () => {
       // Log activity to server (fire-and-forget)
       const eventType = isDailyChallenge ? 'daily_submit' : 'exam_submit';
       logActivity(eventType, {
-        score:       results.totalScore,
-        total_marks: results.totalMarks,
-        accuracy:    results.accuracy,
+        score:       score,
+        total_marks: attemptData.total_marks,
+        accuracy:    attemptData.accuracy,
         attempt_id:  attemptData.id
       });
       
