@@ -305,3 +305,13 @@ This file records the chronological history of tasks, major changes, and feature
     4.  **Startup Auto-Recovery**: verified `SilentStartBackend.vbs` in the Windows Startup folder correctly triggers the WMI-driven `StartBackend.ps1` script silently on boot.
     5.  **Verified Status & URL**: Confirmed the named tunnel `JEE-backend` registered 4 connections and shows **Healthy** in the Cloudflare dashboard. Confirmed the Quick Tunnel URL is updated dynamically in `public/backend_url.txt` and successfully committed/pushed to GitHub, responding with **HTTP 200** to verify end-to-end integration.
 
+## Session 44: Performance Optimization for Massive 18 Million Question Bank Sync
+*   **Request**: Resolve the issue where the browser is showing only 14,159 questions instead of the 15,00,000+ unique questions present in the local database.
+*   **Work Done**:
+    1.  **Identified Database File Discrepancy**: Located that the synchronization script was pointing to a smaller database `questions.db` (24 MB) containing 14,173 rows, instead of the main `jeebakend.DB` database (12.4 GB) containing exactly 18,014,173 questions.
+    2.  **Analyzed Performance Bottleneck**: Joining 18M questions with options and solutions in a streaming JOIN query required SQLite to sort tens of millions of rows in memory, swapping to disk and causing locks and hangs.
+    3.  **Engineered High-Performance Batch Script**: Created `scripts/sync_jee_mariadb.php` to fetch questions, options, and solutions in indexed ID-range batches of 5,000. This reduced data retrieval time from minutes/hours to a mere 0.15 seconds per batch.
+    4.  **Designed Non-Blocking Background Sync API**: Rewrote `api/sync_sqlite.php` to launch the heavy 18M sync script as a detached background process and write progress data to `sync_progress.json`.
+    5.  **Created Live Progress UI Polling**: Updated the Super Admin React panel (`src/pages/SuperAdmin.tsx` and `src/supabase.ts`) to trigger the sync in the background and poll the status endpoint every 2 seconds, displaying a live progress bar showing completed question counts, total count, and percentages to prevent timeouts and provide instant visual feedback.
+    6.  **Pushed changes**: Pushed all code modifications to GitHub main branches.
+
