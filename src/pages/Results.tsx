@@ -4,7 +4,7 @@ import {
   Trophy, Target, CheckCircle2, XCircle, AlertCircle, Brain, Sparkles,
   ArrowLeft, Download, Share2, AlertTriangle, X
 } from 'lucide-react';
-import MathText from '../components/MathText';
+import MathText, { renderMathInText } from '../components/MathText';
 
 const Results = () => {
   const navigate = useNavigate();
@@ -112,11 +112,17 @@ const Results = () => {
       const userAnsText = isUnattempted ? 'Unattempted' : q.userAnswer;
       const correctAnsText = q.correctAnswer;
 
+      // Pre-render all math-containing fields via renderMathInText
+      const renderedStatement = renderMathInText(q.statement || q.question || '');
+      const renderedExplanation = (q.explanation || q.solution)
+        ? renderMathInText(q.explanation || q.solution)
+        : '';
+
       const statusBadge = isCorrect 
-        ? '<span style="color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px;">✅ CORRECT (+4)</span>'
+        ? '<span style="color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px;">&#x2705; CORRECT (+4)</span>'
         : isUnattempted
-        ? '<span style="color:#475569; background:#f8fafc; border:1px solid #e2e8f0; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px;">⚪ UNATTEMPTED (0)</span>'
-        : '<span style="color:#dc2626; background:#fef2f2; border:1px solid #fecaca; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px;">❌ INCORRECT (-1)</span>';
+        ? '<span style="color:#475569; background:#f8fafc; border:1px solid #e2e8f0; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px;">&#x26AA; UNATTEMPTED (0)</span>'
+        : '<span style="color:#dc2626; background:#fef2f2; border:1px solid #fecaca; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px;">&#x274C; INCORRECT (-1)</span>';
 
       let optionsListHTML = '';
       if (q.options && typeof q.options === 'object') {
@@ -129,7 +135,8 @@ const Results = () => {
           } else if (isUserChoice && !isCorrect) {
             optStyle = "padding:10px 14px; margin-bottom:8px; border-radius:10px; border:2px solid #ef4444; background:#fef2f2; color:#991b1b; font-weight:bold; font-size:14px;";
           }
-          return `<div style="${optStyle}"><strong>(${key.toUpperCase()})</strong> ${val}</div>`;
+          const renderedVal = renderMathInText(String(val || ''), true);
+          return `<div style="${optStyle}"><strong>(${key.toUpperCase()})</strong> ${renderedVal}</div>`;
         }).join('');
       }
 
@@ -144,7 +151,7 @@ const Results = () => {
           </div>
           
           <div style="font-size:15px; font-weight:700; color:#1e293b; line-height:1.6; margin-bottom:16px;">
-            ${q.statement || q.question || ''}
+            ${renderedStatement}
           </div>
 
           ${optionsListHTML ? `<div style="margin-bottom:16px;">${optionsListHTML}</div>` : ''}
@@ -154,10 +161,10 @@ const Results = () => {
               <span>Your Marked Answer: <strong style="color:${isCorrect ? '#059669' : isUnattempted ? '#64748b' : '#dc2626'}">${userAnsText}</strong></span>
               <span>Official Correct Answer: <strong style="color:#059669">${correctAnsText}</strong></span>
             </div>
-            ${q.explanation || q.solution ? `
+            ${renderedExplanation ? `
               <div style="border-top:1px dashed #cbd5e1; padding-top:10px; margin-top:10px;">
-                <span style="color:#4f46e5; font-weight:900; font-size:11px; text-transform:uppercase; display:block; margin-bottom:4px;">💡 Detailed Solution / Explanation:</span>
-                <div style="color:#475569; line-height:1.5;">${q.explanation || q.solution}</div>
+                <span style="color:#4f46e5; font-weight:900; font-size:11px; text-transform:uppercase; display:block; margin-bottom:4px;">&#x1F4A1; Detailed Solution / Explanation:</span>
+                <div style="color:#475569; line-height:1.5;">${renderedExplanation}</div>
               </div>
             ` : ''}
           </div>

@@ -77,26 +77,38 @@ export const fixTeXBraces = (tex: string): string => {
   if (!tex) return '';
   let t = tex;
 
-  // 1. Fix \\frac with extra parens/brackets: \\frac{((309)}{{22}} → \\frac{309}{22}
-  t = t.replace(/\\frac\s*\{\s*[\(\{\s]*([^\(\)\{\}\s]+)[\)\}\s]*\}\s*\{\s*[\(\{\s]*([^\(\)\{\}\s]+)[\)\}\s]*\}/gi, '\\frac{$1}{$2}');
-  t = t.replace(/\\frac\s*\{\s*[\(\{\s]*([^{}]+?)[\)\}\s]*\}\s*\{\s*[\(\{\s]*([^{}]+?)[\)\}\s]*\}/gi, '\\frac{$1}{$2}');
+  // 0. Fix double-escaped braces from PDF extraction: \{\{N\}\} → N or \{N\}
+  // Pattern: \{\{ content \}\} where content has no nested braces → just content
+  t = t.replace(/\\\{\\\{([^{}\\]*)\\\}\\\}/g, '$1');
+  // Pattern: {{N}} double curly braces (not escaped) inside TeX → {N}
+  t = t.replace(/\{\{([^{}]*)\}\}/g, '{$1}');
 
-  // 2. Fix double parentheses: ((A)) → (A)
+  // 1. Fix \frac with extra outer parens only (NOT when contents have TeX commands like \sqrt)
+  // Only strip outer parens/braces if content doesn't contain backslash commands
+  t = t.replace(
+    /\\frac\s*\{\s*\(\s*([^(){}\\]+)\s*\)\s*\}\s*\{\s*\(?\s*([^(){}\\]+)\s*\)?\s*\}/gi,
+    '\\frac{$1}{$2}'
+  );
+
+  // 2. Fix double parentheses around simple expressions: ((A)) → (A)
   t = t.replace(/\(\(\s*([^()]+)\s*\)\)/gi, '($1)');
-  t = t.replace(/\(\(\s*([^()]+)\s*\)/gi, '($1)');
-  t = t.replace(/\(\s*([^()]+)\s*\)\)/gi, '($1)');
 
-  // 3. Balance unclosed braces
-  let openCount = (t.match(/\{/g) || []).length;
-  let closeCount = (t.match(/\}/g) || []).length;
-  while (openCount > closeCount) {
-    t += '}';
-    closeCount++;
+  // 3. Fix \left{ without backslash before brace: \left{ → \left\{
+  //    but don't double-escape if already \left\{
+  t = t.replace(/\\left\{(?!\\|\s*\\)/g, '\\left\\{');
+  // Fix \right} → \right\} same way
+  t = t.replace(/\\right\}(?!\\|\s*\\)/g, '\\right\\}');
+
+  // 4. Balance unclosed braces (only if difference is small, don't over-pad)
+  let openCount = 0;
+  let closeCount = 0;
+  for (let ci = 0; ci < t.length; ci++) {
+    if (t[ci] === '{' && (ci === 0 || t[ci - 1] !== '\\')) openCount++;
+    else if (t[ci] === '}' && (ci === 0 || t[ci - 1] !== '\\')) closeCount++;
   }
-  // Remove excess closing braces at end
-  while (closeCount > openCount + 1) {
-    t = t.replace(/\}$/, '');
-    closeCount--;
+  const diff = openCount - closeCount;
+  if (diff > 0 && diff <= 5) {
+    t += '}'.repeat(diff);
   }
   return t;
 };
@@ -198,15 +210,18 @@ export const preprocessTeXMacros = (tex: string): string => {
   });
 
   // 5. Fix \\left{ without proper backslash: \left{ → \left\{
-  m = m.replace(/\\left\{(?!\\)/g, '\\left\\{');
-  m = m.replace(/\\right\}(?!\\)/g, '\\right\\}');
+  //    Note: fixTeXBraces() already handles this; this is an extra safety pass
+  //    Use a safe pattern that won't double-escape already-fixed \left\{
+  m = m.replace(/\\left\{(?!\\|\{)/g, '\\left\\{');
+  m = m.replace(/\\right\}(?!\\|\})/g, '\\right\\}');
 
   // 6. Convert Plain TeX italic correction \/ → /
   m = m.replace(/\\\/([^\/a-zA-Z]|$)/g, '/$1');
   m = m.replace(/\\\//g, '/');
 
   // 7. Fix unescaped % signs inside math (LaTeX comment char, but KaTeX doesn't allow it)
-  m = m.replace(/(?<!\\)%/g, '\\%');
+  // Use a replace with function to avoid lookbehind (not universally supported)
+  m = m.replace(/([^\\])%/g, '$1\\%').replace(/^%/, '\\%');
 
   // 8. Normalize \dfrac → \frac (KaTeX supports it but normalize for consistency)
   // Keep as-is — KaTeX handles \dfrac natively.
@@ -214,6 +229,10 @@ export const preprocessTeXMacros = (tex: string): string => {
   // 9. Fix pmatrix / bmatrix if written as matrix
   m = m.replace(/\\begin\{pmatrix\}/g, '\\begin{pmatrix}');
   m = m.replace(/\\begin\{bmatrix\}/g, '\\begin{bmatrix}');
+
+  // 10. Fix double-escaped braces one more time after all macro processing
+  m = m.replace(/\\\{\\\{([^{}\\]*)\\\}\\\}/g, '{$1}');
+  m = m.replace(/\{\{([^{}\\]*)\}\}/g, '{$1}');
 
   return m;
 };

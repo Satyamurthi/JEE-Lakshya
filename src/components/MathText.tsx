@@ -31,6 +31,13 @@ export const splitIntoSegments = (text: string): Segment[] => {
   while (i < len) {
     // ---- Display math: $$ ... $$  or  \[ ... \] ----
     if (text.startsWith('$$', i)) {
+      // Ensure there is a closing $$
+      const close$$ = text.indexOf('$$', i + 2);
+      if (close$$ === -1) {
+        // No closing $$ — skip over to prevent consuming rest of text
+        i++;
+        continue;
+      }
       pushText(i);
       i += 2;
       const mathStart = i;
@@ -50,6 +57,12 @@ export const splitIntoSegments = (text: string): Segment[] => {
 
     // ---- Display math: \[ ... \] ----
     if (text.startsWith('\\[', i)) {
+      const closePos = text.indexOf('\\]', i + 2);
+      if (closePos === -1) {
+        // No closing \] found — treat as plain text to avoid swallowing entire rest of string
+        i++;
+        continue;
+      }
       pushText(i);
       i += 2;
       const mathStart = i;
@@ -63,6 +76,12 @@ export const splitIntoSegments = (text: string): Segment[] => {
 
     // ---- Inline math: \( ... \) ----
     if (text.startsWith('\\(', i)) {
+      const closePos = text.indexOf('\\)', i + 2);
+      if (closePos === -1) {
+        // No closing \) found — treat as plain text
+        i++;
+        continue;
+      }
       pushText(i);
       i += 2;
       const mathStart = i;
@@ -76,6 +95,13 @@ export const splitIntoSegments = (text: string): Segment[] => {
 
     // ---- Inline math: $...$ (single dollar, not $$) ----
     if (text[i] === '$' && !text.startsWith('$$', i)) {
+      // Look ahead for a matching close $ (not preceded by another $)
+      const closeDollar = text.indexOf('$', i + 1);
+      if (closeDollar === -1) {
+        // No closing $ — treat as plain text
+        i++;
+        continue;
+      }
       pushText(i);
       i += 1;
       const mathStart = i;
