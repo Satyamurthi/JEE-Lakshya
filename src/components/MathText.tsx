@@ -106,43 +106,40 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   // 2. Process segments split by existing $...$ or $$...$$
   const segments = splitIntoSegments(text);
   const processedSegments = segments.map((part, idx) => {
-    // odd indices are already delimited math blocks ($...$ or $$...$$)
-    if (idx % 2 === 1) return part;
-    
-    // even indices are non-delimited text; auto-wrap isolated bare TeX expressions
+    // Odd indices (1, 3, 5...) are math blocks delimited by $$...$$ or $...$
+    if (idx % 2 === 1) {
+      let isDisplay = part.startsWith('$$');
+      let mathContent = isDisplay ? part.slice(2, -2) : part.slice(1, -1);
+
+      if (inlineOnly) {
+        isDisplay = false;
+      }
+
+      try {
+        const cleanedMath = preprocessTeXMacros(mathContent.trim());
+        return katex.renderToString(cleanedMath, { displayMode: isDisplay, throwOnError: false });
+      } catch (e) {
+        console.error("KaTeX render error:", e);
+        return part;
+      }
+    }
+
+    // Even indices (0, 2, 4...) are non-math text
     let p = part;
     if (/\\(left|right|matrix|cases|begin|end|frac|sqrt|vec|hat|alpha|beta|gamma|delta|theta|lambda|mu|pi|sigma|omega|Delta|Omega|over|ne|le|ge|to|infty|sum|prod|int|lim|sin|cos|tan|log|ln|cdot|times|pm|mp|partial|nabla)/i.test(p)) {
-      p = p.replace(/(\\left[\s\S]*?\\right\.?|\\begin\{[^}]+\}[\s\S]*?\\end\{[^}]+\}|\\frac\{[^}]+\}\{[^}]+\}|\\sqrt\{[^}]+\}|\\vec\{[^}]+\}|\\hat\{[^}]+\})/g, '$$$$1$$$$');
-      p = p.replace(/(\\alpha|\\beta|\\gamma|\\delta|\\theta|\\lambda|\\mu|\\pi|\\sigma|\\omega|\\Delta|\\Omega|\\ne|\\le|\\ge|\\to|\\infty|\\cdot|\\times|\\pm|\\mp)(\_\{[^}]+\}|\^\{[^}]+\}|\_[a-zA-Z0-9]+|\^[a-zA-Z0-9]+)?/g, '$$1$');
+      p = p.replace(/(\\left[\s\S]*?\\right\.?|\\begin\{[^}]+\}[\s\S]*?\\end\{[^}]+\}|\\frac\{[^}]+\}\{[^}]+\}|\\sqrt\{[^}]+\}|\\vec\{[^}]+\}|\\hat\{[^}]+\})/g, (match, inner) => {
+        try {
+          const cleanedMath = preprocessTeXMacros(inner.trim());
+          return katex.renderToString(cleanedMath, { displayMode: !inlineOnly, throwOnError: false });
+        } catch {
+          return match;
+        }
+      });
     }
     return p;
   });
 
-  const fullText = processedSegments.join('');
-
-  // 3. Render $$ ... $$ (Display mode)
-  let processed = fullText.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
-    try {
-      const cleanedMath = preprocessTeXMacros(math.trim());
-      return katex.renderToString(cleanedMath, { displayMode: true, throwOnError: false });
-    } catch (e) {
-      console.error("KaTeX display error:", e);
-      return match;
-    }
-  });
-  
-  // 4. Render $ ... $ (Inline mode)
-  processed = processed.replace(/\$([^\$]+?)\$/g, (match, math) => {
-    try {
-      const cleanedMath = preprocessTeXMacros(math.trim());
-      return katex.renderToString(cleanedMath, { displayMode: false, throwOnError: false });
-    } catch (e) {
-      console.error("KaTeX inline error:", e);
-      return match;
-    }
-  });
-  
-  return processed;
+  return processedSegments.join('');
 };
 
 const MathText: FC<MathTextProps> = ({ children, text, className = '', inlineOnly = false }) => {

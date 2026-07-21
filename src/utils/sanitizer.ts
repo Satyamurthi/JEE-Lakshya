@@ -122,8 +122,11 @@ export const replaceRaiseLower = (text: string): string => {
           }
           
           let cleanedContent = content.trim();
-          if (cleanedContent.startsWith('$') && cleanedContent.endsWith('$')) {
-            cleanedContent = cleanedContent.slice(1, -1).trim();
+          while (cleanedContent.startsWith('$')) {
+            cleanedContent = cleanedContent.slice(1).trim();
+          }
+          while (cleanedContent.endsWith('$')) {
+            cleanedContent = cleanedContent.slice(0, -1).trim();
           }
           
           const targetDim = isRaise ? dim : `-${dim}`;
