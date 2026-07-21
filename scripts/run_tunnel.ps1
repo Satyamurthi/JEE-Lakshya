@@ -57,12 +57,12 @@ if ($Url -ne $CurrentUrl) {
     # Run git push using the PAT
     Remove-Item -Path "$Cwd\.git\index.lock" -Force -ErrorAction SilentlyContinue
     
-    Start-Process -FilePath "git" -ArgumentList "add", "public/backend_url.txt" -WorkingDirectory $Cwd -NoNewWindow -Wait
-    Start-Process -FilePath "git" -ArgumentList "commit", "-m", "chore: update dynamic backend tunnel URL" -WorkingDirectory $Cwd -NoNewWindow -Wait
+    git add public/backend_url.txt
+    git commit -m "chore: update dynamic backend tunnel URL"
     
     # Push to repositories
-    Start-Process -FilePath "git" -ArgumentList "push", "https://$($Pat)@github.com/Satyamurthi/JEE-Lakshya.git", "main", "--force" -WorkingDirectory $Cwd -NoNewWindow -Wait
-    Start-Process -FilePath "git" -ArgumentList "push", "https://$($Pat)@github.com/Satyamurthi/JEE-Nexus.git", "main", "--force" -WorkingDirectory $Cwd -NoNewWindow -Wait
+    git push "https://$($Pat)@github.com/Satyamurthi/JEE-Lakshya.git" main --force
+    git push "https://$($Pat)@github.com/Satyamurthi/JEE-Nexus.git" main --force
     
     Write-Host "Successfully updated backend URL on GitHub!"
 } else {

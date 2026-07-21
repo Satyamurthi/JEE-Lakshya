@@ -15,6 +15,11 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $file = __DIR__ . '/..' . $uri;
 
+// Prevent recursive inclusion of the router itself
+if (realpath($file) === realpath(__FILE__)) {
+    return false;
+}
+
 // If file exists, serve or include it
 if (is_file($file)) {
     if (pathinfo($file, PATHINFO_EXTENSION) === 'php') {

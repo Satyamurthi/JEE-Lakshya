@@ -1,9 +1,14 @@
 <?php
+set_time_limit(60);
+ini_set('max_execution_time', 60);
+ob_start(); // Buffer output to avoid chunked-encoding issues with cloudflared
+
 require_once __DIR__ . '/db.php';
 
 // Disable default PHP error reporting to ensure only JSON is returned
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
+
 
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 
@@ -432,4 +437,5 @@ try {
     }
     echo json_encode(["data" => null, "error" => ["message" => $msg]]);
 }
+ob_end_flush(); // Flush buffered output to client
 ?>

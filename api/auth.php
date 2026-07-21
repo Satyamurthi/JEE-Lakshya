@@ -1,5 +1,8 @@
 <?php
+set_time_limit(60);
+ob_start();
 require_once __DIR__ . '/db.php';
+
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 

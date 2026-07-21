@@ -42,10 +42,11 @@ Start-Sleep -Seconds 5
 Log "Named tunnel service status: $((Get-Service cloudflared -ErrorAction SilentlyContinue).Status)"
 Start-Sleep -Seconds 2
 
-# -- Step 3: Start PHP CLI Server (8 workers) -----------------
-Log "Starting PHP CLI Server on 127.0.0.1:8080 (8 workers)..."
-$env:PHP_CLI_SERVER_WORKERS = "8"
-$phpCmd = '"{0}" -S 127.0.0.1:8080 -t "{1}" "{1}\api\router.php"' -f $PhpExe, $JeeRoot
+# -- Step 3: Start PHP CLI Server -----------------
+Log "Starting PHP CLI Server on 127.0.0.1:8080..."
+# Note: PHP_CLI_SERVER_WORKERS doesn't work on Windows (no fork support)
+# PHP CLI server is single-threaded on Windows - this is expected behavior
+$phpCmd = '"' + $PhpExe + '" -S 127.0.0.1:8080 -t "' + $JeeRoot + '" "' + $JeeRoot + '\api\router.php"'
 $phpProc = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $phpCmd }
 Start-Sleep -Seconds 3
 Log "PHP Server started with PID $($phpProc.ProcessId)."

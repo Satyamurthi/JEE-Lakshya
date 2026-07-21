@@ -11,12 +11,18 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
     exit(0);
 }
 
+// Set PHP execution time limit (60 seconds per request)
+set_time_limit(60);
+ini_set('max_execution_time', 60);
+
 // Detect active stream
 $active_stream = 'jee';
 if (isset($_GET['stream'])) {
     $active_stream = strtolower($_GET['stream']);
 } elseif (isset($_SERVER['HTTP_X_ACTIVE_STREAM'])) {
     $active_stream = strtolower($_SERVER['HTTP_X_ACTIVE_STREAM']);
+} elseif (isset(getallheaders()['X-Active-Stream'])) {
+    $active_stream = strtolower(getallheaders()['X-Active-Stream']);
 }
 
 // Map stream to MySQL database name
@@ -30,18 +36,25 @@ if (strpos($active_stream, 'neet') !== false) {
 }
 
 $host = "127.0.0.1";
+$port = 3306;
 $username = "root";
 $password = ""; // Default empty password in XAMPP
 
 try {
-    $conn = new PDO("mysql:host=" . $host . ";dbname=" . $db_name . ";charset=utf8mb4", $username, $password);
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    $dsn = "mysql:host=$host;port=$port;dbname=$db_name;charset=utf8mb4";
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_TIMEOUT            => 5,       // 5-second connection timeout
+        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4",
+    ];
+    $conn = new PDO($dsn, $username, $password, $options);
 } catch (PDOException $exception) {
     http_response_code(500);
     echo json_encode([
-        "error" => "Database connection failure.",
-        "details" => $exception->getMessage()
+        "error"   => "Database connection failure.",
+        "details" => $exception->getMessage(),
+        "db"      => $db_name
     ]);
     exit(0);
 }
