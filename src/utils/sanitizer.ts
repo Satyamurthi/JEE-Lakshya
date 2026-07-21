@@ -72,25 +72,66 @@ const PUA_MAP: Record<string, string> = {
   '\uf048': 'H',
 };
 
+/**
+ * Collapse {{ ... }} → { ... } using a character-level scanner that properly
+ * handles arbitrarily nested braces inside the double-brace groups.
+ * Runs up to 4 passes to handle multiple levels of double-wrapping.
+ */
+const collapseDoubleBraces = (tex: string): string => {
+  let t = tex;
+  for (let pass = 0; pass < 4; pass++) {
+    let result = '';
+    let i = 0;
+    let changed = false;
+    while (i < t.length) {
+      // Detect {{ (not escaped)
+      if (
+        t[i] === '{' && t[i + 1] === '{' &&
+        (i === 0 || t[i - 1] !== '\\')
+      ) {
+        // Track depth from the SECOND { to find the matching }}
+        let depth = 1; // depth counts from the inner {
+        let j = i + 2;
+        while (j < t.length && depth > 0) {
+          if (t[j] === '{' && t[j - 1] !== '\\') depth++;
+          else if (t[j] === '}' && t[j - 1] !== '\\') depth--;
+          j++;
+        }
+        // j now points just after the closing } of the inner group
+        // Check if the very next char is also } (closing the outer {)
+        if (j < t.length && t[j] === '}') {
+          // We have {{ innerContent }}
+          // Replace with { innerContent }
+          const inner = t.substring(i + 2, j - 1);
+          result += '{' + inner + '}';
+          i = j + 1;
+          changed = true;
+          continue;
+        }
+      }
+      result += t[i];
+      i++;
+    }
+    t = result;
+    if (!changed) break;
+  }
+  return t;
+};
+
 // ─── Fix corrupted TeX fraction/brace syntax ──────────────────────────────────
 export const fixTeXBraces = (tex: string): string => {
   if (!tex) return '';
   let t = tex;
 
-  // 0. Fix double-escaped braces from PDF extraction: \{\{N\}\} → N or \{N\}
-  // Pattern: \{\{ content \}\} where content has no nested braces → just content
-  t = t.replace(/\\\{\\\{([^{}\\]*)\\\}\\\}/g, '$1');
-  // Pattern: {{N}} double curly braces (not escaped) inside TeX → {N}
-  t = t.replace(/\{\{([^{}]*)\}\}/g, '{$1}');
+  // 0. Fix double-escaped braces from PDF extraction: \{\{N\}\} → N
+  t = t.replace(/\\\\\{\\\\{([^{}\\]*)\\\\\}\\\\}/g, '$1');
 
-  // 0b. Fix \frac with a triple-brace single arg containing two sub-groups:
-  //   \frac{{{A}{B}}} → \frac{A}{B}  (very common PDF extraction artifact)
-  //   Works for simple single-level inner groups like {1} and {\sqrt 3}
-  t = t.replace(
-    /\\frac\s*\{\s*\{\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*\}\s*\}/g,
-    '\\frac$1$2'
-  );
-  // Also handle \frac{{A}{B}} (double-braced, two inner groups) → \frac{A}{B}
+  // 0a. Collapse {{ ... }} → { ... } with full nested-brace support
+  t = collapseDoubleBraces(t);
+
+  // 0b. Fix \frac with a single outer-braced arg containing two sub-groups:
+  //   \frac{{A}{B}} or \frac{{{A}{B}}} → \frac{A}{B}
+  //   (very common PDF extraction artifact, run AFTER collapseDoubleBraces)
   t = t.replace(
     /\\frac\s*\{\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*\}/g,
     '\\frac$1$2'
@@ -98,6 +139,10 @@ export const fixTeXBraces = (tex: string): string => {
 
   // 0c. Strip redundant outer braces around trig functions: {\sin^{-1}} → \sin^{-1}
   t = t.replace(/\{(\\(?:sin|cos|tan|cot|sec|csc|arcsin|arccos|arctan|log|ln|exp)(?:[^{}]|\{[^{}]*\})*)\}/g, '$1');
+
+  // 0d. Recover \frac with missing denominator by inserting {1}:
+  //   \frac{X} followed by non-{ character → \frac{X}{1}
+  t = t.replace(/\\frac(\{(?:[^{}]|\{[^{}]*\})*\})(?!\s*\{)/g, '\\frac$1{1}');
 
   // 1. Fix \frac with extra outer parens only (NOT when contents have TeX commands like \sqrt)
   // Only strip outer parens/braces if content doesn't contain backslash commands
