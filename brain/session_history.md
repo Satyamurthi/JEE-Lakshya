@@ -330,3 +330,10 @@ This file records the chronological history of tasks, major changes, and feature
     3.  **Engineered Delimiter Nesting Splitter**: Standard regex segment splitting on `$` breaks when math expressions contain nested `$` delimiters (e.g. inside `\raisebox` text blocks). Replaced the regex-based splitter inside [src/components/MathText.tsx](file:///d:/JEE/src/components/MathText.tsx) with a custom character-by-character scanner `splitIntoSegments()`. This scanner tracks curly brace depths (`{...}`) to ignore internal nested dollar signs, isolating complex equations into single, clean KaTeX render blocks.
     4.  **Pushed updates**: Deployed and pushed changes to GitHub remotes to trigger Netlify auto-building.
 
+## Session 47: Exam Submission ReferenceError Resolution
+*   **Request**: Fix error during test submission ("Submission failed: ReferenceError: isDailyChallenge is not defined").
+*   **Work Done**:
+    1.  **Identified Root Cause**: In [src/pages/ExamPortal.tsx](file:///d:/JEE/src/pages/ExamPortal.tsx), line 233 referenced `isDailyChallenge` to determine the activity log event type (`daily_submit` vs `exam_submit`), but the `isDailyChallenge` variable was never defined in that scope.
+    2.  **Implemented Fix**: Declared `const isDailyChallenge = !!(config && config.type === 'Daily Challenge');` prior to branch evaluation and corrected the `logActivity` parameter values (`score`, `attemptData.total_marks`, `attemptData.accuracy`).
+    3.  **Pushed updates**: Pushed fix to GitHub main branches, triggering Netlify deployment.
+
