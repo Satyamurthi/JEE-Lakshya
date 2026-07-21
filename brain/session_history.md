@@ -337,3 +337,10 @@ This file records the chronological history of tasks, major changes, and feature
     2.  **Implemented Fix**: Declared `const isDailyChallenge = !!(config && config.type === 'Daily Challenge');` prior to branch evaluation and corrected the `logActivity` parameter values (`score`, `attemptData.total_marks`, `attemptData.accuracy`).
     3.  **Pushed updates**: Pushed fix to GitHub main branches, triggering Netlify deployment.
 
+## Session 48: KaTeX raisebox Dollar Stripping & Direct Segment Rendering Fix
+*   **Request**: Resolve remaining LaTeX rendering issue where formulas containing `\raisebox` failed to compile and displayed raw red error text.
+*   **Work Done**:
+    1.  **Fixed Double Dollar Signs inside `\raisebox`**: Updated `replaceRaiseLower()` in [src/utils/sanitizer.ts](file:///d:/JEE/src/utils/sanitizer.ts) to strip ALL leading/trailing `$` signs from the inner content using a `while` loop before re-wrapping with single `$`, preventing KaTeX from rejecting illegal `\raisebox{dimen}{$$math$$}` display-mode expressions.
+    2.  **Implemented Direct Segment Rendering**: Refactored `renderMathInText()` in [src/components/MathText.tsx](file:///d:/JEE/src/components/MathText.tsx) to render math blocks directly during array mapping instead of joining and re-executing `replace(/\$([^\$]+?)\$/g)` on `fullText`. This prevents post-processing regexes from splitting math blocks containing internal `$` delimiters inside `\raisebox` text boxes.
+    3.  **Pushed updates**: Deployed and pushed changes to GitHub remotes.
+
