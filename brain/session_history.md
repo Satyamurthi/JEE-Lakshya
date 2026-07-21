@@ -296,3 +296,12 @@ This file records the chronological history of tasks, major changes, and feature
     3.  **Installed Cloudflare Tunnel Service**: Installed the user's permanent Cloudflare Tunnel connector (`Cloudflared`) as a Windows service configured to start automatically on system boot. Reconfigured it with the correct token (`eyJhIjoiOWIwNT...`) provided by the user to connect successfully.
     4.  **Hardened Tunnel Script**: Modified `scripts/run_tunnel.ps1` to use robust `Start-Process` calls with explicit working directories for Git operations, preventing TTY/console piping hangs when run inside background scheduled tasks.
 
+## Session 43: Cloudflare Quick Tunnel Auto-Recovery & Named Service Health Configuration
+*   **Request**: Fix the Cloudflare tunnel that is showing "Down" and ensure that the backend automatically connects after every system restart.
+*   **Work Done**:
+    1.  **Diagnosed Tunnel Down Root Cause**: The named Cloudflare Windows service was crashing/disconnecting because it had zero routes/hostnames configured in the dashboard, violating Cloudflare's server requirements.
+    2.  **Configured Private CIDR Route**: Guided the user to configure a Private CIDR route `10.0.0.0/8` in the Cloudflare Zero Trust dashboard. Replaced and reinstalled the Cloudflare service using the new rotated token (`eyJhIjoiOWIwNT...`).
+    3.  **WMI Detached Process Architecture**: Rewrote the startup orchestration script `d:\JEE\scripts\StartBackend.ps1` to launch both the multi-threaded PHP CLI server and the Cloudflare Quick Tunnel as completely detached background processes using WMI (`Win32_Process` class `Create` method) with clean formatted command-lines. This prevents processes from exiting when the parent boot console/task manager exits.
+    4.  **Startup Auto-Recovery**: verified `SilentStartBackend.vbs` in the Windows Startup folder correctly triggers the WMI-driven `StartBackend.ps1` script silently on boot.
+    5.  **Verified Status & URL**: Confirmed the named tunnel `JEE-backend` registered 4 connections and shows **Healthy** in the Cloudflare dashboard. Confirmed the Quick Tunnel URL is updated dynamically in `public/backend_url.txt` and successfully committed/pushed to GitHub, responding with **HTTP 200** to verify end-to-end integration.
+

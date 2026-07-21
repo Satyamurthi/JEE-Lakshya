@@ -29,7 +29,7 @@
 | **Math Rendering** | KaTeX + custom sanitizer (`src/utils/sanitizer.ts`) |
 | **Routing** | React Router v6 |
 | **Build** | Vite + Netlify (automatic deploy on GitHub push) |
-| **Tunneling** | Serveo SSH Tunnel (auto-managed via `scripts/run_tunnel.ps1`) |
+| **Tunneling** | Cloudflare Quick Tunnel (`trycloudflare.com`, no domain needed) — primary; Serveo SSH fallback |
 | **Host OS** | Windows Server 2025 |
 
 ---
@@ -603,11 +603,13 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 
 ---
 
-## 20. CURRENT OPERATIONAL STATE (as of Session 42)
+## 20. CURRENT OPERATIONAL STATE (as of Session 43)
 
 - ✅ PHP CLI server: 8 workers, port 8080 (PDO SQLite extension enabled, configured as auto-startup task)
-- ✅ Cloudflare Tunnel: Installed as `Cloudflared` Windows service, starts automatically on PC boot
-- ✅ SSH Serveo Tunnel: Fallback/dynamic script `run_tunnel.ps1` hardened with `Start-Process`
+- ✅ Cloudflare Quick Tunnel: `cloudflared --url http://127.0.0.1:8080` (trycloudflare.com, no domain needed) — PRIMARY tunnel
+- ✅ SSH Serveo Tunnel: Fallback if Cloudflare Quick Tunnel fails (in StartBackend.ps1)
+- ✅ Startup Auto-Recovery: `SilentStartBackend.vbs` in Windows Startup folder → calls `d:\JEE\scripts\StartBackend.ps1`
+- ✅ `StartBackend.ps1`: Starts PHP + Cloudflare Quick Tunnel, captures URL, writes `public/backend_url.txt`, pushes to GitHub
 - ✅ Netlify: Auto-deploying from `Satyamurthi/JEE-Lakshya` main branch
 - ✅ MariaDB: Running, all 4 schemas initialized with **9 tables each** (configured as auto-startup task)
 - ✅ Question Synchronization: Dynamic SQLite streaming clean sync implemented & executed (database cleared before sync)
@@ -625,8 +627,9 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 - ✅ Question Count Today: `gte` filter now works, shows real count
 - ✅ Revenue Calculation: Primary source = `payment_logs.amount_rupees` SUM
 - ✅ `gte/lte/gt/lt` filters: Supported in `local_db.php`
-- ⚠️ Cloudflare Tunnel routes public traffic directly to local PHP backend on port 8080
-- ✅ PC Auto-Startup: Both database, PHP server, and Cloudflare Tunnel start automatically on PC restart without user interaction
+- ✅ PHP Memory Limit: Increased from 128M → 512M in php.ini
+- ❌ Named Cloudflare Tunnel service (cloudflared Windows service): **DISABLED** — it required a domain/route which was never configured; was causing a crash loop
+- ⚠️ Tunnel URL changes on every PC restart — `StartBackend.ps1` auto-updates `public/backend_url.txt` and pushes to GitHub so Netlify stays in sync
 
 ## 21. ALL 9 DATABASE TABLES (per schema)
 
