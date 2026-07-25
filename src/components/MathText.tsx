@@ -14,8 +14,8 @@ type Segment = { type: 'text' | 'inline' | 'display'; content: string };
 
 /**
  * Split raw text into an array of typed segments.
- * Each segment is tagged as 'display' ($$...$$), 'inline' ($...$), or 'text'.
- * This avoids the broken idx%2 parity approach.
+ * Each segment is tagged as 'display' ($$...$$ or \[...\] or \begin{env}...\end{env}),
+ * 'inline' ($...$ or \(...\)), or 'text'.
  */
 export const splitIntoSegments = (text: string): Segment[] => {
   const segments: Segment[] = [];
@@ -46,12 +46,10 @@ export const splitIntoSegments = (text: string): Segment[] => {
       }
     }
 
-    // ---- Display math: $$ ... $$  or  \[ ... \] ----
+    // ---- Display math: $$ ... $$ ----
     if (text.startsWith('$$', i)) {
-      // Ensure there is a closing $$
       const close$$ = text.indexOf('$$', i + 2);
       if (close$$ === -1) {
-        // No closing $$ — skip over to prevent consuming rest of text
         i++;
         continue;
       }
@@ -66,7 +64,7 @@ export const splitIntoSegments = (text: string): Segment[] => {
         i++;
       }
       const mathContent = text.substring(mathStart, i);
-      if (i < len) i += 2; // skip closing $$
+      if (i < len) i += 2;
       segments.push({ type: 'display', content: mathContent });
       textStart = i;
       continue;
@@ -76,8 +74,12 @@ export const splitIntoSegments = (text: string): Segment[] => {
     if (text.startsWith('\\[', i)) {
       const closePos = text.indexOf('\\]', i + 2);
       if (closePos === -1) {
-        // No closing \] found — treat as plain text to avoid swallowing entire rest of string
-        i++;
+        pushText(i);
+        i += 2;
+        const mathContent = text.substring(i);
+        segments.push({ type: 'display', content: mathContent });
+        i = len;
+        textStart = i;
         continue;
       }
       pushText(i);
@@ -95,8 +97,12 @@ export const splitIntoSegments = (text: string): Segment[] => {
     if (text.startsWith('\\(', i)) {
       const closePos = text.indexOf('\\)', i + 2);
       if (closePos === -1) {
-        // No closing \) found — treat as plain text
-        i++;
+        pushText(i);
+        i += 2;
+        const mathContent = text.substring(i);
+        segments.push({ type: 'inline', content: mathContent });
+        i = len;
+        textStart = i;
         continue;
       }
       pushText(i);
@@ -112,10 +118,8 @@ export const splitIntoSegments = (text: string): Segment[] => {
 
     // ---- Inline math: $...$ (single dollar, not $$) ----
     if (text[i] === '$' && !text.startsWith('$$', i)) {
-      // Look ahead for a matching close $ (not preceded by another $)
       const closeDollar = text.indexOf('$', i + 1);
       if (closeDollar === -1) {
-        // No closing $ — treat as plain text
         i++;
         continue;
       }
@@ -130,7 +134,7 @@ export const splitIntoSegments = (text: string): Segment[] => {
         i++;
       }
       const mathContent = text.substring(mathStart, i);
-      if (i < len) i += 1; // skip closing $
+      if (i < len) i += 1;
       segments.push({ type: 'inline', content: mathContent });
       textStart = i;
       continue;
@@ -139,7 +143,6 @@ export const splitIntoSegments = (text: string): Segment[] => {
     i++;
   }
 
-  // Flush remaining text
   pushText(i);
   return segments;
 };
@@ -148,37 +151,31 @@ export const splitIntoSegments = (text: string): Segment[] => {
 const fixCorruptedTeX = (tex: string): string => {
   let t = tex;
 
-  // ── Corrupted command names (PDF extraction artifacts) ──────────────────
-  t = t.replace(/\\azin\b/g, '\\sin');   // \azin → \sin
-  t = t.replace(/\\asin\b/g, '\\sin');   // \asin → \sin (non-standard)
+  // Corrupted command names (PDF extraction artifacts)
+  t = t.replace(/\\azin\b/g, '\\sin');
+  t = t.replace(/\\asin\b/g, '\\sin');
   t = t.replace(/\\acos\b/g, '\\cos');
   t = t.replace(/\\atan\b/g, '\\tan');
   t = t.replace(/\\acot\b/g, '\\cot');
-  t = t.replace(/\\tg\b/g, '\\tan');     // Russian notation
+  t = t.replace(/\\tg\b/g, '\\tan');
   t = t.replace(/\\ctg\b/g, '\\cot');
 
-  // ── Fix unit dots and greek letter corruptions (e.g., \mu . N. → \mu\text{N}) ─────
+  // Unit dots and greek letter corruptions
   t = t.replace(/\\(mu|micro|nano|pico|femto|milli|kilo|mega|giga)\s*\.\s*([A-Za-z]+)\.?(?=\s|$|\\|\$)/gi, '\\$1\\text{$2}');
   t = t.replace(/\\(mu|micro)\s*([NCFHzmVAKgJWsT]|mol|rad|cd)\b(?!\s*\{)/g, '\\mu\\text{$2}');
   t = t.replace(/\\(alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)\s*\.(?=\s|$|\\|\$)/g, '\\$1 ');
   t = t.replace(/(\\times|\\cdot)\s*10(?!\^)/g, '$1 10^');
   t = t.replace(/=\s*\\times/g, '= \\times');
 
-  // ── Superscript/subscript spaces ─────────────────────────────────────────
-  // ^{ - 1} → ^{-1},  ^{ 2 } → ^{2},  ^{-   1} → ^{-1}
-  t = t.replace(/\^\{(\s*-?\s*\d+\s*)\}/g, (_, n) => `^{${n.replace(/\s+/g, '')}}`);
-  t = t.replace(/\^\{\s*(-\s*)/g, '^{-');
-  // x^-1 (no braces on negative exponent) → x^{-1}
+  // Superscript/subscript spaces
+  t = t.replace(/\^\{\s*(-?\s*\d+)\s*\}/g, (_, n) => `^{${n.replace(/\s+/g, '')}}`);
   t = t.replace(/(\^)(-\d+)(?!\})/g, '$1{$2}');
-  // x^n where n is multi-char but no braces: ^12 → ^{12}
   t = t.replace(/\^(\d{2,})/g, '^{$1}');
 
-  // ── Trig functions with space before ^ ───────────────────────────────────
-  // \sin ^{ - 1} → \sin^{-1}
+  // Trig functions with space before ^
   t = t.replace(/\\(sin|cos|tan|cot|sec|csc|log|ln|exp)\s+\^/g, '\\$1^');
 
-  // ── \left / \right mismatches ─────────────────────────────────────────────
-  // \left[ without matching \right] → fix \right. or \right) to \right]
+  // Mismatched \left / \right
   const leftBracket = (t.match(/\\left\[/g) || []).length;
   const rightBracket = (t.match(/\\right\]/g) || []).length;
   if (leftBracket > rightBracket) {
@@ -189,7 +186,6 @@ const fixCorruptedTeX = (tex: string): string => {
       return m;
     });
   }
-  // \left( without matching \right)
   const leftParen = (t.match(/\\left\(/g) || []).length;
   const rightParen = (t.match(/\\right\)/g) || []).length;
   if (leftParen > rightParen) {
@@ -201,51 +197,24 @@ const fixCorruptedTeX = (tex: string): string => {
     });
   }
 
-  // ── Other common JEE/NEET corruption patterns ─────────────────────────────
-  // Fix bare 'times' attached to letters/numbers (e.g. timesR, 2timesg, times12, times \frac)
+  // Bare times
   t = t.replace(/(?<!\\)times(?=[A-Za-z0-9\s\\\[\(\{\_])/gi, '\\times ');
   t = t.replace(/\btimes\b(?!\\)/gi, '\\times ');
 
-  // Fix PDF OCR Fraction & Double Frac Artifacts (fracfrac -> \frac{\frac, \frac{X}{--} -> -\frac{X}{1})
+  // Double Frac / OCR artifacts
   t = t.replace(/(?<!\\)fracfrac/gi, '\\frac{\\frac');
   t = t.replace(/\\frac\s*\{\s*([^}]+)\s*\}\s*\{\s*--\s*\}/g, '-\\frac{$1}{1}');
   t = t.replace(/\^\s*\\frac\s*\{\s*(\d+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
   t = t.replace(/\^\s*\\frac\s*\{\s*([a-zA-Z0-9+\-]+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
-  t = t.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)\}/g, '{$1}');
-  t = t.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)/g, '{$1');
-  t = t.replace(/\\frac\s*\{\s*1\s*\}\s*\{\s*1([a-zA-Z])\s*\}/g, '\\frac{1}{$1}');
-  t = t.replace(/\\frac\s*\{\s*2\s*\}\s*\{\s*1([a-zA-Z])\s*\}/g, '\\frac{2}{$1}');
-  t = t.replace(/-\s*\\frac\s*\{\s*1\s*\}\s*\{\s*1\s*\}/g, ' -1 ');
-  t = t.replace(/^\{\s*-\s*/, '- ');
-  t = t.replace(/\{\s*-\s*\\frac/, ' -\\frac');
 
-  // Fix OCR missing \frac before differential brace pairs: {dv}{dt} -> \frac{dv}{dt}, {du}{dt} -> \frac{du}{dt}
-  t = t.replace(/(?<!\\frac)\{([a-zA-Z0-9_\^\s]+)\}\{([a-zA-Z0-9_\^\s]+)\}/g, (match, g1, g2) => {
-    if (g1.startsWith('d') || g2.startsWith('d') || g2 === 'dt' || g2 === 'dx' || g2 === 'dy' || g2 === 'dz') {
-      return `\\frac{${g1}}{${g2}}`;
-    }
-    return match;
-  });
-
-  // Fix OCR closing brace mismatches: ^2}{v_I} -> ^2 v_I, ^3}}v_I^2 -> ^3 v_I^2
-  t = t.replace(/\}\}\s*([a-zA-Z0-9_\^]+)/g, '} $1');
-  t = t.replace(/\}\s*\{\s*([a-zA-Z0-9_]+)\s*\}/g, '} $1');
-  t = t.replace(/\\frac\s*\{\s*-\s*\}\s*\{\s*1\s*\}/g, ' - ');
-  t = t.replace(/\\frac\s*\{\s*\+\s*\}\s*\{\s*1\s*\}/g, ' + ');
-  t = t.replace(/\\frac\s*\{\s*([a-zA-Z0-9])\s*\}\s*\{\s*1\s*\}/g, ' $1 ');
-  t = t.replace(/\\frac\s*\{\s*\\text\{\s*-\s*\}\s*\}\s*\{\s*1\s*\}/g, ' - ');
-  t = t.replace(/_\s*\\frac\s*\{\s*1\s*\}\s*\{\s*1\s*\}/g, '_{1}');
-
-  t = t.replace(/\s+([_^])\s*\{/g, '$1{');
-  t = t.replace(/\)\s*\((?!\s*[)\]}])/g, ') \\cdot (');
-  t = t.replace(/^\s*\)\s*\)/g, '');
+  // Clean trailing orphan \left or \right
   t = t.replace(/\\right\s*$/g, '');
   t = t.replace(/\\left\s*$/g, '');
 
   return t;
 };
 
-/** KaTeX render helper — returns rendered HTML or a styled fallback (never raw TeX or red boxes) */
+/** KaTeX render helper — returns rendered HTML or styled fallback (never raw TeX or red boxes) */
 const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
   try {
     const fixed = fixCorruptedTeX(mathContent.trim());
@@ -265,13 +234,12 @@ const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
       },
     });
 
-    // If KaTeX generated a red error box internally, clean up the error box styling
     if (result.includes('katex-error')) {
       const sanitizedResult = result
         .replace(/katex-error/g, 'katex-rendered')
         .replace(/color:\s*#cc0000/g, 'color:inherit')
         .replace(/border:[^;"]+/g, 'border:none');
-      
+
       try {
         const textOnly = katex.renderToString(`\\text{${cleaned.replace(/[\$\\]/g, '').replace(/[\{\}]/g, ' ')}}`, {
           displayMode: false,
@@ -307,6 +275,84 @@ const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
 const BARE_TEX_RE =
   /\\(left|right|matrix|cases|begin|end|frac|sqrt|vec|hat|bar|tilde|dot|ddot|widehat|widetilde|overline|underline|overbrace|underbrace|alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|over|ne|le|ge|to|infty|sum|prod|int|oint|lim|sin|cos|tan|cot|sec|csc|arcsin|arccos|arctan|log|ln|exp|det|cdot|times|div|pm|mp|partial|nabla|hbar|ell|forall|exists|in|notin|subset|supset|cup|cap|emptyset|angle|parallel|perp|propto|sim|approx|equiv|cong|neq|leq|geq|ll|gg|subset|supset|subseteq|supseteq|rightarrow|leftarrow|Rightarrow|Leftarrow|leftrightarrow|Leftrightarrow|uparrow|downarrow|text|mathrm|mathbf|mathit|mathcal|mathbb|operatorname|underset|overset|stackrel|limits|nolimits|displaystyle|textstyle|scriptstyle|scriptscriptstyle|raisebox|rule|hspace|vspace|mbox|quad|qquad|,|;|!|:|\\\\)/i;
 
+/** Extract a full bare TeX expression token starting at position i in text */
+const parseBareTeXTokenAt = (text: string, startIdx: number): { token: string; endIdx: number } | null => {
+  let i = startIdx;
+  const len = text.length;
+  if (text[i] !== '\\') return null;
+
+  let cmd = '\\';
+  i++;
+  while (i < len && /[a-zA-Z]/.test(text[i])) {
+    cmd += text[i];
+    i++;
+  }
+
+  // Handle \left ... \right
+  if (cmd === '\\left') {
+    let depth = 1;
+    while (i < len && depth > 0) {
+      if (text.startsWith('\\left', i)) depth++;
+      else if (text.startsWith('\\right', i)) {
+        depth--;
+        if (depth === 0) {
+          i += 6;
+          if (i < len && /[()\[\]{}|.]/.test(text[i])) i++;
+          break;
+        }
+      }
+      i++;
+    }
+    return { token: text.substring(startIdx, i), endIdx: i };
+  }
+
+  // Handle \begin{env} ... \end{env}
+  if (cmd === '\\begin') {
+    const endEnv = text.indexOf('\\end{', i);
+    if (endEnv !== -1) {
+      const closeBrace = text.indexOf('}', endEnv + 5);
+      if (closeBrace !== -1) {
+        return { token: text.substring(startIdx, closeBrace + 1), endIdx: closeBrace + 1 };
+      }
+    }
+  }
+
+  // Consume arguments { ... } or [ ... ] or subscripts/superscripts _... ^...
+  while (i < len) {
+    while (i < len && /[ \t]/.test(text[i])) i++;
+
+    if (i < len && (text[i] === '{' || text[i] === '[')) {
+      const openChar = text[i];
+      const closeChar = openChar === '{' ? '}' : ']';
+      let depth = 1;
+      i++;
+      while (i < len && depth > 0) {
+        if (text[i] === openChar) depth++;
+        else if (text[i] === closeChar) depth--;
+        i++;
+      }
+    } else if (i < len && (text[i] === '_' || text[i] === '^')) {
+      i++;
+      if (i < len && text[i] === '{') {
+        let depth = 1;
+        i++;
+        while (i < len && depth > 0) {
+          if (text[i] === '{') depth++;
+          else if (text[i] === '}') depth--;
+          i++;
+        }
+      } else {
+        if (i < len) i++;
+      }
+    } else {
+      break;
+    }
+  }
+
+  const token = text.substring(startIdx, i);
+  return token.length > 1 ? { token, endIdx: i } : null;
+};
+
 /** Process a single text line that may contain bare TeX macros */
 const processSingleTextLine = (text: string, inlineOnly: boolean): string => {
   if (!BARE_TEX_RE.test(text)) {
@@ -331,27 +377,30 @@ const processSingleTextLine = (text: string, inlineOnly: boolean): string => {
     return renderKaTeX(trimmed, displayMode);
   }
 
-  // Otherwise scan for inline macro-containing sub-tokens
-  const INLINE_MATH_RE =
-    /\\(?:left[\s\S]*?\\right(?:\.|[|)])|begin\{[^}]+\}[\s\S]*?\\end\{[^}]+\}|(?:frac|sqrt|vec|hat|bar|tilde|overline|underline|text|mathrm|mathbf|mathit|mathcal|mathbb|operatorname)\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}(?:\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\})?|(?:alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|hbar|ell|infty|nabla|partial|forall|exists|emptyset|angle|parallel|perp|propto|pm|mp|times|div|cdot|le|ge|ne|approx|equiv|cong|sim|ll|gg|to|rightarrow|leftarrow|Rightarrow|Leftarrow|in|notin|subset|supset|cup|cap|sum|prod|int|oint|lim|sin|cos|tan|log|ln|exp|det)\b(?:_\{?[^{}\s]+\}?)?(?:\^\{?[^{}\s]+\}?)?)/g;
-
+  // Scan text for bare TeX tokens using balanced-brace parser
   let result = '';
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
+  let i = 0;
+  const len = text.length;
 
-  INLINE_MATH_RE.lastIndex = 0;
-  while ((match = INLINE_MATH_RE.exec(text)) !== null) {
-    const before = text.substring(lastIndex, match.index);
-    if (before) {
-      result += before.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  while (i < len) {
+    if (text[i] === '\\') {
+      const parsed = parseBareTeXTokenAt(text, i);
+      if (parsed && parsed.token.length > 1) {
+        result += renderKaTeX(parsed.token, false);
+        i = parsed.endIdx;
+        continue;
+      }
     }
-    result += renderKaTeX(match[0], false);
-    lastIndex = match.index + match[0].length;
+
+    const char = text[i];
+    if (char === '&') result += '&amp;';
+    else if (char === '<') result += '&lt;';
+    else if (char === '>') result += '&gt;';
+    else result += char;
+
+    i++;
   }
-  const after = text.substring(lastIndex);
-  if (after) {
-    result += after.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+
   return result;
 };
 
@@ -363,16 +412,11 @@ const processTextSegment = (text: string, inlineOnly: boolean): string => {
   return processSingleTextLine(text, inlineOnly);
 };
 
-/**
- * Convert newlines to <br> and format numbered lists / bullet lists nicely.
- * Also handles simple markdown-style **bold** and `code` in plain-text portions.
- */
+/** Format newlines & lists in plain text portions */
 const formatTextContent = (html: string): string => {
-  // Detect numbered list lines like "1. Something"
   const lines = html.split(/\n|\r\n?/);
   if (lines.length <= 1) return html;
 
-  // Check if it looks like a list
   const numberedRe = /^\s*\d+[\.\)]\s/;
   const bulletRe = /^\s*[-•*]\s/;
   const hasNumbered = lines.some(l => numberedRe.test(l));
@@ -407,24 +451,9 @@ const formatTextContent = (html: string): string => {
 export const renderMathInText = (rawText: string, inlineOnly = false): string => {
   if (!rawText) return '';
 
-  // Step 1: Clean & sanitize
   const text = cleanQuestionText(String(rawText));
   if (!text) return '';
 
-  // Step 2: Check if the entire cleaned text is a bare formula (no delimiters at all)
-  const hasDelimiters =
-    text.includes('$') || text.includes('\\(') || text.includes('\\[');
-  const hasBareTeX = BARE_TEX_RE.test(text);
-
-  if (!hasDelimiters && hasBareTeX) {
-    const hasCases = text.includes('\\begin{') || text.includes('\\left\\{');
-    const hasNewlines = text.includes('\\\\');
-    const displayMode =
-      !inlineOnly && (hasCases || hasNewlines || text.length > 60);
-    return renderKaTeX(text, displayMode);
-  }
-
-  // Step 3: Split into typed segments and render each
   const segments = splitIntoSegments(text);
   const parts: string[] = [];
 
@@ -436,16 +465,12 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
       const html = renderKaTeX(seg.content, false);
       parts.push(html);
     } else {
-      // Plain text — may still contain bare TeX
       const rendered = processTextSegment(seg.content, inlineOnly);
       parts.push(rendered);
     }
   }
 
   const joined = parts.join('');
-
-  // Step 4: Format newlines & lists in the final HTML
-  // Only format the text parts, not inside katex spans
   return formatTextContent(joined);
 };
 

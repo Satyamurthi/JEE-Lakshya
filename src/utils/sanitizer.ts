@@ -1,7 +1,7 @@
 /**
  * Question & Math Sanitizer Utility
- * Cleans raw text, decodes HTML entities, strips internal tags like [JEE Hard #123],
- * strips malformed/pre-rendered HTML, and fixes KaTeX/TeX formatting errors.
+ * Cleans raw text, decodes HTML entities, strips internal tags,
+ * converts HTML math formatting (sub/sup/p/br), and repairs TeX formatting errors.
  *
  * This utility is the first line of defence before KaTeX rendering.
  */
@@ -57,7 +57,6 @@ const PUA_MAP: Record<string, string> = {
   '\uf0a5': '∞',
   '\uf0bc': '⋅',
   '\uf0ba': '≡',
-  // Additional common PUA glyphs
   '\uf0b5': 'μ',
   '\uf04e': 'N',
   '\uf052': 'R',
@@ -72,11 +71,26 @@ const PUA_MAP: Record<string, string> = {
   '\uf048': 'H',
 };
 
+/** Fix JavaScript string control character corruptions (e.g., \f in \frac becoming formfeed \x0c) */
+export const fixControlChars = (text: string): string => {
+  if (!text) return '';
+  return text
+    .replace(/\x0crac/g, '\\frac')
+    .replace(/\x08eta/g, '\\beta')
+    .replace(/\x08egin/g, '\\begin')
+    .replace(/\x09heta/g, '\\theta')
+    .replace(/\x09imes/g, '\\times')
+    .replace(/\x09an/g, '\\tan')
+    .replace(/\x09ext/g, '\\text')
+    .replace(/\x09au/g, '\\tau')
+    .replace(/\x0dight/g, '\\right')
+    .replace(/\x0dho/g, '\\rho');
+};
+
 /**
  * Collapse {{ ... }} → { ... } using a character-level scanner.
  * Tracks depth from the OUTER { so that patterns like {{A}{B}} and
  * {{{\frac{a}{b}}}} all correctly collapse, regardless of nesting depth.
- * Runs up to 4 passes for multiple levels of double-wrapping.
  */
 const collapseDoubleBraces = (tex: string): string => {
   let t = tex;
@@ -85,10 +99,8 @@ const collapseDoubleBraces = (tex: string): string => {
     let i = 0;
     let changed = false;
     while (i < t.length) {
-      // Detect {{ (unescaped)
       if (t[i] === '{' && i + 1 < t.length && t[i + 1] === '{' &&
           (i === 0 || t[i - 1] !== '\\')) {
-        // Track from the OUTER { until its matching }
         let depth = 0;
         let j = i;
         while (j < t.length) {
@@ -99,11 +111,8 @@ const collapseDoubleBraces = (tex: string): string => {
           }
           j++;
         }
-        // segment = t[i..j) is the full outer group
         const segment = t.substring(i, j);
         if (segment.startsWith('{{') && segment.endsWith('}}')) {
-          // Strip one outer brace layer: {{ X }} → { X }
-          // slice(1,-1) removes the outermost { and }
           result += segment.slice(1, -1);
           i = j;
           changed = true;
@@ -116,10 +125,7 @@ const collapseDoubleBraces = (tex: string): string => {
     t = result;
     if (!changed) break;
   }
-  // Final pass: handle remaining unbalanced double-open {{simple}
-  // (outer } is missing — just strip the extra leading {)
   t = t.replace(/\{\{([^{}]*)\}/g, '{$1}');
-  // Strip orphan triple/double opening braces from text: {{{ For rolling wheel -> For rolling wheel, {{\Rightarrow -> \Rightarrow, {{a_I = -> a_I =
   t = t.replace(/^\{\{\{+/gm, '');
   t = t.replace(/^\{\{+/gm, '');
   t = t.replace(/\{\{\{+(\s*\\?[a-zA-Z])/g, '$1');
@@ -134,6 +140,9 @@ export const fixTeXBraces = (tex: string): string => {
   if (!tex) return '';
   let t = tex;
 
+  // Fix control characters
+  t = fixControlChars(t);
+
   // 0. Fix double-escaped braces from PDF extraction: \\{\\{N\\}\\} → N
   t = t.replace(/\\\{\\\{([^{}\\]*)\\\}\\\}/g, '$1');
 
@@ -141,7 +150,7 @@ export const fixTeXBraces = (tex: string): string => {
   t = collapseDoubleBraces(t);
 
   // 0b. Fix \frac whose first brace-arg contains two sub-groups (missing split):
-  //   \frac{{A}{B}} → \frac{A}{B}  (run AFTER collapseDoubleBraces)
+  //   \frac{{A}{B}} → \frac{A}{B}
   t = t.replace(
     /\\frac\s*\{\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*\}/g,
     '\\frac$1$2'
@@ -152,6 +161,10 @@ export const fixTeXBraces = (tex: string): string => {
 
   // 0d. Recover \frac with missing denominator: \frac{X}nonBrace → \frac{X}{1}
   t = t.replace(/\\frac(\{(?:[^{}]|\{[^{}]*\})*\})(?!\s*\{)/g, '\\frac$1{1}');
+
+  // 0d-2. Fix bare \frac 1 2 or \frac 12 34 without braces: \frac 1 2 -> \frac{1}{2}
+  t = t.replace(/(?<!\\)frac\s+([0-9a-zA-Z]+)\s+([0-9a-zA-Z]+)/g, '\\frac{$1}{$2}');
+  t = t.replace(/\\frac\s+([0-9a-zA-Z]+)\s+([0-9a-zA-Z]+)/g, '\\frac{$1}{$2}');
 
   // 0e. Fix spaces inside superscripts/subscripts: ^{ - 1} → ^{-1}, ^{ 2 } → ^{2}
   t = t.replace(/\^\{\s*(-?\s*\d+)\s*\}/g, (_, n) => `^{${n.replace(/\s+/g, '')}}`);
@@ -174,7 +187,6 @@ export const fixTeXBraces = (tex: string): string => {
   t = t.replace(/\\right\}(?!\\|\s*\\)/g, '\\right\\}');
 
   // 4. Ensure \left[ has matching \right] and \left( has matching \right)
-  //    If \left[ exists without \right], fix \right. → \right]
   if ((t.match(/\\left\[/g) || []).length !== (t.match(/\\right\]/g) || []).length) {
     t = t.replace(/\\right\./g, '\\right]');
   }
@@ -259,10 +271,8 @@ export const preprocessTeXMacros = (tex: string): string => {
   if (!tex) return '';
   let m = tex;
 
-  // 0. Replace Plain TeX \\raise/\\lower with \\raisebox
+  m = fixControlChars(m);
   m = replaceRaiseLower(m);
-
-  // Fix double-parentheses / corrupted braces first
   m = fixTeXBraces(m);
 
   // 1. Convert TeX \\over to \\frac: { A \\over B } → \\frac{A}{B}
@@ -291,9 +301,7 @@ export const preprocessTeXMacros = (tex: string): string => {
     return match;
   });
 
-  // 5. Fix \\left{ without proper backslash: \left{ → \left\{
-  //    Note: fixTeXBraces() already handles this; this is an extra safety pass
-  //    Use a safe pattern that won't double-escape already-fixed \left\{
+  // 5. Fix \\left{ without proper backslash
   m = m.replace(/\\left\{(?!\\|\{)/g, '\\left\\{');
   m = m.replace(/\\right\}(?!\\|\})/g, '\\right\\}');
 
@@ -301,22 +309,14 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/\\\/([^\/a-zA-Z]|$)/g, '/$1');
   m = m.replace(/\\\//g, '/');
 
-  // 7. Fix unescaped % signs inside math (LaTeX comment char, but KaTeX doesn't allow it)
-  // Use a replace with function to avoid lookbehind (not universally supported)
+  // 7. Fix unescaped % signs inside math
   m = m.replace(/([^\\])%/g, '$1\\%').replace(/^%/, '\\%');
 
-  // 8. Normalize \dfrac → \frac (KaTeX supports it but normalize for consistency)
-  // Keep as-is — KaTeX handles \dfrac natively.
-
-  // 9. Fix pmatrix / bmatrix if written as matrix
-  m = m.replace(/\\begin\{pmatrix\}/g, '\\begin{pmatrix}');
-  m = m.replace(/\\begin\{bmatrix\}/g, '\\begin{bmatrix}');
-
-  // 10. Fix double-escaped braces one more time after all macro processing
+  // 8. Fix double-escaped braces one more time after all macro processing
   m = m.replace(/\\\{\\\{([^{}\\]*)\\\}\\\}/g, '{$1}');
   m = m.replace(/\{\{([^{}\\]*)\}\}/g, '{$1}');
 
-  // 11. Fix PDF OCR / extraction corruption artifacts (\eft -> \left, \ight -> \right)
+  // 9. Fix PDF OCR / extraction corruption artifacts (\eft -> \left, \ight -> \right)
   m = m.replace(/\\eft\b/g, '\\left');
   m = m.replace(/\\ight\b/g, '\\right');
   m = m.replace(/\\(int|sum|prod|lim|oint)\s*_\s*\\limits/g, '\\$1\\limits_');
@@ -328,7 +328,7 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/\\frac\s*\{\s*-l\s*\}/g, '\\frac{-1}');
   m = m.replace(/\\frac\s*\{\s*l\s*\}/g, '\\frac{1}');
 
-  // 12. Fix corrupted SI unit dots and trailing punctuation attached to greek letters
+  // 10. Fix corrupted SI unit dots and trailing punctuation attached to greek letters
   m = m.replace(/\\(mu|micro|nano|pico|femto|milli|kilo|mega|giga)\s*\.\s*([A-Za-z]+)\.?(?=\s|$|\\|\$)/gi, '\\$1\\text{$2}');
   m = m.replace(/\\(mu|micro)\s*([NCFHzmVAKgJWsT]|mol|rad|cd)\b(?!\s*\{)/g, '\\mu\\text{$2}');
   m = m.replace(/\\(alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)\s*\.(?=\s|$|\\|\$)/g, '\\$1 ');
@@ -338,7 +338,7 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/(?<!\\)\btherefore\b/gi, '\\therefore ');
   m = m.replace(/\\therefore\b/g, '\\Rightarrow ');
 
-  // 13. Fix bare PDF OCR macros missing backslashes (frac 1 1 12 -> \frac{1}{12}, frac 24 1 25 -> \frac{24}{25}, left[ -> \left[, right] -> \right])
+  // 11. Fix bare PDF OCR macros missing backslashes
   m = m.replace(/(?<!\\)\bfracfrac(\d)(\d{2})(\d{2})/gi, '\\frac{\\frac{$1}{$2}}{$3}');
   m = m.replace(/(?<!\\)\bfracfrac/gi, '\\frac{\\frac');
   m = m.replace(/(?<!\\)\bfrac\s+(\d+)\s+1\s+(\d+)\b/gi, '\\frac{$1}{$2}');
@@ -348,15 +348,15 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/(?<!\\)\bleft\(/gi, '\\left(');
   m = m.replace(/(?<!\\)\bright\)/gi, '\\right)');
 
-  // 14. Fix PDF OCR variable corruption artifacts inside braces ({1v} -> {v}, {1u} -> {u}, {1a_i} -> {a_i})
+  // 12. Fix PDF OCR variable corruption artifacts inside braces ({1v} -> {v}, {1u} -> {u})
   m = m.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)\}/g, '{$1}');
   m = m.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)/g, '{$1');
 
-  // 15. Fix PDF OCR exponents (^\frac{2}{1} -> ^2, ^\frac{3}{1} -> ^3)
+  // 13. Fix PDF OCR exponents (^\frac{2}{1} -> ^2, ^\frac{3}{1} -> ^3)
   m = m.replace(/\^\s*\\frac\s*\{\s*(\d+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
   m = m.replace(/\^\s*\\frac\s*\{\s*([a-zA-Z0-9+\-]+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
 
-  // 16. Fix missing \frac before differential brace pairs ({dv}{dt} -> \frac{dv}{dt})
+  // 14. Fix missing \frac before differential brace pairs ({dv}{dt} -> \frac{dv}{dt})
   m = m.replace(/(?<!\\frac)\{([a-zA-Z0-9_\^\s]+)\}\s*\{([a-zA-Z0-9_\^\s]+)\}/g, (match, g1, g2) => {
     if (g1.startsWith('d') || g2.startsWith('d') || g2 === 'dt' || g2 === 'dx' || g2 === 'dy' || g2 === 'dz') {
       return `\\frac{${g1}}{${g2}}`;
@@ -364,51 +364,102 @@ export const preprocessTeXMacros = (tex: string): string => {
     return match;
   });
 
-  // 17. Fix OCR closing brace mismatches (^2}}{v_I} -> ^2 v_I)
+  // 15. Fix OCR closing brace mismatches (^2}}{v_I} -> ^2 v_I)
   m = m.replace(/\}\}\s*([a-zA-Z0-9_\^]+)/g, '} $1');
   m = m.replace(/\}\s*\{\s*([a-zA-Z0-9_]+)\s*\}/g, '} $1');
 
   return m;
 };
 
-/** Auto-balance and fix unclosed dollar delimiters in question text */
+/** Auto-balance and fix unclosed dollar delimiters in text */
 export const autoFixDollarDelimiters = (raw: string): string => {
   if (!raw || !raw.includes('$')) return raw;
   
-  // Replace display math $$ first to count single inline dollars
   const placeholders: string[] = [];
   const withPlaceholders = raw.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => {
     placeholders.push(inner);
     return `___DISPLAY_MATH_${placeholders.length - 1}___`;
   });
 
-  // Count single dollars
   const singleDollarMatches = withPlaceholders.match(/(?<!\\)\$/g);
   const count = singleDollarMatches ? singleDollarMatches.length : 0;
 
   let fixed = withPlaceholders;
   if (count % 2 !== 0) {
-    // Unclosed $ detected!
-    // If there is an unclosed $ containing a TeX macro before punctuation or end of text, close it
     fixed = fixed.replace(/((?<!\\)\$[^\$\n]*?\\[a-zA-Z]+[^\$\n]*?)(?=\.|\,|$|\n|\?)/g, '$1$');
-    
     const newCount = (fixed.match(/(?<!\\)\$/g) || []).length;
     if (newCount % 2 !== 0) {
       fixed += '$';
     }
   }
 
-  // Restore display math
   return fixed.replace(/___DISPLAY_MATH_(\d+)___/g, (_, idx) => `$$${placeholders[parseInt(idx, 10)]}$$`);
+};
+
+/** Auto-balance and fix unclosed slash delimiters (\( ... \) or \[ ... \]) */
+export const autoFixSlashDelimiters = (raw: string): string => {
+  if (!raw) return raw;
+  let text = raw;
+
+  // Fix unclosed \[
+  const openBracket = (text.match(/\\\[/g) || []).length;
+  const closeBracket = (text.match(/\\\]/g) || []).length;
+  if (openBracket > closeBracket) {
+    text += '\\]'.repeat(openBracket - closeBracket);
+  }
+
+  // Fix unclosed \(
+  const openParen = (text.match(/\\\(/g) || []).length;
+  const closeParen = (text.match(/\\\)/g) || []).length;
+  if (openParen > closeParen) {
+    text += '\\)'.repeat(openParen - closeParen);
+  }
+
+  return text;
 };
 
 // ─── Main text cleaning pipeline ─────────────────────────────────────────────
 export const cleanQuestionText = (text: string): string => {
   if (!text) return '';
 
-  let cleaned = String(text);
+  let cleaned = fixControlChars(String(text));
 
-  // 1. Decode HTML entities (&lt; → <, &gt; → >, &amp; → &, etc.)
+  // 1. Convert HTML subscript/superscript tags to TeX notation BEFORE tag stripping
+  cleaned = cleaned
+    .replace(/<sub>\s*(.*?)\s*<\/sub>/gi, '_{$1}')
+    .replace(/<sup>\s*(.*?)\s*<\/sup>/gi, '^{$1}');
+
+  // 2. Convert HTML paragraph and break tags to clean line breaks
+  cleaned = cleaned
+    .replace(/<p\b[^>]*>/gi, '')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<br\s*\/?>/gi, '\n');
+
+  // 3. Extract raw TeX from MathML <annotation> blocks if present
+  if (/<[\s]*annotation/i.test(cleaned)) {
+    cleaned = cleaned.replace(
+      /<\s*annotation[^>]*>([\s\S]*?)<\s*\/\s*annotation\s*>/gi,
+      ' $$$$ $1 $$$$ '
+    );
+  }
+
+  // 4. Preserve TeX inside <math> tags before stripping HTML
+  cleaned = cleaned.replace(/<math[^>]*>([\s\S]*?)<\/math>/gi, (_, inner) => {
+    const texContent = inner.replace(/<[^>]+>/g, '').trim();
+    return texContent ? ` $$${texContent}$$ ` : '';
+  });
+
+  // 5. Strip raw CSS style blocks, scripts, and table classes
+  cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ');
+  cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ');
+  cleaned = cleaned.replace(/\.tg\s*\{[^}]*\}/gi, ' ');
+  cleaned = cleaned.replace(/\.tg\s*td[^{]*\{[^}]*\}/gi, ' ');
+  cleaned = cleaned.replace(/\.tg\s*th[^{]*\{[^}]*\}/gi, ' ');
+
+  // 6. Strip valid HTML tags ONLY (preserving mathematical inequalities like 0 < x < 5)
+  cleaned = cleaned.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/gi, ' ');
+
+  // 7. Decode HTML entities (&lt; → <, &gt; → >, &amp; → &, etc.)
   cleaned = cleaned
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -419,57 +470,36 @@ export const cleanQuestionText = (text: string): string => {
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
     .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 
-  // 1.5 Auto-fix unclosed dollar delimiters
+  // 8. Auto-fix unclosed delimiters
   cleaned = autoFixDollarDelimiters(cleaned);
+  cleaned = autoFixSlashDelimiters(cleaned);
 
-  // 2. Extract raw TeX from MathML <annotation> blocks if present
-  if (/<[\s]*annotation/i.test(cleaned)) {
-    cleaned = cleaned.replace(
-      /<\s*annotation[^>]*>([\s\S]*?)<\s*\/\s*annotation\s*>/gi,
-      ' $$$$ $1 $$$$ '
-    );
-  }
-
-  // 3. Preserve TeX inside <math> tags before stripping HTML
-  // Replace <math>...</math> with $$...$$ preserving content
-  cleaned = cleaned.replace(/<math[^>]*>([\s\S]*?)<\/math>/gi, (_, inner) => {
-    // Strip remaining tags inside math block
-    const texContent = inner.replace(/<[^>]+>/g, '').trim();
-    return texContent ? ` $$${texContent}$$ ` : '';
-  });
-
-  // 3.5 Strip raw CSS style blocks and .tg table classes (e.g. .tg {border-collapse...} or <style>...</style>)
-  cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ');
-  cleaned = cleaned.replace(/\.tg\s*\{[^}]*\}/gi, ' ');
-  cleaned = cleaned.replace(/\.tg\s*td[^{]*\{[^}]*\}/gi, ' ');
-  cleaned = cleaned.replace(/\.tg\s*th[^{]*\{[^}]*\}/gi, ' ');
-  cleaned = cleaned.replace(/\.tg\s*\.[^{]*\{[^}]*\}/gi, ' ');
-  cleaned = cleaned.replace(/\.[a-zA-Z0-9_-]+\s*\{[^{}]*border-[^{}]*\}/gi, ' ');
-  cleaned = cleaned.replace(/\.[a-zA-Z0-9_-]+\s*\{[^{}]*font-family:[^{}]*\}/gi, ' ');
-
-  // 4. Strip ALL HTML-like tags (including malformed tags)
-  cleaned = cleaned.replace(/<\s*\/?[^>]+>/gi, ' ');
-
-  // 5. Strip internal exam identification tags like [JEE Hard #771], [#507]
+  // 9. Strip internal exam identification tags like [JEE Hard #771], [#507]
   cleaned = cleaned.replace(
     /\[\s*(JEE|NEET|KCET|UPSC)?\s*(Hard|Medium|Easy|Advanced|Main)?\s*#\d+\s*\]/gi,
     ''
   );
   cleaned = cleaned.replace(/\[\s*#\d+\s*\]/gi, '');
 
-  // 6. Replace Private Use Area (PUA) font glyphs from PDF extraction
+  // 10. Replace Private Use Area (PUA) font glyphs from PDF extraction
   cleaned = cleaned.replace(/[\uf000-\uf0ff]/g, (char) => PUA_MAP[char] || '');
 
-  // 7. Preprocess TeX macros (\\matrix, \\over, \\cr, brace fixes, etc.)
+  // 11. Preprocess TeX macros (\\matrix, \\over, \\cr, brace fixes, etc.)
   cleaned = preprocessTeXMacros(cleaned);
 
-  // 8. Fix corrupted greatest-integer notation artifacts
+  // 12. Fix corrupted greatest-integer notation artifacts
   cleaned = cleaned.replace(/\[\s*\]\s*≡/g, '[·]').replace(/\[\s*\]\s*⋅/g, '[·]');
 
-  // 9. Fix rho subscript formatting issues
+  // 13. Fix rho subscript formatting issues
   cleaned = cleaned.replace(/\{\s*\\rho\s*_\{([^}]+)\}\s*\}/g, '\\rho_{$1}');
 
-  // 10. Fix common Unicode math chars that should be TeX
+  // 14. Replace Unicode replacement chars (\ufffd) when adjacent to numbers/10
+  cleaned = cleaned.replace(/10\s*<sup>\s*\ufffd\s*(\d+)\s*<\/sup>/gi, '10^{-$1}');
+  cleaned = cleaned.replace(/\ufffd\s*10\^/g, '\\times 10^');
+  cleaned = cleaned.replace(/(\d+)\s*\ufffd\s*10/g, '$1 \\times 10');
+  cleaned = cleaned.replace(/\ufffd/g, ' ');
+
+  // 15. Fix common Unicode math chars that should be TeX
   cleaned = cleaned
     .replace(/×/g, '\\times ')
     .replace(/÷/g, '\\div ')
@@ -532,13 +562,59 @@ export const cleanQuestionText = (text: string): string => {
     .replace(/¼/g, '\\frac{1}{4}')
     .replace(/¾/g, '\\frac{3}{4}');
 
-  // 11. Normalize contiguous whitespace (but preserve newlines for list detection)
+  // 16. Normalize contiguous whitespace (preserving newlines)
   cleaned = cleaned.replace(/[ \t]+/g, ' ');
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
 
-  // 12. Strip orphan leading curly braces (e.g., {{{{ For rolling wheel or {{{ For rolling wheel)
+  // 17. Strip orphan leading curly braces (e.g., {{{{ For rolling wheel)
   cleaned = cleaned.replace(/^\{{1,4}}\s*/gm, '');
   cleaned = cleaned.replace(/\{{2,}\s*([A-Za-z])/g, '$1');
 
   return cleaned.trim();
+};
+
+/**
+ * Universal option & answer matching helper.
+ * Correctly checks if an option key or option value matches the question's official answer.
+ * Handles A/B/C/D vs 0/1/2/3 vs 1/2/3/4 vs exact text values.
+ */
+export const isOptionCorrect = (
+  correctAnswer: any,
+  optionKey: string | number,
+  optionIndex: number,
+  optionVal?: any
+): boolean => {
+  if (correctAnswer === undefined || correctAnswer === null) return false;
+
+  const target = String(correctAnswer).trim();
+  if (!target) return false;
+
+  const keyStr = String(optionKey).trim();
+  const idxStr = String(optionIndex);
+  const idx1Str = String(optionIndex + 1);
+  const letterStr = String.fromCharCode(65 + optionIndex); // 'A', 'B', 'C', 'D'
+
+  const targetUpper = target.toUpperCase();
+  const keyUpper = keyStr.toUpperCase();
+  const letterUpper = letterStr.toUpperCase();
+
+  // 1. Direct match with option key ('A', 'B', '0', '1', etc.)
+  if (
+    targetUpper === keyUpper ||
+    targetUpper === letterUpper ||
+    target === idxStr ||
+    target === idx1Str
+  ) {
+    return true;
+  }
+
+  // 2. Direct match with option text value
+  if (optionVal !== undefined && optionVal !== null) {
+    const valStr = String(optionVal).trim();
+    if (valStr && (valStr.toUpperCase() === targetUpper || valStr === target)) {
+      return true;
+    }
+  }
+
+  return false;
 };
