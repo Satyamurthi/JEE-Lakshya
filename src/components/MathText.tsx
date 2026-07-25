@@ -206,7 +206,9 @@ const fixCorruptedTeX = (tex: string): string => {
   t = t.replace(/(?<!\\)times(?=[A-Za-z0-9\s\\\[\(\{\_])/gi, '\\times ');
   t = t.replace(/\btimes\b(?!\\)/gi, '\\times ');
 
-  // Fix PDF OCR Fraction & Minus Artifacts (\frac{-}{1} -> -, \frac{h}{1} -> h, ^\frac{2}{1} -> ^2)
+  // Fix PDF OCR Fraction & Double Frac Artifacts (fracfrac -> \frac{\frac, \frac{X}{--} -> -\frac{X}{1})
+  t = t.replace(/(?<!\\)fracfrac/gi, '\\frac{\\frac');
+  t = t.replace(/\\frac\s*\{\s*([^}]+)\s*\}\s*\{\s*--\s*\}/g, '-\\frac{$1}{1}');
   t = t.replace(/\^\s*\\frac\s*\{\s*(\d+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
   t = t.replace(/\^\s*\\frac\s*\{\s*([a-zA-Z0-9+\-]+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
   t = t.replace(/\\frac\s*\{\s*1\s*\}\s*\{\s*1([a-zA-Z])\s*\}/g, '\\frac{1}{$1}');
@@ -282,11 +284,8 @@ const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
 const BARE_TEX_RE =
   /\\(left|right|matrix|cases|begin|end|frac|sqrt|vec|hat|bar|tilde|dot|ddot|widehat|widetilde|overline|underline|overbrace|underbrace|alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|over|ne|le|ge|to|infty|sum|prod|int|oint|lim|sin|cos|tan|cot|sec|csc|arcsin|arccos|arctan|log|ln|exp|det|cdot|times|div|pm|mp|partial|nabla|hbar|ell|forall|exists|in|notin|subset|supset|cup|cap|emptyset|angle|parallel|perp|propto|sim|approx|equiv|cong|neq|leq|geq|ll|gg|subset|supset|subseteq|supseteq|rightarrow|leftarrow|Rightarrow|Leftarrow|leftrightarrow|Leftrightarrow|uparrow|downarrow|text|mathrm|mathbf|mathit|mathcal|mathbb|operatorname|underset|overset|stackrel|limits|nolimits|displaystyle|textstyle|scriptstyle|scriptscriptstyle|raisebox|rule|hspace|vspace|mbox|quad|qquad|,|;|!|:|\\\\)/i;
 
-/**
- * Process a plain-text segment that might contain bare TeX macros
- * not wrapped in $ delimiters (common in AI-generated question banks).
- */
-const processTextSegment = (text: string, inlineOnly: boolean): string => {
+/** Process a single text line that may contain bare TeX macros */
+const processSingleTextLine = (text: string, inlineOnly: boolean): string => {
   if (!BARE_TEX_RE.test(text)) {
     return text
       .replace(/&/g, '&amp;')
@@ -299,13 +298,13 @@ const processTextSegment = (text: string, inlineOnly: boolean): string => {
   const hasNewlines = trimmed.includes('\\\\');
   const startsWithMacro = /^[-+\s]*\\(frac|sqrt|matrix|cases|begin|int|sum|prod|lim|vec|hat|overline|Rightarrow|Leftarrow)\b/.test(trimmed);
   const startsWithWord = /^[A-Za-z]{3,}\s/.test(trimmed);
-  const containsEqOrTeX = /[=\+\-]\s*\\frac|\\frac.*\\frac|\\Rightarrow|\\int|\\sum|\^\\frac|\{.*\\frac/.test(trimmed);
+  const containsEqOrTeX = /[=\+\-]\s*\\frac|\\frac.*\\frac|\\Rightarrow|\\int|\\sum|\^\\frac|\{.*\\frac|\\frac.*=|=.*\\frac/.test(trimmed);
   const hasMultipleMacros = (trimmed.match(/\\(frac|sqrt|Rightarrow|alpha|beta|gamma|theta|int|sum|vec|_|\^)/g) || []).length >= 2;
 
   const isLikelyFullFormula = (hasCases || hasNewlines || (hasMultipleMacros && containsEqOrTeX) || (startsWithMacro && !startsWithWord)) && trimmed.length > 3;
 
   if (isLikelyFullFormula) {
-    const displayMode = !inlineOnly && (hasCases || hasNewlines || trimmed.length > 60);
+    const displayMode = !inlineOnly && (hasCases || hasNewlines || trimmed.length > 30);
     return renderKaTeX(trimmed, displayMode);
   }
 
@@ -331,6 +330,14 @@ const processTextSegment = (text: string, inlineOnly: boolean): string => {
     result += after.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
   return result;
+};
+
+/** Process plain-text segment line-by-line */
+const processTextSegment = (text: string, inlineOnly: boolean): string => {
+  if (text.includes('\n')) {
+    return text.split(/\r?\n/).map(line => processSingleTextLine(line, inlineOnly)).join('\n');
+  }
+  return processSingleTextLine(text, inlineOnly);
 };
 
 /**
