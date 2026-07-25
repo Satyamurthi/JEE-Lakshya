@@ -211,6 +211,8 @@ const fixCorruptedTeX = (tex: string): string => {
   t = t.replace(/\\frac\s*\{\s*([^}]+)\s*\}\s*\{\s*--\s*\}/g, '-\\frac{$1}{1}');
   t = t.replace(/\^\s*\\frac\s*\{\s*(\d+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
   t = t.replace(/\^\s*\\frac\s*\{\s*([a-zA-Z0-9+\-]+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
+  t = t.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)\}/g, '{$1}');
+  t = t.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)/g, '{$1');
   t = t.replace(/\\frac\s*\{\s*1\s*\}\s*\{\s*1([a-zA-Z])\s*\}/g, '\\frac{1}{$1}');
   t = t.replace(/\\frac\s*\{\s*2\s*\}\s*\{\s*1([a-zA-Z])\s*\}/g, '\\frac{2}{$1}');
   t = t.replace(/-\s*\\frac\s*\{\s*1\s*\}\s*\{\s*1\s*\}/g, ' -1 ');

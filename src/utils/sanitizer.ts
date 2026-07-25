@@ -346,6 +346,26 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/(?<!\\)\bleft\(/gi, '\\left(');
   m = m.replace(/(?<!\\)\bright\)/gi, '\\right)');
 
+  // 14. Fix PDF OCR variable corruption artifacts inside braces ({1v} -> {v}, {1u} -> {u}, {1a_i} -> {a_i})
+  m = m.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)\}/g, '{$1}');
+  m = m.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)/g, '{$1');
+
+  // 15. Fix PDF OCR exponents (^\frac{2}{1} -> ^2, ^\frac{3}{1} -> ^3)
+  m = m.replace(/\^\s*\\frac\s*\{\s*(\d+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
+  m = m.replace(/\^\s*\\frac\s*\{\s*([a-zA-Z0-9+\-]+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
+
+  // 16. Fix missing \frac before differential brace pairs ({dv}{dt} -> \frac{dv}{dt})
+  m = m.replace(/(?<!\\frac)\{([a-zA-Z0-9_\^\s]+)\}\s*\{([a-zA-Z0-9_\^\s]+)\}/g, (match, g1, g2) => {
+    if (g1.startsWith('d') || g2.startsWith('d') || g2 === 'dt' || g2 === 'dx' || g2 === 'dy' || g2 === 'dz') {
+      return `\\frac{${g1}}{${g2}}`;
+    }
+    return match;
+  });
+
+  // 17. Fix OCR closing brace mismatches (^2}}{v_I} -> ^2 v_I)
+  m = m.replace(/\}\}\s*([a-zA-Z0-9_\^]+)/g, '} $1');
+  m = m.replace(/\}\s*\{\s*([a-zA-Z0-9_]+)\s*\}/g, '} $1');
+
   return m;
 };
 
