@@ -206,7 +206,14 @@ const fixCorruptedTeX = (tex: string): string => {
   t = t.replace(/(?<!\\)times(?=[A-Za-z0-9\s\\\[\(\{\_])/gi, '\\times ');
   t = t.replace(/\btimes\b(?!\\)/gi, '\\times ');
 
-  // Fix PDF OCR Fraction & Minus Artifacts (\frac{-}{1} -> -, \frac{h}{1} -> h)
+  // Fix PDF OCR Fraction & Minus Artifacts (\frac{-}{1} -> -, \frac{h}{1} -> h, ^\frac{2}{1} -> ^2)
+  t = t.replace(/\^\s*\\frac\s*\{\s*(\d+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
+  t = t.replace(/\^\s*\\frac\s*\{\s*([a-zA-Z0-9+\-]+)\s*\}\s*\{\s*1\s*\}/g, '^{$1}');
+  t = t.replace(/\\frac\s*\{\s*1\s*\}\s*\{\s*1([a-zA-Z])\s*\}/g, '\\frac{1}{$1}');
+  t = t.replace(/\\frac\s*\{\s*2\s*\}\s*\{\s*1([a-zA-Z])\s*\}/g, '\\frac{2}{$1}');
+  t = t.replace(/-\s*\\frac\s*\{\s*1\s*\}\s*\{\s*1\s*\}/g, ' -1 ');
+  t = t.replace(/^\{\s*-\s*/, '- ');
+  t = t.replace(/\}\}\s*([a-zA-Z0-9_\^]+)/g, '} $1');
   t = t.replace(/\\frac\s*\{\s*-\s*\}\s*\{\s*1\s*\}/g, ' - ');
   t = t.replace(/\\frac\s*\{\s*\+\s*\}\s*\{\s*1\s*\}/g, ' + ');
   t = t.replace(/\\frac\s*\{\s*([a-zA-Z0-9])\s*\}\s*\{\s*1\s*\}/g, ' $1 ');
@@ -263,11 +270,11 @@ const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
     return result;
   } catch (e) {
     console.warn('KaTeX render error:', e, 'Content:', mathContent);
-    const safe = mathContent
+    const safeText = mathContent
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    return `<span class="katex-fallback" style="font-family:inherit;color:inherit;font-style:normal;">${safe}</span>`;
+    return `<span class="katex-fallback" style="font-family:serif;font-style:italic;">${safeText}</span>`;
   }
 };
 
@@ -290,10 +297,12 @@ const processTextSegment = (text: string, inlineOnly: boolean): string => {
   const trimmed = text.trim();
   const hasCases = trimmed.includes('\\begin{') || trimmed.includes('\\left\\{') || trimmed.includes('\\[');
   const hasNewlines = trimmed.includes('\\\\');
-  const startsWithMacro = /^\\(frac|sqrt|matrix|cases|begin|int|sum|prod|lim|vec|hat|overline)\b/.test(trimmed);
-  const startsWithWord = /^[A-Za-z]{2,}\s/.test(trimmed);
+  const startsWithMacro = /^[-+\s]*\\(frac|sqrt|matrix|cases|begin|int|sum|prod|lim|vec|hat|overline|Rightarrow|Leftarrow)\b/.test(trimmed);
+  const startsWithWord = /^[A-Za-z]{3,}\s/.test(trimmed);
+  const containsEqOrTeX = /[=\+\-]\s*\\frac|\\frac.*\\frac|\\Rightarrow|\\int|\\sum|\^\\frac|\{.*\\frac/.test(trimmed);
+  const hasMultipleMacros = (trimmed.match(/\\(frac|sqrt|Rightarrow|alpha|beta|gamma|theta|int|sum|vec|_|\^)/g) || []).length >= 2;
 
-  const isLikelyFullFormula = (hasCases || hasNewlines || (startsWithMacro && !startsWithWord)) && trimmed.length > 3;
+  const isLikelyFullFormula = (hasCases || hasNewlines || (hasMultipleMacros && containsEqOrTeX) || (startsWithMacro && !startsWithWord)) && trimmed.length > 3;
 
   if (isLikelyFullFormula) {
     const displayMode = !inlineOnly && (hasCases || hasNewlines || trimmed.length > 60);
