@@ -261,6 +261,15 @@ const fixCorruptedTeX = (tex: string): string => {
     });
   }
 
+  // Fix KaTeX parse errors caused by math commands inside \text{...}
+  t = t.replace(/\\text\s*\{([^}]*)\}/g, (match, inner) => {
+    if (/\\(alpha|beta|gamma|delta|epsilon|theta|lambda|mu|nu|xi|pi|rho|sigma|tau|phi|chi|psi|omega|Delta|Omega|Theta|Lambda|Sigma|Phi|Psi|frac|sqrt|int|sum|prod|lim|infty|Rightarrow|Leftarrow|rightarrow|leftarrow)/.test(inner)) {
+      const cleaned = inner.replace(/(\\([a-zA-Z]+))/g, '}\\$2\\text{');
+      return `\\text{${cleaned}}`.replace(/\\text\{\s*\}/g, '');
+    }
+    return match;
+  });
+
   t = t.replace(/(?<!\\)times(?=[A-Za-z0-9\s\\\[\(\{\_])/gi, '\\times ');
   t = t.replace(/\btimes\b(?!\\)/gi, '\\times ');
 
@@ -573,6 +582,57 @@ const renderMarkdownAndTables = (text: string): string => {
   return finalProcessed.join('\n').replace(/\n/g, '<br>');
 };
 
+/**
+ * Auto-detect multi-line derivation blocks in text segments that contain equations/macros on multiple lines,
+ * and auto-wrap them in \begin{aligned} ... \end{aligned} display math.
+ */
+const autoWrapMultiLineDerivations = (text: string): string => {
+  if (!text || !text.includes('\n')) return text;
+
+  const lines = text.split(/\r?\n/);
+  const resultLines: string[] = [];
+  let mathBuffer: string[] = [];
+
+  const isMathLine = (l: string): boolean => {
+    const trimmed = l.trim();
+    if (!trimmed) return false;
+    if (trimmed.startsWith('\\begin{') || trimmed.startsWith('\\[') || trimmed.startsWith('$$')) return false;
+    const startsWithMathOp = /^[=\+\-\\\&]\s*/.test(trimmed) || /^\\(Rightarrow|Leftarrow|rightarrow|leftarrow|frac|int|sum|prod|lim|vec)\b/i.test(trimmed);
+    const hasMathSymbols = (trimmed.match(/\\(frac|sqrt|Rightarrow|alpha|beta|gamma|theta|psi|omega|pi|mu|lambda|Delta|int|sum|vec|_|\^)/g) || []).length >= 1;
+    const hasEqAndTeX = /[=\+\-]\s*\\frac|\\frac.*\\frac|\\Rightarrow|\\int|\\sum|\^\\frac|\{.*\\frac|\\frac.*=|=.*\\frac/i.test(trimmed);
+    return startsWithMathOp || (hasMathSymbols && hasEqAndTeX);
+  };
+
+  const flushMathBuffer = () => {
+    if (mathBuffer.length === 0) return;
+    if (mathBuffer.length >= 2) {
+      const cleanedBuffer = mathBuffer.map(line => {
+        let l = line.trim();
+        if (!l.startsWith('&') && (l.startsWith('=') || l.startsWith('\\Rightarrow') || l.startsWith('+') || l.startsWith('-'))) {
+          l = '& ' + l;
+        }
+        return l;
+      });
+      resultLines.push('$$\n\\begin{aligned}\n' + cleanedBuffer.join(' \\\\\n') + '\n\\end{aligned}\n$$');
+    } else {
+      resultLines.push(...mathBuffer);
+    }
+    mathBuffer = [];
+  };
+
+  for (const line of lines) {
+    if (isMathLine(line)) {
+      mathBuffer.push(line);
+    } else {
+      if (mathBuffer.length > 0) flushMathBuffer();
+      resultLines.push(line);
+    }
+  }
+  if (mathBuffer.length > 0) flushMathBuffer();
+
+  return resultLines.join('\n');
+};
+
 const RENDER_CACHE = new Map<string, string>();
 const MAX_CACHE_SIZE = 5000;
 
@@ -584,8 +644,19 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
     return RENDER_CACHE.get(cacheKey)!;
   }
 
-  const text = cleanQuestionText(String(rawText));
+  // Stash HTML <img> tags before processing text so they don't get escaped
+  const imgBlocks: string[] = [];
+  const addImgBlock = (imgHtml: string): string => {
+    const idx = imgBlocks.length;
+    imgBlocks.push(imgHtml);
+    return `%%%HTMLIMG${idx}%%%`;
+  };
+
+  let textToProcess = String(rawText).replace(/<img\b[^>]*\/?>/gi, (match) => addImgBlock(match));
+  let text = cleanQuestionText(textToProcess);
   if (!text) return '';
+
+  text = autoWrapMultiLineDerivations(text);
 
   const katexBlocks: string[] = [];
   const addKaTeXBlock = (html: string): string => {
@@ -625,6 +696,12 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   finalHtml = finalHtml.replace(/%%%KATEXBLOCK(\d+)%%%/g, (_, idxStr) => {
     const idx = parseInt(idxStr, 10);
     return katexBlocks[idx] || '';
+  });
+
+  // Re-insert protected HTML <img> tags into the final HTML
+  finalHtml = finalHtml.replace(/%%%HTMLIMG(\d+)%%%/g, (_, idxStr) => {
+    const idx = parseInt(idxStr, 10);
+    return imgBlocks[idx] || '';
   });
 
   if (RENDER_CACHE.size > MAX_CACHE_SIZE) {

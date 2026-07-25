@@ -260,6 +260,15 @@ export const fixTeXBraces = (tex: string): string => {
     });
   }
 
+  // Fix KaTeX parse errors caused by math commands inside \text{...}
+  t = t.replace(/\\text\s*\{([^}]*)\}/g, (match, inner) => {
+    if (/\\(alpha|beta|gamma|delta|epsilon|theta|lambda|mu|nu|xi|pi|rho|sigma|tau|phi|chi|psi|omega|Delta|Omega|Theta|Lambda|Sigma|Phi|Psi|frac|sqrt|int|sum|prod|lim|infty|Rightarrow|Leftarrow|rightarrow|leftarrow)/.test(inner)) {
+      const cleaned = inner.replace(/(\\([a-zA-Z]+))/g, '}\\$2\\text{');
+      return `\\text{${cleaned}}`.replace(/\\text\{\s*\}/g, '');
+    }
+    return match;
+  });
+
   // 5. Balance unclosed braces (only if difference is small)
   let openCount = 0;
   let closeCount = 0;

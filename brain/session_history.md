@@ -475,3 +475,14 @@ This file records the chronological history of tasks, major changes, and feature
     2. **Prefix Pipe & Brace Stripping (`stripOrphanLeadingChars`)**: Expanded orphan character cleaner to strip leading `|||{`, `|||`, `||`, `|`, `((((`, `{{{` before `\begin{...}` or `\` TeX commands.
     3. **Fallback Clean-up (`convertTeXToReadableHTML`)**: Enhanced fallback renderer to strip `&` alignment tokens and format clean line breaks in the rare event of extreme TeX corruption.
     4. **GitHub & Netlify Auto-Deployment**: Pushed commit `0ab269c` to both `JEE-Lakshya` and `JEE-Nexus` GitHub remotes for instant Netlify auto-deployment.
+
+---
+
+## Session 55: Resolution of Placeholder Token Collision with Markdown Bold Formatting
+*   **Request**: Inspect screenshot showing literal string `_KATEX_BLOCK_0_` in question statement and explanation.
+*   **Root Cause**: The placeholder token format `___KATEX_BLOCK_0___` used three leading and trailing underscores `___`. The Markdown bold regex (`/(\*\*|__)(.*?)\1/g`) matched the double underscores `__` at the start and end of the token, transforming `___KATEX_BLOCK_0___` into `<strong>_KATEX_BLOCK_0_</strong>`. Consequently, the token substitution regex `/___KATEX_BLOCK_(\d+)___/g` failed to match the corrupted token string, causing the literal string `_KATEX_BLOCK_0_` to be rendered on screen.
+*   **Files**: `src/components/MathText.tsx`, `brain/PROJECT_BRAIN.md`, `brain/session_history.md`
+*   **Work Done**:
+    1. Replaced placeholder token pattern `___KATEX_BLOCK_${idx}___` with `%%%KATEXBLOCK${idx}%%%` in [MathText.tsx](file:///d:/JEE/src/components/MathText.tsx).
+    2. Since `%` characters cannot be matched by Markdown bold, italic, list, or header rules, the token remains completely untouched during Markdown formatting and is cleanly substituted with the rendered KaTeX HTML.
+    3. Pushed commit `96087e8` to both `JEE-Lakshya` and `JEE-Nexus` GitHub main branches for Netlify auto-deployment.
