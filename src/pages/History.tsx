@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { History as HistoryIcon, Search, Target, Zap, ChevronRight, Award, BookOpen, FileText, CheckCircle2, HelpCircle, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { getUserExamAttempts, getUserAllDailyAttempts, getAllDailyChallenges } from '../supabase';
 import MathText from '../components/MathText';
+import { isOptionCorrect, normalizeOptions, getQuestionSolution } from '../utils/sanitizer';
 
 const History = () => {
   const navigate = useNavigate();
@@ -187,9 +188,9 @@ const History = () => {
 
                       <div className="space-y-6">
                         {qs.map((q: any, idx: number) => {
-                          const options = q.options || {};
-                          const optsArray = Array.isArray(options) ? options : Object.entries(options).map(([key, val]) => ({ key, val }));
+                          const normalizedOpts = normalizeOptions(q.options);
                           const correct = String(q.correctAnswer || q.correct_answer || '');
+                          const solText = getQuestionSolution(q);
 
                           return (
                             <div key={idx} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
@@ -209,16 +210,14 @@ const History = () => {
                               </div>
 
                               {/* Options */}
-                              {optsArray.length > 0 && (
+                              {normalizedOpts.length > 0 && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                                  {optsArray.map((opt: any, oIdx: number) => {
-                                    const optKey = opt.key || String.fromCharCode(65 + oIdx);
-                                    const optVal = typeof opt === 'string' ? opt : (opt.val || opt.text || '');
-                                    const isCorrectOpt = correct.toUpperCase() === optKey.toUpperCase() || correct === optVal;
+                                  {normalizedOpts.map((opt: any) => {
+                                    const isCorrectOpt = isOptionCorrect(correct, opt.key, opt.index, opt.val);
 
                                     return (
                                       <div 
-                                        key={oIdx} 
+                                        key={opt.key + opt.index} 
                                         className={`p-4 rounded-2xl border flex items-start gap-3 text-xs font-semibold transition-all ${
                                           isCorrectOpt 
                                             ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-sm' 
@@ -228,10 +227,10 @@ const History = () => {
                                         <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
                                           isCorrectOpt ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
                                         }`}>
-                                          {optKey}
+                                          {opt.label}
                                         </span>
                                         <div className="flex-1 pt-0.5">
-                                          <MathText inlineOnly text={optVal} />
+                                           <MathText inlineOnly text={opt.val} />
                                         </div>
                                         {isCorrectOpt && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />}
                                       </div>
@@ -241,7 +240,7 @@ const History = () => {
                               )}
 
                               {/* Numerical / Direct Answer if no options */}
-                              {optsArray.length === 0 && correct && (
+                              {normalizedOpts.length === 0 && correct && (
                                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-bold text-emerald-900 flex items-center gap-2">
                                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                                   <span>Correct Answer: <strong>{correct}</strong></span>
@@ -249,11 +248,11 @@ const History = () => {
                               )}
 
                               {/* Solution / Explanation */}
-                              {(q.solution || q.explanation) && (
+                              {solText && (
                                 <div className="p-4 bg-indigo-50/60 border border-indigo-100 rounded-2xl space-y-1 mt-2">
                                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest block">Solution & Explanation</span>
                                   <div className="text-xs text-slate-700 font-medium leading-relaxed">
-                                    <MathText text={q.solution || q.explanation} />
+                                    <MathText text={solText} />
                                   </div>
                                 </div>
                               )}

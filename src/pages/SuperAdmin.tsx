@@ -3,7 +3,7 @@ import {
   Crown, Users, UserPlus, Sliders, Zap, CheckCircle2, X, Eye, 
   Settings2, Loader2, Sparkles, Database, ShieldAlert, ArrowUpRight, 
   Trash2, DollarSign, Award, Calendar, RefreshCw, Key, Lock, Unlock, Edit3, ShieldCheck, Layers, Plus, Snowflake,
-  Download, FileText, BookOpen
+  Download, FileText, BookOpen, Brain
 } from 'lucide-react';
 import { 
   supabase, getAllProfiles, updateAdminMaxLimit, 
@@ -15,6 +15,7 @@ import {
   getSQLiteQuestionsCount, syncSQLiteQuestions, getSyncStatus
 } from '../supabase';
 import MathText, { renderMathInText } from '../components/MathText';
+import { normalizeOptions, getQuestionSolution } from '../utils/sanitizer';
 import YearWisePYQ from './YearWisePYQ';
 
 interface AdminUser {
@@ -29,6 +30,8 @@ interface AdminUser {
   can_access_full_exam?: boolean;
   can_access_practice?: boolean;
   studentCount?: number;
+  subscription_expires_at?: string;
+  is_frozen?: boolean | number;
 }
 
 const SuperAdmin = () => {
@@ -519,7 +522,7 @@ const SuperAdmin = () => {
         mathematics: { mcq: mcqN, numerical: numN, chapters: [], topics: [] }
       };
       
-      const result = await service.generateFullJEEDailyPaper(defaultDailyConfig as any);
+      const result: any = await service.generateFullJEEDailyPaper(defaultDailyConfig as any);
       const allQs = isNeet 
         ? [...result.physics, ...result.chemistry, ...(result.botany || []), ...(result.zoology || [])]
         : [...result.physics, ...result.chemistry, ...(result.mathematics || [])];
@@ -767,24 +770,14 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
           docHtml += `<div class="q-statement"><strong>Q${qIndex}.</strong> <span class="pyq-tag">${pyqRef}</span> ${renderedStmt}</div>\n`;
 
           // Format Options cleanly
-          if (q.options) {
+          const normOpts = normalizeOptions(q.options);
+          if (normOpts.length > 0) {
             docHtml += `<table class="options-table"><tr>`;
-            if (typeof q.options === 'object' && !Array.isArray(q.options)) {
-              const keys = Object.keys(q.options);
-              keys.forEach((k, i) => {
-                if (i > 0 && i % 2 === 0) docHtml += `</tr><tr>`;
-                const renderedOpt = renderMathInText(q.options[k] || '');
-                docHtml += `<td><strong>(${k})</strong> ${renderedOpt}</td>`;
-              });
-            } else if (Array.isArray(q.options)) {
-              const labels = ['A', 'B', 'C', 'D'];
-              q.options.forEach((val: string, i: number) => {
-                if (i > 0 && i % 2 === 0) docHtml += `</tr><tr>`;
-                const lbl = labels[i] || String(i + 1);
-                const renderedOpt = renderMathInText(val || '');
-                docHtml += `<td><strong>(${lbl})</strong> ${renderedOpt}</td>`;
-              });
-            }
+            normOpts.forEach((opt, i) => {
+              if (i > 0 && i % 2 === 0) docHtml += `</tr><tr>`;
+              const renderedOpt = renderMathInText(opt.val);
+              docHtml += `<td><strong>(${opt.label})</strong> ${renderedOpt}</td>`;
+            });
             docHtml += `</tr></table>\n`;
           }
 
@@ -793,7 +786,7 @@ h2 { font-size: 13pt; color: #4338ca; background-color: #f1f5f9; padding: 6pt 10
             docHtml += `<div class="ans-box">Correct Answer: (${corr})</div>\n`;
           }
 
-          const sol = q.solution || q.explanation;
+          const sol = getQuestionSolution(q);
           if (sol) {
             const renderedSol = renderMathInText(sol);
             docHtml += `<div class="sol-box"><strong>Solution & Explanation:</strong> ${renderedSol}</div>\n`;

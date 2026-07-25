@@ -10,6 +10,8 @@ export interface AuthenticJeePaper {
   questions: Question[];
 }
 
+export const OFFICIAL_JEE_PYQ_BANK: Question[] = Object.values(extractedPapers as Record<string, any>).flatMap((paper: any) => paper?.questions || []);
+
 const parseSubject = (subStr: string): Subject => {
   if (subStr === 'Chemistry') return Subject.Chemistry;
   if (subStr === 'Mathematics') return Subject.Mathematics;

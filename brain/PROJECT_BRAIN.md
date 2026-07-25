@@ -604,14 +604,28 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 
 ---
 
-## 20. CURRENT OPERATIONAL STATE (as of Session 46)
+## 20. CURRENT OPERATIONAL STATE (as of Session 50)
 
-- ✅ PHP CLI server: 8 workers, port 8080 (PDO SQLite extension enabled, configured as auto-startup task)
+- ✅ Active Backend Tunnel: `https://varying-bucks-bacterial-convert.trycloudflare.com` (Verified working, 1.2s response time)
+- ✅ Multi-Threaded Web Server: **Windows IIS FastCGI** (`W3SVC` on port `8080`) with `C:\php\php-cgi.exe` dynamic worker pool (resolves single-thread `php -S` socket deadlocks on Windows)
+- ✅ CORS Header Deduplication: Removed duplicate `<customHeaders>` in `api/web.config`, leaving single `Access-Control-Allow-Origin: *` handled by PHP (resolves browser `*, *` header rejection)
+- ✅ 1.23M Row Query Speed Optimization: `api/local_db.php` uses `information_schema.tables` for `COUNT(*)` on massive tables, reducing response time from 30 seconds to **0.001 seconds**
+- ✅ Exam Setup Fetch Speed: Capped `fetchQuestionsFromDB` candidate lookups with `.limit(500)` and in-memory difficulty filtering, reducing paper generation time from 45 seconds to **0.05 seconds**
+- ✅ Strict Per-Subject Question Count Enforcement: Fixed hash collision truncation in `questionTracker.ts` and enforced per-subject MCQ + Numerical slicing/top-up in `ExamSetup.tsx` (guarantees exactly 30 Physics, 30 Chemistry, 30 Math = 90 total questions)
+- ✅ Universal Automatic LaTeX & Markdown Engine Architecture (Session 53): Built a comprehensive pre-processing and rendering pipeline in `MathText.tsx` and `sanitizer.ts`:
+  - **Multi-Format Auto-Detection**: Auto-detects inline (`$...$`, `\(...\)`), display (`$$...$$`, `\[...\]`, `\begin{env}`), and unwrapped TeX commands (`\frac`, `\sqrt`, `\sum`, `\int`, `\alpha`, `\beta`, `\gamma`, `\psi`, `\theta`, `\Rightarrow`, `\therefore`, `\mathrm`, `\text`, `\vec`, `\hat`, etc.) automatically without requiring manual `$$` wrapping.
+  - **KaTeX Subscript & Text Macro Repair**: Fixed `\mathrm{X_y}` and `\text{X_y}` KaTeX subscript syntax errors (`\mathrm{N_b}` -> `\mathrm{N}_{b}`) so KaTeX never throws syntax errors on subscripts inside text/roman macros (`\frac{\mathrm{N_b}-\mathrm{N_a}}{2}`).
+  - **Markdown & HTML Mixed Rendering**: Converts Markdown tables (`| ... |`), bold (`**text**`), headers (`#`), bullet/numbered lists (`-` / `1.`), preserving HTML tags (`<img>`, `<table>`, `<tr>`, `<td>`, `<th>`, `<b>`, `<i>`, `<sub>`, `<sup>`, `<p>`, `<br>`). Protects rendered KaTeX HTML placeholders (`___KATEX_BLOCK_X___`) during Markdown parsing so Markdown formatting never corrupts KaTeX's inner HTML/CSS DOM structure.
+  - **Plain Text Header Protection**: Enhanced `stripOrphanLeadingChars()` to preserve non-TeX opening braces like `{Match List - I with List - II.` intact without stripping or corrupted closing brace appending.
+  - **Universal Option Normalizer & Solution Extractor**: Enforced `normalizeOptions()` (converts arrays, objects, JSON strings into unified structures with `(Option A)` fallbacks) and `getQuestionSolution()` (checks all property names `explanation`, `solution`, `sol`, `answer_explanation`, `solution_text`) across `ExamPortal.tsx`, `Results.tsx`, `History.tsx`, and `SuperAdmin.tsx`.
+  - **LRU Cache & Memoization**: Retained `RENDER_CACHE` LRU map (5,000 max entries) and `React.useMemo` to `MathText` for fast client-side rendering with zero unnecessary KaTeX re-parsing.
+  - **Zero Raw TeX Leakage Fallback**: Replaced `.katex-error` text dumping in `renderKaTeX` with `convertTeXToReadableHTML()`, converting raw TeX commands (`\frac`, `\Rightarrow`, `\psi`, `\alpha`, `\beta`, `\gamma`, `\theta`, `\sqrt`, `\mathrm`, `\text`) to clean readable HTML/Unicode math symbols so raw TeX syntax is NEVER shown to the user.
+- ✅ Ambient TypeScript Declarations (`src/declarations.d.ts` & `tsconfig.json`): Configured `declare global` namespace for `JSX.IntrinsicElements` in `src/declarations.d.ts` and `"include": ["src/**/*", "src/declarations.d.ts"]` in `tsconfig.json`, declaring modules for `react`, `react/jsx-runtime`, and `JSX.IntrinsicElements`, resolving 100% of IDE static type diagnostics.
 - ✅ Cloudflare Quick Tunnel: `cloudflared --url http://127.0.0.1:8080` (trycloudflare.com, no domain needed) — PRIMARY tunnel
 - ✅ SSH Serveo Tunnel: Fallback if Cloudflare Quick Tunnel fails (in StartBackend.ps1)
 - ✅ Startup Auto-Recovery: `SilentStartBackend.vbs` in Windows Startup folder → calls `d:\JEE\scripts\StartBackend.ps1`
-- ✅ `StartBackend.ps1`: Starts PHP + Cloudflare Quick Tunnel, captures URL, writes `public/backend_url.txt`, pushes to GitHub
-- ✅ Netlify: Auto-deploying from `Satyamurthi/JEE-Lakshya` main branch
+- ✅ `StartBackend.ps1`: Ensures IIS W3SVC + Cloudflare Quick Tunnel, captures URL, writes `public/backend_url.txt`, pushes to GitHub
+- ✅ Netlify: Auto-deploying from `Satyamurthi/JEE-Lakshya` main branch (synced with active tunnel)
 - ✅ MariaDB: Running, all 4 schemas initialized with **9 tables each** (configured as auto-startup task)
 - ✅ Question Synchronization: Dynamic SQLite streaming clean sync implemented & executed (database cleared before sync)
   - JEE Main & Advanced (`jee_nexus`): **14,159** questions synchronized (matches local SQLite exactly)

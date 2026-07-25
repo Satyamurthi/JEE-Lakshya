@@ -84,7 +84,25 @@ export const fixControlChars = (text: string): string => {
     .replace(/\x09ext/g, '\\text')
     .replace(/\x09au/g, '\\tau')
     .replace(/\x0dight/g, '\\right')
-    .replace(/\x0dho/g, '\\rho');
+    .replace(/\x0dho/g, '\\rho')
+    .replace(/\x07lpha/g, '\\alpha')
+    .replace(/\x0epsi/g, '\\psi');
+};
+
+/**
+ * Strip orphan leading characters (parentheses, braces, brackets, spaces)
+ * that precede TeX environments or commands from PDF/OCR extraction artifacts.
+ * e.g., "(((({\begin{aligned}" → "\begin{aligned}", "{{\Delta E" → "\Delta E"
+ */
+export const stripOrphanLeadingChars = (text: string): string => {
+  if (!text) return '';
+  let t = text;
+  // Collapse orphan leading parens, braces, brackets, pipes, spaces ONLY before actual TeX commands or environments
+  t = t.replace(/^[\|\(\{\[\s]+(?=\\[a-zA-Z]+)/gm, '');
+  t = t.replace(/^[\|\(\{\[\s]+(?=\\begin\{)/gm, '');
+  t = t.replace(/[\|\(\{\[]+(?=\\begin\{[a-zA-Z]+\})/gi, '');
+  t = t.replace(/^\{{1,6}}\s*(?=\\)/gm, '');
+  return t;
 };
 
 /**
@@ -94,6 +112,7 @@ export const fixControlChars = (text: string): string => {
  */
 const collapseDoubleBraces = (tex: string): string => {
   let t = tex;
+  t = stripOrphanLeadingChars(t);
   for (let pass = 0; pass < 4; pass++) {
     let result = '';
     let i = 0;
@@ -173,6 +192,12 @@ export const fixTeXBraces = (tex: string): string => {
   // 0f. Fix bare superscripts without braces on multi-char exponents: x^-1 → x^{-1}
   t = t.replace(/(\^)(-[0-9]+)/g, '$1{$2}');
 
+  // 0g. Fix \mathrm{X_y} and \text{X_y} where subscripts/superscripts are invalid inside KaTeX \mathrm / \text
+  t = t.replace(/\\mathrm\s*\{\s*([a-zA-Z0-9]+)_([a-zA-Z0-9]+)\s*\}/g, '\\mathrm{$1}_{$2}');
+  t = t.replace(/\\mathrm\s*\{\s*([a-zA-Z0-9]+)\^([a-zA-Z0-9]+)\s*\}/g, '\\mathrm{$1}^{$2}');
+  t = t.replace(/\\text\s*\{\s*([a-zA-Z0-9]+)_([a-zA-Z0-9]+)\s*\}/g, '\\text{$1}_{$2}');
+  t = t.replace(/\\text\s*\{\s*([a-zA-Z0-9]+)\^([a-zA-Z0-9]+)\s*\}/g, '\\text{$1}^{$2}');
+
   // 1. Fix \frac with extra outer parens only
   t = t.replace(
     /\\frac\s*\{\s*\(\s*([^(){}\\]+)\s*\)\s*\}\s*\{\s*\(?\s*([^(){}\\]+)\s*\)?\s*\}/gi,
@@ -186,12 +211,53 @@ export const fixTeXBraces = (tex: string): string => {
   t = t.replace(/\\left\{(?!\\|\s*\\)/g, '\\left\\{');
   t = t.replace(/\\right\}(?!\\|\s*\\)/g, '\\right\\}');
 
-  // 4. Ensure \left[ has matching \right] and \left( has matching \right)
-  if ((t.match(/\\left\[/g) || []).length !== (t.match(/\\right\]/g) || []).length) {
-    t = t.replace(/\\right\./g, '\\right]');
+  // 4. Ensure \left( has matching \right), \left[ has matching \right], \left\{ has matching \right\}
+  const leftParen = (t.match(/\\left\(/g) || []).length;
+  const rightParen = (t.match(/\\right\)/g) || []).length;
+  if (leftParen > rightParen) {
+    let replaced = 0;
+    const needed = leftParen - rightParen;
+    t = t.replace(/\\right[.)](?!\]|\))/g, (m) => {
+      if (replaced < needed) { replaced++; return '\\right)'; }
+      return m;
+    });
+    if (replaced < needed) t += '\\right)'.repeat(needed - replaced);
+  } else if (rightParen > leftParen) {
+    let excess = rightParen - leftParen;
+    t = t.replace(/\\right\)/g, (m) => {
+      if (excess > 0) { excess--; return ')'; }
+      return m;
+    });
   }
-  if ((t.match(/\\left\(/g) || []).length !== (t.match(/\\right\)/g) || []).length) {
-    t = t.replace(/\\right\./g, '\\right)');
+
+  const leftBracket = (t.match(/\\left\[/g) || []).length;
+  const rightBracket = (t.match(/\\right\]/g) || []).length;
+  if (leftBracket > rightBracket) {
+    let replaced = 0;
+    const needed = leftBracket - rightBracket;
+    t = t.replace(/\\right[.)](?!\])/g, (m) => {
+      if (replaced < needed) { replaced++; return '\\right]'; }
+      return m;
+    });
+    if (replaced < needed) t += '\\right]'.repeat(needed - replaced);
+  } else if (rightBracket > leftBracket) {
+    let excess = rightBracket - leftBracket;
+    t = t.replace(/\\right\]/g, (m) => {
+      if (excess > 0) { excess--; return ']'; }
+      return m;
+    });
+  }
+
+  const leftBrace = (t.match(/\\left\\\{/g) || []).length;
+  const rightBrace = (t.match(/\\right\\\}/g) || []).length;
+  if (leftBrace > rightBrace) {
+    t += '\\right\\}'.repeat(leftBrace - rightBrace);
+  } else if (rightBrace > leftBrace) {
+    let excess = rightBrace - leftBrace;
+    t = t.replace(/\\right\\\}/g, (m) => {
+      if (excess > 0) { excess--; return '\\}'; }
+      return m;
+    });
   }
 
   // 5. Balance unclosed braces (only if difference is small)
@@ -616,4 +682,75 @@ export const isOptionCorrect = (
   }
 
   return false;
+};
+
+export interface NormalizedOption {
+  key: string;
+  label: string;
+  val: string;
+  index: number;
+}
+
+/** Universal options normalizer — converts arrays, objects, stringified JSON to unified structure */
+export const normalizeOptions = (rawOptions: any): NormalizedOption[] => {
+  if (!rawOptions) return [];
+  let opts = rawOptions;
+
+  if (typeof opts === 'string') {
+    const trimmed = opts.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        opts = JSON.parse(trimmed);
+      } catch (e) {
+        opts = [opts];
+      }
+    } else {
+      opts = [opts];
+    }
+  }
+
+  const result: NormalizedOption[] = [];
+
+  if (Array.isArray(opts)) {
+    opts.forEach((val: any, idx: number) => {
+      const label = String.fromCharCode(65 + idx);
+      const strVal = val !== undefined && val !== null ? String(val).trim() : '';
+      result.push({
+        key: label,
+        label,
+        val: strVal || `(Option ${label})`,
+        index: idx,
+      });
+    });
+  } else if (typeof opts === 'object' && opts !== null) {
+    Object.entries(opts).forEach(([k, v]: [string, any], idx: number) => {
+      let label = String(k).trim().toUpperCase();
+      if (/^[0-9]+$/.test(label)) {
+        label = String.fromCharCode(65 + parseInt(label, 10));
+      }
+      const strVal = v !== undefined && v !== null ? String(v).trim() : '';
+      result.push({
+        key: String(k),
+        label: label || String.fromCharCode(65 + idx),
+        val: strVal || `(Option ${label || String.fromCharCode(65 + idx)})`,
+        index: idx,
+      });
+    });
+  }
+
+  return result;
+};
+
+/** Universal solution/explanation extractor — checks all potential property names */
+export const getQuestionSolution = (q: any): string => {
+  if (!q) return '';
+  const sol =
+    q.solution ||
+    q.explanation ||
+    q.sol ||
+    q.answer_explanation ||
+    q.solution_text ||
+    q.exp ||
+    '';
+  return String(sol).trim();
 };

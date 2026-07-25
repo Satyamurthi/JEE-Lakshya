@@ -47,8 +47,10 @@ try {
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_TIMEOUT            => 5,       // 5-second connection timeout
-        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4",
     ];
+    if (defined('PDO::MYSQL_ATTR_INIT_COMMAND')) {
+        $options[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES utf8mb4";
+    }
     $conn = new PDO($dsn, $username, $password, $options);
 } catch (PDOException $exception) {
     http_response_code(500);

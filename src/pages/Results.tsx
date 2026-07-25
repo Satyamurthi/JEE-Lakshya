@@ -5,7 +5,7 @@ import {
   ArrowLeft, Download, Share2, AlertTriangle, X
 } from 'lucide-react';
 import MathText, { renderMathInText } from '../components/MathText';
-import { isOptionCorrect } from '../utils/sanitizer';
+import { isOptionCorrect, normalizeOptions, getQuestionSolution } from '../utils/sanitizer';
 
 const Results = () => {
   const navigate = useNavigate();
@@ -381,28 +381,24 @@ const Results = () => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {q.type === 'MCQ' && q.options ? (
-                      (Array.isArray(q.options)
-                        ? q.options.map((val: any, idx: number) => [String.fromCharCode(65 + idx), val, idx])
-                        : Object.entries(q.options).map(([k, v], idx) => [k, v, idx])
-                      ).map(([key, val, idx]: any) => {
-                        const isUserAnswer = isOptionCorrect(q.userAnswer, key, idx, val);
-                        const isCorrectAnswer = isOptionCorrect(q.correctAnswer, key, idx, val);
-                        const displayLabel = String(key).length === 1 && /[0-9]/.test(key) ? String.fromCharCode(65 + Number(key)) : String(key).toUpperCase();
+                    {q.type === 'MCQ' ? (
+                      normalizeOptions(q.options).map((opt) => {
+                        const isUserAnswer = isOptionCorrect(q.userAnswer, opt.key, opt.index, opt.val);
+                        const isCorrectAnswer = isOptionCorrect(q.correctAnswer, opt.key, opt.index, opt.val);
                         
                         let borderClass = 'border-slate-100 bg-slate-50/50';
                         if (isCorrectAnswer) borderClass = 'border-emerald-500 bg-emerald-50 shadow-sm';
                         else if (isUserAnswer && !isCorrectAnswer) borderClass = 'border-rose-500 bg-rose-50 shadow-sm';
 
                         return (
-                          <div key={String(key) + idx} className={`p-5 rounded-2xl border-2 flex items-center gap-4 ${borderClass}`}>
+                          <div key={opt.key + opt.index} className={`p-5 rounded-2xl border-2 flex items-center gap-4 ${borderClass}`}>
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
                               isCorrectAnswer ? 'bg-emerald-500 text-white' : isUserAnswer ? 'bg-rose-500 text-white' : 'bg-white text-slate-400 border border-slate-200'
                             }`}>
-                              {displayLabel}
+                              {opt.label}
                             </div>
                             <MathText inlineOnly className={`font-bold text-sm ${isCorrectAnswer ? 'text-emerald-900' : isUserAnswer ? 'text-rose-900' : 'text-slate-600'}`}>
-                              {String(val || '').trim() ? String(val) : `(Option ${displayLabel})`}
+                              {opt.val}
                             </MathText>
                           </div>
                         );
@@ -423,14 +419,14 @@ const Results = () => {
                     )}
                   </div>
 
-                  {(q.explanation || q.solution) && (
+                  {getQuestionSolution(q) && (
                     <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-6 space-y-3">
                        <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
                          <Brain className="w-3.5 h-3.5" /> Solution & Explanation
                        </h4>
                        <div className="text-sm font-medium text-indigo-900/80 leading-relaxed overflow-x-auto">
                          <MathText>
-                           {q.explanation || q.solution}
+                           {getQuestionSolution(q)}
                          </MathText>
                        </div>
                     </div>

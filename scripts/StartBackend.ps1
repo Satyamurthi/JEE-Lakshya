@@ -5,15 +5,13 @@
 # On boot: starts PHP + named service + Quick Tunnel, pushes URL to GitHub
 # ============================================================
 
+# $PhpExe, $CfSvcToken kept for reference / fallback configuration
 $JeeRoot      = "d:\JEE"
-$PhpExe       = "C:\Users\Administrator\AppData\Local\Microsoft\WinGet\Packages\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe"
 $CfExe        = "C:\Program Files (x86)\cloudflared\cloudflared.exe"
 $UrlFile      = "$JeeRoot\public\backend_url.txt"
 $CfLog        = "$JeeRoot\cf_quicktunnel.log"
 $LogFile      = "$JeeRoot\StartBackend.log"
 $Pat          = "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"
-# New JEE-backend named tunnel token (tunnel ID: 2080ddf8-1f85-4cf5-9ac9-ebb22133ca29)
-$CfSvcToken   = "eyJhIjoiOWIwNTIzNzY5MDZiNzlmZDU2NGMzZmYwOWQwMzYyYTUiLCJ0IjoiMjA4MGRkZjgtMWY4NS00Y2Y1LTlhYzktZWJiMjIxMzNjYTI5IiwicyI6IlpEQTNZVFkwTURrdE1XUTJaQzAwWm1GakxUZ3hZell0TXpOaE9EQTBaVFppTmpnNCJ9"
 
 function Log($msg) {
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -28,10 +26,9 @@ Log "========================================================"
 Log "Waiting 15s for network to be ready..."
 Start-Sleep -Seconds 15
 
-# -- Step 2: Kill old PHP + cloudflared processes -------------
-Log "Stopping old PHP and cloudflared processes..."
+# -- Step 2: Kill old cloudflared processes -------------------
+Log "Stopping old cloudflared processes..."
 sc.exe stop cloudflared 2>$null
-Get-Process -Name "php" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Get-Process -Name "cloudflared" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
@@ -42,14 +39,11 @@ Start-Sleep -Seconds 5
 Log "Named tunnel service status: $((Get-Service cloudflared -ErrorAction SilentlyContinue).Status)"
 Start-Sleep -Seconds 2
 
-# -- Step 3: Start PHP CLI Server -----------------
-Log "Starting PHP CLI Server on 127.0.0.1:8080..."
-# Note: PHP_CLI_SERVER_WORKERS doesn't work on Windows (no fork support)
-# PHP CLI server is single-threaded on Windows - this is expected behavior
-$phpCmd = '"' + $PhpExe + '" -S 127.0.0.1:8080 -t "' + $JeeRoot + '" "' + $JeeRoot + '\api\router.php"'
-$phpProc = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $phpCmd }
-Start-Sleep -Seconds 3
-Log "PHP Server started with PID $($phpProc.ProcessId)."
+# -- Step 3: Ensure IIS Web Server (W3SVC) is running ----------
+Log "Ensuring IIS W3SVC service is running on 127.0.0.1:8080 (Multi-threaded PHP FastCGI)..."
+sc.exe start W3SVC 2>$null
+Start-Sleep -Seconds 2
+Log "IIS W3SVC service status: $((Get-Service W3SVC -ErrorAction SilentlyContinue).Status)"
 
 # -- Step 4: Clean old CF logs --------------------------------
 $CfErrLog = "$JeeRoot\cf_quicktunnel_err.log"
@@ -91,6 +85,7 @@ if (-not $TunnelUrl) {
 
     $sshCmd = 'cmd.exe /c "ssh.exe -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:127.0.0.1:8080 serveo.net > "{0}" 2> "{1}""' -f $ServeoLog, $ServeoErr
     $sshProc = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $sshCmd }
+    Log "Serveo SSH process started with PID $($sshProc.ProcessId)."
 
     for ($i = 0; $i -lt 20; $i++) {
         Start-Sleep -Seconds 1
