@@ -309,7 +309,19 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/\\\{\\\{([^{}\\]*)\\\}\\\}/g, '{$1}');
   m = m.replace(/\{\{([^{}\\]*)\}\}/g, '{$1}');
 
-  // 11. Fix corrupted SI unit dots and trailing punctuation attached to greek letters (e.g. \mu . N. -> \mu\text{N})
+  // 11. Fix PDF OCR / extraction corruption artifacts (\eft -> \left, \ight -> \right)
+  m = m.replace(/\\eft\b/g, '\\left');
+  m = m.replace(/\\ight\b/g, '\\right');
+  m = m.replace(/\\(int|sum|prod|lim|oint)\s*_\s*\\limits/g, '\\$1\\limits_');
+  m = m.replace(/\\limits\s*O\b/g, '\\limits_{0}');
+  m = m.replace(/_O\b(?!\w)/g, '_{0}');
+  m = m.replace(/_O\^/g, '_{0}^');
+  m = m.replace(/\\frac\s*\{\s*-I\s*\}/g, '\\frac{-1}');
+  m = m.replace(/\\frac\s*\{\s*I\s*\}/g, '\\frac{1}');
+  m = m.replace(/\\frac\s*\{\s*-l\s*\}/g, '\\frac{-1}');
+  m = m.replace(/\\frac\s*\{\s*l\s*\}/g, '\\frac{1}');
+
+  // 12. Fix corrupted SI unit dots and trailing punctuation attached to greek letters
   m = m.replace(/\\(mu|micro|nano|pico|femto|milli|kilo|mega|giga)\s*\.\s*([A-Za-z]+)\.?(?=\s|$|\\|\$)/gi, '\\$1\\text{$2}');
   m = m.replace(/\\(mu|micro)\s*([NCFHzmVAKgJWsT]|mol|rad|cd)\b(?!\s*\{)/g, '\\mu\\text{$2}');
   m = m.replace(/\\(alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)\s*\.(?=\s|$|\\|\$)/g, '\\$1 ');

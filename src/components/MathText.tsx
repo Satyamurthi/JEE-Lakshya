@@ -29,6 +29,23 @@ export const splitIntoSegments = (text: string): Segment[] => {
   };
 
   while (i < len) {
+    // ---- Bare Environment Math: \begin{env} ... \end{env} ----
+    if (text.startsWith('\\begin{', i)) {
+      const closeEnvStart = text.indexOf('\\end{', i + 7);
+      if (closeEnvStart !== -1) {
+        const closeBrace = text.indexOf('}', closeEnvStart + 5);
+        if (closeBrace !== -1) {
+          pushText(i);
+          const envEnd = closeBrace + 1;
+          const mathContent = text.substring(i, envEnd);
+          segments.push({ type: 'display', content: mathContent });
+          i = envEnd;
+          textStart = i;
+          continue;
+        }
+      }
+    }
+
     // ---- Display math: $$ ... $$  or  \[ ... \] ----
     if (text.startsWith('$$', i)) {
       // Ensure there is a closing $$
