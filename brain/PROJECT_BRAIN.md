@@ -604,7 +604,7 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 
 ---
 
-## 20. CURRENT OPERATIONAL STATE (as of Session 43)
+## 20. CURRENT OPERATIONAL STATE (as of Session 45)
 
 - ✅ PHP CLI server: 8 workers, port 8080 (PDO SQLite extension enabled, configured as auto-startup task)
 - ✅ Cloudflare Quick Tunnel: `cloudflared --url http://127.0.0.1:8080` (trycloudflare.com, no domain needed) — PRIMARY tunnel
@@ -618,6 +618,9 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
   - NEET UG (`neet_nexus`): **60,000** questions synchronized (matches local SQLite exactly)
 - ✅ Super Admin: `satyu000@gmail.com` seeded in all schemas
 - ✅ CORS: Wildcard headers, OPTIONS preflight handled
+- ✅ API Endpoint Router: Direct basename lookup in `api/router.php` resolves all API script calls instantly without Windows pathing issues
+- ✅ Meta Tags: Added `mobile-web-app-capable` alongside `apple-mobile-web-app-capable`
+- ✅ SVG Backgrounds: Inline SVG fractal noise data URI replaces broken external `noise.svg` URL in `Dashboard.tsx`
 - ✅ Freeze/Unfreeze: Working, cascades to students
 - ✅ Grant/Revoke All: Working, cascades to students
 - ✅ Exam History: Visible after refresh (localStorage backup + DB merge)
