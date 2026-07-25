@@ -319,10 +319,10 @@ const processSingleTextLine = (text: string, inlineOnly: boolean): string => {
   const trimmed = text.trim();
   const hasCases = trimmed.includes('\\begin{') || trimmed.includes('\\left\\{') || trimmed.includes('\\[');
   const hasNewlines = trimmed.includes('\\\\');
-  const startsWithMacro = /^[-+\s]*\\(frac|sqrt|matrix|cases|begin|int|sum|prod|lim|vec|hat|overline|Rightarrow|Leftarrow)\b/.test(trimmed);
-  const startsWithWord = /^[A-Za-z]{3,}\s/.test(trimmed);
-  const containsEqOrTeX = /[=\+\-]\s*\\frac|\\frac.*\\frac|\\Rightarrow|\\int|\\sum|\^\\frac|\{.*\\frac|\\frac.*=|=.*\\frac/.test(trimmed);
-  const hasMultipleMacros = (trimmed.match(/\\(frac|sqrt|Rightarrow|alpha|beta|gamma|theta|int|sum|vec|_|\^)/g) || []).length >= 2;
+  const startsWithMacro = /^[\{\s\-+]*\\(frac|sqrt|matrix|cases|begin|int|sum|prod|lim|vec|hat|overline|Rightarrow|Leftarrow)\b/i.test(trimmed);
+  const startsWithWord = /^[A-Za-z]{3,}\s/.test(trimmed.replace(/^\{\{+/, ''));
+  const containsEqOrTeX = /[=\+\-]\s*\\frac|\\frac.*\\frac|\\Rightarrow|\\int|\\sum|\^\\frac|\{.*\\frac|\\frac.*=|=.*\\frac|\{+\\Rightarrow/i.test(trimmed);
+  const hasMultipleMacros = (trimmed.match(/\\(frac|sqrt|Rightarrow|alpha|beta|gamma|theta|int|sum|vec|_|\^)/g) || []).length >= 1;
 
   const isLikelyFullFormula = (hasCases || hasNewlines || (hasMultipleMacros && containsEqOrTeX) || (startsWithMacro && !startsWithWord)) && trimmed.length > 3;
 
@@ -454,7 +454,7 @@ const MathText: FC<MathTextProps> = ({
   text,
   className = '',
   inlineOnly = false,
-}) => {
+}: MathTextProps) => {
   const contentToRender =
     children !== undefined ? children : text !== undefined ? text : '';
   const htmlContent = renderMathInText(contentToRender, inlineOnly);

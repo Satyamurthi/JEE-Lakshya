@@ -119,11 +119,13 @@ const collapseDoubleBraces = (tex: string): string => {
   // Final pass: handle remaining unbalanced double-open {{simple}
   // (outer } is missing — just strip the extra leading {)
   t = t.replace(/\{\{([^{}]*)\}/g, '{$1}');
-  // Strip orphan triple/double opening braces from text: {{{ For rolling wheel -> For rolling wheel
-  t = t.replace(/^\{\{\{+/g, '');
-  t = t.replace(/^\{\{+/g, '');
-  t = t.replace(/\{\{\{+(\s*[a-zA-Z])/g, '$1');
-  t = t.replace(/\{\{+(\s*[a-zA-Z])/g, '$1');
+  // Strip orphan triple/double opening braces from text: {{{ For rolling wheel -> For rolling wheel, {{\Rightarrow -> \Rightarrow, {{a_I = -> a_I =
+  t = t.replace(/^\{\{\{+/gm, '');
+  t = t.replace(/^\{\{+/gm, '');
+  t = t.replace(/\{\{\{+(\s*\\?[a-zA-Z])/g, '$1');
+  t = t.replace(/\{\{+(\s*\\?[a-zA-Z])/g, '$1');
+  t = t.replace(/\{\{\s*\\(Rightarrow|frac|left|right|begin)/gi, '\\$1');
+  t = t.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*=/gi, '$1 =');
   return t;
 };
 
@@ -435,6 +437,15 @@ export const cleanQuestionText = (text: string): string => {
     const texContent = inner.replace(/<[^>]+>/g, '').trim();
     return texContent ? ` $$${texContent}$$ ` : '';
   });
+
+  // 3.5 Strip raw CSS style blocks and .tg table classes (e.g. .tg {border-collapse...} or <style>...</style>)
+  cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ');
+  cleaned = cleaned.replace(/\.tg\s*\{[^}]*\}/gi, ' ');
+  cleaned = cleaned.replace(/\.tg\s*td[^{]*\{[^}]*\}/gi, ' ');
+  cleaned = cleaned.replace(/\.tg\s*th[^{]*\{[^}]*\}/gi, ' ');
+  cleaned = cleaned.replace(/\.tg\s*\.[^{]*\{[^}]*\}/gi, ' ');
+  cleaned = cleaned.replace(/\.[a-zA-Z0-9_-]+\s*\{[^{}]*border-[^{}]*\}/gi, ' ');
+  cleaned = cleaned.replace(/\.[a-zA-Z0-9_-]+\s*\{[^{}]*font-family:[^{}]*\}/gi, ' ');
 
   // 4. Strip ALL HTML-like tags (including malformed tags)
   cleaned = cleaned.replace(/<\s*\/?[^>]+>/gi, ' ');
