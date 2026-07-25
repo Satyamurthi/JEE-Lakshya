@@ -472,25 +472,25 @@ export const fetchQuestionsFromDB = async (
     
     const fetchByType = async (type: string, count: number) => {
         if (count <= 0) return [];
-        let query = supabase.from('questions').select('id, statement').eq('type', type);
+        let query = supabase.from('questions').select('id, statement, difficulty').eq('type', type);
         if (subject) query = query.eq('subject', subject);
         if (chapter) query = query.eq('chapter', chapter);
         if (topics && topics.length > 0) query = query.in('concept', topics);
-        if (difficulty) query = query.ilike('difficulty', `%${difficulty}%`);
+        query = query.limit(500);
         
         let { data: idData, error: idError } = await query;
         if (idError) throw idError;
         
-        // If strict difficulty query returned empty, fall back to any difficulty for this subject/chapter
-        if (!idData || idData.length === 0) {
-          let fallbackQuery = supabase.from('questions').select('id, statement').eq('type', type);
-          if (subject) fallbackQuery = fallbackQuery.eq('subject', subject);
-          if (chapter) fallbackQuery = fallbackQuery.eq('chapter', chapter);
-          const { data: fbData } = await fallbackQuery;
-          idData = fbData || [];
-        }
-        
         if (!idData || idData.length === 0) return [];
+
+        // Filter by difficulty in memory if specified
+        if (difficulty) {
+          const diffLower = difficulty.toLowerCase();
+          const matchedDiff = idData.filter((q: any) => q.difficulty && q.difficulty.toLowerCase().includes(diffLower));
+          if (matchedDiff.length >= count) {
+            idData = matchedDiff;
+          }
+        }
         
         const globalHistory = getSeenQuestionHashes();
         const freshList: any[] = [];
