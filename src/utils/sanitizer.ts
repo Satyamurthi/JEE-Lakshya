@@ -693,6 +693,43 @@ export const isOptionCorrect = (
   return false;
 };
 
+/** Helper to determine if a question is MCQ (multiple choice) */
+export const isQuestionMCQ = (q: any): boolean => {
+  if (!q) return false;
+  const normOpts = normalizeOptions(q.options);
+  if (normOpts.length >= 2) return true;
+  const typeUpper = String(q.type || '').toUpperCase();
+  return typeUpper === 'MCQ' || typeUpper === 'SINGLE' || typeUpper === 'MULTIPLE';
+};
+
+/** Helper to evaluate if a user's submitted answer is correct for MCQ or Numerical */
+export const checkUserAnswerCorrect = (q: any, userAnswer: any): boolean => {
+  if (userAnswer === undefined || userAnswer === null || String(userAnswer).trim() === '') {
+    return false;
+  }
+  const normOpts = normalizeOptions(q.options);
+  if (normOpts.length > 0) {
+    return normOpts.some(opt => {
+      const isUser = isOptionCorrect(userAnswer, opt.key, opt.index, opt.val);
+      const isCorr = isOptionCorrect(q.correctAnswer || q.answer, opt.key, opt.index, opt.val);
+      return isUser && isCorr;
+    }) || isOptionCorrect(q.correctAnswer || q.answer, userAnswer, 0, userAnswer);
+  }
+
+  // Numerical question comparison
+  const userStr = String(userAnswer).trim();
+  const corrStr = String(q.correctAnswer || q.answer || '').trim();
+
+  const userNum = parseFloat(userStr);
+  const corrNum = parseFloat(corrStr);
+
+  if (!isNaN(userNum) && !isNaN(corrNum)) {
+    return Math.abs(userNum - corrNum) < 0.05 || Math.abs((userNum - corrNum) / (corrNum || 1)) < 0.01;
+  }
+
+  return userStr.toLowerCase() === corrStr.toLowerCase();
+};
+
 export interface NormalizedOption {
   key: string;
   label: string;

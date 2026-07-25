@@ -1,8 +1,10 @@
 <?php
-// Enable CORS for all environments & proxies
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: *");
+// Enable CORS dynamically for web apps, netlify, and mobile apps
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
+header("Access-Control-Allow-Origin: " . $origin);
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Active-Stream, x-active-stream, *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS");
+header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Max-Age: 86400");
 header("Content-Type: application/json; charset=UTF-8");
 header("Connection: close");

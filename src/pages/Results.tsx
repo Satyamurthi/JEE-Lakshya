@@ -5,7 +5,7 @@ import {
   ArrowLeft, Download, Share2, AlertTriangle, X
 } from 'lucide-react';
 import MathText, { renderMathInText } from '../components/MathText';
-import { isOptionCorrect, normalizeOptions, getQuestionSolution } from '../utils/sanitizer';
+import { isOptionCorrect, normalizeOptions, getQuestionSolution, isQuestionMCQ, checkUserAnswerCorrect } from '../utils/sanitizer';
 
 const Results = () => {
   const navigate = useNavigate();
@@ -381,10 +381,10 @@ const Results = () => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {q.type === 'MCQ' ? (
+                    {isQuestionMCQ(q) ? (
                       normalizeOptions(q.options).map((opt) => {
                         const isUserAnswer = isOptionCorrect(q.userAnswer, opt.key, opt.index, opt.val);
-                        const isCorrectAnswer = isOptionCorrect(q.correctAnswer, opt.key, opt.index, opt.val);
+                        const isCorrectAnswer = isOptionCorrect(q.correctAnswer || q.answer, opt.key, opt.index, opt.val);
                         
                         let borderClass = 'border-slate-100 bg-slate-50/50';
                         if (isCorrectAnswer) borderClass = 'border-emerald-500 bg-emerald-50 shadow-sm';
@@ -408,11 +408,13 @@ const Results = () => {
                         <div className="flex gap-4">
                           <div className="flex-1 p-5 rounded-2xl border-2 border-rose-100 bg-rose-50/30">
                             <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">Your Answer</p>
-                            <p className="text-xl font-black text-rose-900">{q.userAnswer || 'N/A'}</p>
+                            <p className="text-xl font-black text-rose-900">
+                              {q.userAnswer !== undefined && String(q.userAnswer).trim() !== '' ? String(q.userAnswer) : 'Unattempted'}
+                            </p>
                           </div>
                           <div className="flex-1 p-5 rounded-2xl border-2 border-emerald-100 bg-emerald-50/30">
                             <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Correct Answer</p>
-                            <MathText className="text-xl font-black text-emerald-900">{String(q.correctAnswer)}</MathText>
+                            <MathText className="text-xl font-black text-emerald-900">{String(q.correctAnswer || q.answer || '')}</MathText>
                           </div>
                         </div>
                       </div>

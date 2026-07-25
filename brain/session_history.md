@@ -486,3 +486,18 @@ This file records the chronological history of tasks, major changes, and feature
     1. Replaced placeholder token pattern `___KATEX_BLOCK_${idx}___` with `%%%KATEXBLOCK${idx}%%%` in [MathText.tsx](file:///d:/JEE/src/components/MathText.tsx).
     2. Since `%` characters cannot be matched by Markdown bold, italic, list, or header rules, the token remains completely untouched during Markdown formatting and is cleanly substituted with the rendered KaTeX HTML.
     3. Pushed commit `96087e8` to both `JEE-Lakshya` and `JEE-Nexus` GitHub main branches for Netlify auto-deployment.
+
+---
+
+## Session 56: Multi-Line Derivation Auto-Wrapping, Math in Text Macro Extraction & HTML Image Protection
+*   **Request**: Inspect 5 screenshots showing raw multi-line derivations (`\% charge = \Delta E...`), unparsed `\begin{aligned}` with `\text{ (as } x = \pi \text{)}`, and raw `<img class="question-image" ...>` HTML tags rendered as code.
+*   **Root Cause**:
+    1. **HTML Images Escaped to Raw Code**: `<img class="question-image"...>` tags were HTML-escaped (`&lt;img...&gt;`) by text line processors, displaying literal HTML code instead of rendering figures/diagrams.
+    2. **Math Commands Inside `\text{...}`**: TeX macros like `\pi` inside `\text{ (as } x = \pi \text{)}` caused KaTeX to throw `Can't use function '\pi' in text mode`, failing `\begin{aligned}` blocks.
+    3. **Unwrapped Multi-line Derivations**: Equations across multiple lines were processed line-by-line instead of as a unified aligned block.
+*   **Files**: `src/components/MathText.tsx`, `src/utils/sanitizer.ts`, `brain/PROJECT_BRAIN.md`, `brain/session_history.md`
+*   **Work Done**:
+    1. **HTML `<img>` Tag Protection**: Stashed raw HTML `<img>` tags into `%%%HTMLIMG${idx}%%%` placeholder tokens before line processing, re-inserting them into `finalHtml` so organic/physics diagrams render natively.
+    2. **Text Macro Math Extraction**: Built TeX command extractor inside `\text{...}` in `fixCorruptedTeX`, extracting macros like `\pi`, `\alpha`, `\beta`, `\gamma`, `\theta` outside `\text{}` so KaTeX parses them cleanly.
+    3. **`autoWrapMultiLineDerivations`**: Automatically detects multi-line equation sequences and wraps them in `$$\n\begin{aligned}\n...\n\end{aligned}\n$$` so KaTeX renders complete derivation blocks seamlessly.
+    4. **GitHub & Netlify Auto-Deployment**: Pushed commit `2cf4ac1` to `JEE-Lakshya` and `JEE-Nexus` GitHub main branches for live Netlify deployment.

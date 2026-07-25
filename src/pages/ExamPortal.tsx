@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { submitExamAttempt, submitDailyAttempt, supabase, logActivity } from '../supabase';
 import MathText from '../components/MathText';
-import { cleanQuestionText, normalizeOptions } from '../utils/sanitizer';
+import { cleanQuestionText, normalizeOptions, checkUserAnswerCorrect, isQuestionMCQ } from '../utils/sanitizer';
 import { recordSeenQuestions } from '../utils/questionTracker';
 
 const VirtualKeypad = ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
@@ -173,9 +173,9 @@ const ExamPortal = () => {
       let score = 0;
       const results = questions.map((q, i) => {
         const userAnswer = answers[i];
-        const isCorrect = userAnswer === q.correctAnswer;
+        const isCorrect = checkUserAnswerCorrect(q, userAnswer);
         if (isCorrect) score += 4;
-        else if (userAnswer !== undefined) score -= 1;
+        else if (userAnswer !== undefined && String(userAnswer).trim() !== '') score -= 1;
         
         return {
           ...q,
@@ -927,7 +927,7 @@ const ExamPortal = () => {
                   </p>
                 </div>
 
-                {currentQuestion?.type === 'MCQ' ? (
+                {isQuestionMCQ(currentQuestion) ? (
                   <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto w-full">
                     {['A', 'B', 'C', 'D'].map((key) => (
                       <button
@@ -987,7 +987,7 @@ const ExamPortal = () => {
                     </div>
                  </div>
 
-                 {currentQuestion?.type === 'MCQ' ? (
+                 {isQuestionMCQ(currentQuestion) ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {normalizeOptions(currentQuestion?.options).map((opt) => {
                         const isSelected = answers[currentIndex] === opt.key || answers[currentIndex] === String(opt.index) || answers[currentIndex] === opt.val;
