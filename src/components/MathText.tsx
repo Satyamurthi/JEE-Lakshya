@@ -215,7 +215,19 @@ const fixCorruptedTeX = (tex: string): string => {
   t = t.replace(/\\frac\s*\{\s*2\s*\}\s*\{\s*1([a-zA-Z])\s*\}/g, '\\frac{2}{$1}');
   t = t.replace(/-\s*\\frac\s*\{\s*1\s*\}\s*\{\s*1\s*\}/g, ' -1 ');
   t = t.replace(/^\{\s*-\s*/, '- ');
+  t = t.replace(/\{\s*-\s*\\frac/, ' -\\frac');
+
+  // Fix OCR missing \frac before differential brace pairs: {dv}{dt} -> \frac{dv}{dt}, {du}{dt} -> \frac{du}{dt}
+  t = t.replace(/(?<!\\frac)\{([a-zA-Z0-9_\^\s]+)\}\{([a-zA-Z0-9_\^\s]+)\}/g, (match, g1, g2) => {
+    if (g1.startsWith('d') || g2.startsWith('d') || g2 === 'dt' || g2 === 'dx' || g2 === 'dy' || g2 === 'dz') {
+      return `\\frac{${g1}}{${g2}}`;
+    }
+    return match;
+  });
+
+  // Fix OCR closing brace mismatches: ^2}{v_I} -> ^2 v_I, ^3}}v_I^2 -> ^3 v_I^2
   t = t.replace(/\}\}\s*([a-zA-Z0-9_\^]+)/g, '} $1');
+  t = t.replace(/\}\s*\{\s*([a-zA-Z0-9_]+)\s*\}/g, '} $1');
   t = t.replace(/\\frac\s*\{\s*-\s*\}\s*\{\s*1\s*\}/g, ' - ');
   t = t.replace(/\\frac\s*\{\s*\+\s*\}\s*\{\s*1\s*\}/g, ' + ');
   t = t.replace(/\\frac\s*\{\s*([a-zA-Z0-9])\s*\}\s*\{\s*1\s*\}/g, ' $1 ');
@@ -272,11 +284,20 @@ const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
     return result;
   } catch (e) {
     console.warn('KaTeX render error:', e, 'Content:', mathContent);
-    const safeText = mathContent
+    const readableText = mathContent
+      .replace(/\\frac\s*\{([^}]+)\}\s*\{([^}]+)\}/g, '($1/$2)')
+      .replace(/\\Rightarrow/g, '⇒')
+      .replace(/\\rightarrow/g, '→')
+      .replace(/\\cdot/g, '·')
+      .replace(/\\times/g, '×')
+      .replace(/\\alpha/g, 'α')
+      .replace(/\\beta/g, 'β')
+      .replace(/\\gamma/g, 'γ')
+      .replace(/\\theta/g, 'θ')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    return `<span class="katex-fallback" style="font-family:serif;font-style:italic;">${safeText}</span>`;
+    return `<span class="katex-fallback" style="font-family:serif;font-style:italic;">${readableText}</span>`;
   }
 };
 
