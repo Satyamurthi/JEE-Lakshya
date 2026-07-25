@@ -273,7 +273,7 @@ const Dashboard = () => {
           onClick={() => navigate('/exam-setup')}
         >
           {/* Animated Background */}
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;utf8,<svg%20viewBox=%220%200%20200%20200%22%20xmlns=%22http://www.w3.org/2000/svg%22><filter%20id=%22noiseFilter%22><feTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.8%22%20numOctaves=%223%22%20stitchTiles=%22stitch%22/></filter><rect%20width=%22100%25%22%20height=%22100%25%22%20filter=%22url(%23noiseFilter)%22/></svg>')] opacity-20 pointer-events-none"></div>
           <div className="absolute -right-20 -top-20 w-[500px] h-[500px] bg-indigo-500 rounded-full blur-[120px] opacity-30 group-hover:opacity-40 transition-opacity duration-700"></div>
           <div className="absolute -left-20 -bottom-20 w-[400px] h-[400px] bg-fuchsia-500 rounded-full blur-[100px] opacity-20 group-hover:opacity-30 transition-opacity duration-700"></div>
           

@@ -378,3 +378,15 @@ This file records the chronological history of tasks, major changes, and feature
     6. **Results.tsx — PDF pre-rendering**: `handleExportPDF()` now calls `renderMathInText()` on all question text, options, and explanations before injecting into PDF HTML — math renders as KaTeX HTML spans, not raw LaTeX.
     7. **Pushed**: commit `ab23da6` to both remotes, Netlify auto-deploys.
 
+---
+
+## Session 45: Console Errors Resolution (404 API Endpoint, Deprecated Meta Tag, Broken SVG Asset)
+*   **Problem**: DevTools console errors showing 404 for `local_db.php` (endless spinner on Coaching Admins card), deprecated `apple-mobile-web-app-capable` meta tag warning, and 404 for `noise.svg` from external URL `https://grainy-gradients.vercel.app/noise.svg`.
+*   **Files**: `api/router.php`, `index.html`, `src/pages/Dashboard.tsx`, `scripts/StartBackend.ps1`
+*   **Work Done**:
+    1. **`api/router.php` Path Resolution**: Enhanced URI router to check `__DIR__ . DIRECTORY_SEPARATOR . basename($uri)` directly before fallback path searches. Ensures requests like `/api/local_db.php`, `/api/auth.php`, etc. are resolved instantly without slash normalization or path relative mismatch issues on Windows PHP CLI server.
+    2. **`index.html` Deprecation Warning**: Added `<meta name="mobile-web-app-capable" content="yes">` alongside `apple-mobile-web-app-capable` to satisfy standard PWA standards.
+    3. **`Dashboard.tsx` SVG Noise Fallback**: Replaced broken external URL `https://grainy-gradients.vercel.app/noise.svg` with an inline SVG fractal noise data URI (`data:image/svg+xml;...`), eliminating 404 errors and external network dependencies.
+    4. **Backend Tunnel Restart**: Executed `StartBackend.ps1` to restart PHP CLI server and Cloudflare Quick Tunnel, updating `public/backend_url.txt` and pushing changes to GitHub for Netlify auto-deployment.
+
+

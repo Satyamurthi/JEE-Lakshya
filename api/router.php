@@ -11,35 +11,48 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
     exit(0);
 }
 
-// Resolve the requested file path
+// Resolve the requested URI path
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$file = __DIR__ . '/..' . $uri;
+$base = basename($uri);
 
-// Prevent recursive inclusion of the router itself
-if (realpath($file) === realpath(__FILE__)) {
-    return false;
+// 1. Direct lookup in current /api directory
+if ($base && $base !== 'router.php') {
+    $api_file = __DIR__ . DIRECTORY_SEPARATOR . $base;
+    if (is_file($api_file) && pathinfo($api_file, PATHINFO_EXTENSION) === 'php') {
+        include $api_file;
+        exit(0);
+    }
 }
 
-// If file exists, serve or include it
-if (is_file($file)) {
-    if (pathinfo($file, PATHINFO_EXTENSION) === 'php') {
-        include $file;
+// 2. Relative to project root
+$rel_file = __DIR__ . '/..' . $uri;
+if (is_file($rel_file)) {
+    if (pathinfo($rel_file, PATHINFO_EXTENSION) === 'php') {
+        if (realpath($rel_file) !== realpath(__FILE__)) {
+            include $rel_file;
+            exit(0);
+        }
     } else {
-        // Let the server serve the static file directly
         return false;
     }
-} else {
-    // Try without folder mapping in case the PHP working directory differs
-    $file_root = $_SERVER['DOCUMENT_ROOT'] . $uri;
-    if (is_file($file_root)) {
-        if (pathinfo($file_root, PATHINFO_EXTENSION) === 'php') {
-            include $file_root;
+}
+
+// 3. Document Root relative lookup
+$doc_root = $_SERVER['DOCUMENT_ROOT'] ?? '';
+if ($doc_root) {
+    $doc_file = $doc_root . $uri;
+    if (is_file($doc_file)) {
+        if (pathinfo($doc_file, PATHINFO_EXTENSION) === 'php') {
+            if (realpath($doc_file) !== realpath(__FILE__)) {
+                include $doc_file;
+                exit(0);
+            }
         } else {
             return false;
         }
-    } else {
-        http_response_code(404);
-        echo json_encode(["error" => "Not Found", "path" => $uri]);
     }
 }
+
+http_response_code(404);
+echo json_encode(["error" => "Not Found", "path" => $uri]);
 ?>
