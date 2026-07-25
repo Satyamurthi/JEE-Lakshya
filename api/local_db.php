@@ -211,13 +211,25 @@ try {
         $countOption   = isset($input['countOption'])   ? $input['countOption']          : null;
 
         if ($countOption === 'exact' || $columns === 'count(*)' || strtolower($columns) === 'count(1)') {
-            $countSql = "SELECT COUNT(*) FROM `$table`";
-            if (count($where_clauses) > 0) {
-                $countSql .= " WHERE " . implode(" AND ", $where_clauses);
+            if (count($where_clauses) === 0 && ($table === 'questions' || $table === 'exam_attempts')) {
+                // High-performance instant count from information_schema (bypasses full table scan on 1M+ rows)
+                $infoStmt = $conn->prepare("SELECT TABLE_ROWS FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?");
+                $infoStmt->execute([$table]);
+                $totalCount = (int)$infoStmt->fetchColumn();
+                if ($totalCount === 0) {
+                    $countStmt = $conn->prepare("SELECT COUNT(*) FROM `$table`");
+                    $countStmt->execute();
+                    $totalCount = (int)$countStmt->fetchColumn();
+                }
+            } else {
+                $countSql = "SELECT COUNT(*) FROM `$table`";
+                if (count($where_clauses) > 0) {
+                    $countSql .= " WHERE " . implode(" AND ", $where_clauses);
+                }
+                $countStmt = $conn->prepare($countSql);
+                $countStmt->execute($params);
+                $totalCount = (int)$countStmt->fetchColumn();
             }
-            $countStmt = $conn->prepare($countSql);
-            $countStmt->execute($params);
-            $totalCount = (int)$countStmt->fetchColumn();
             echo json_encode(["data" => [], "error" => null, "count" => $totalCount]);
             exit;
         }
