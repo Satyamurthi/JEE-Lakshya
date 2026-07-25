@@ -101,8 +101,8 @@ const ExamSetup = () => {
     setPreparedQuestions([]);
     setPreparationLogs([`Initializing paper generation for ${examType}...`]);
     
-    const resetProgress = { ...progress };
-    selectedSubjects.forEach(s => resetProgress[s] = 'pending');
+    const resetProgress: Record<string, string> = { ...progress };
+    selectedSubjects.forEach((s: Subject) => resetProgress[s] = 'pending');
     setProgress(resetProgress);
     
     try {
@@ -110,15 +110,15 @@ const ExamSetup = () => {
       const { saveQuestionsToDB, fetchQuestionsFromDB } = await import('../supabase');
       const savedKey = localStorage.getItem('user_gemini_api_key') || (import.meta as any).env?.VITE_GEMINI_API_KEY;
 
-      const generationPromises = selectedSubjects.map(async (sub) => {
-        setProgress(prev => ({ ...prev, [sub]: 'loading' }));
+      const generationPromises = selectedSubjects.map(async (sub: Subject) => {
+        setProgress((prev: Record<string, string>) => ({ ...prev, [sub]: 'loading' }));
         
         let questions: any[] = [];
         let source = "Database Question Bank";
 
         // 1. Try fetching from Database Question Bank first
         try {
-          setPreparationLogs(prev => [...prev, `Fetching ${difficulty} level questions for ${sub} from Question Bank...`]);
+          setPreparationLogs((prev: string[]) => [...prev, `Fetching ${difficulty} level questions for ${sub} from Question Bank...`]);
           questions = await fetchQuestionsFromDB(
             sub,
             undefined,
@@ -135,7 +135,7 @@ const ExamSetup = () => {
         if (!questions || questions.length < totalPerSubject) {
           if (savedKey) {
             try {
-              setPreparationLogs(prev => [...prev, `Database has insufficient questions. Attempting AI generation for ${sub}...`]);
+              setPreparationLogs((prev: string[]) => [...prev, `Database has insufficient questions. Attempting AI generation for ${sub}...`]);
               const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
               const service = await getStreamGeminiService(activeStream);
               const aiQuestions = await service.generateJEEQuestions(
@@ -151,11 +151,11 @@ const ExamSetup = () => {
               if (aiQuestions && aiQuestions.length > 0) {
                   questions = aiQuestions;
                   source = "AI Engine";
-                  setPreparationLogs(prev => [...prev, `Saving ${sub} AI questions to database...`]);
+                  setPreparationLogs((prev: string[]) => [...prev, `Saving ${sub} AI questions to database...`]);
                   await saveQuestionsToDB(questions);
               }
             } catch (aiErr: any) {
-              setPreparationLogs(prev => [...prev, `⚠️ AI generation failed for ${sub}.`]);
+              setPreparationLogs((prev: string[]) => [...prev, `⚠️ AI generation failed for ${sub}.`]);
             }
           }
         }
@@ -200,12 +200,12 @@ const ExamSetup = () => {
           const finalSubNums = nums.slice(0, questionCounts.numerical);
           const finalSubQuestions = [...finalSubMcqs, ...finalSubNums];
 
-          setPreparationLogs(prev => [...prev, `✅ ${sub} prepared: ${finalSubMcqs.length} MCQs + ${finalSubNums.length} Numericals (via ${source})`]);
-          setProgress(prev => ({ ...prev, [sub]: 'done' }));
+          setPreparationLogs((prev: string[]) => [...prev, `✅ ${sub} prepared: ${finalSubMcqs.length} MCQs + ${finalSubNums.length} Numericals (via ${source})`]);
+          setProgress((prev: Record<string, string>) => ({ ...prev, [sub]: 'done' }));
           return finalSubQuestions;
         } catch (fbErr) {
           console.error(`[ExamSetup] Synthesis failed for ${sub}:`, fbErr);
-          setProgress(prev => ({ ...prev, [sub]: 'error' }));
+          setProgress((prev: Record<string, string>) => ({ ...prev, [sub]: 'error' }));
           return questions || [];
         }
       });
@@ -214,10 +214,10 @@ const ExamSetup = () => {
       const allPrepared = results.flat();
       
       setPreparedQuestions(allPrepared);
-      setPreparationLogs(prev => [...prev, "Paper Synthesis Complete."]);
+      setPreparationLogs((prev: string[]) => [...prev, "Paper Synthesis Complete."]);
     } catch (err: any) {
       console.error(err);
-      setPreparationLogs(prev => [...prev, `Critical Error: ${err.message}`]);
+      setPreparationLogs((prev: string[]) => [...prev, `Critical Error: ${err.message}`]);
     } finally {
       setIsPreparing(false);
     }
@@ -415,7 +415,7 @@ const ExamSetup = () => {
             </h2>
             
             <div className="space-y-4 flex-1">
-              {selectedSubjects.map(sub => (
+              {selectedSubjects.map((sub: Subject) => (
                 <div key={sub} className="flex items-center justify-between p-4 bg-white/60 rounded-2xl border border-white/40">
                   <span className="text-sm font-bold text-slate-700">{sub}</span>
                   <div className="flex items-center gap-3">
@@ -425,7 +425,7 @@ const ExamSetup = () => {
               ))}
               
               <div className="mt-4 p-4 bg-slate-900 rounded-2xl border border-slate-800 font-mono text-[10px] text-emerald-400 space-y-1 overflow-y-auto max-h-32 custom-scrollbar">
-                {preparationLogs.map((log, i) => (
+                {preparationLogs.map((log: string, i: number) => (
                     <div key={i} className="flex gap-2">
                         <span className="opacity-30">[{new Date().toLocaleTimeString([], {hour12:false, hour:'2-digit', minute:'2-digit'})}]</span>
                         <span>{log}</span>

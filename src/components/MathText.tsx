@@ -1,9 +1,9 @@
-import { FC } from 'react';
+import React, { FC } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { cleanQuestionText, preprocessTeXMacros } from '../utils/sanitizer';
 
-interface MathTextProps {
+export interface MathTextProps {
   children?: string;
   text?: string;
   className?: string;
