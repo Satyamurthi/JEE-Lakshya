@@ -119,6 +119,11 @@ const collapseDoubleBraces = (tex: string): string => {
   // Final pass: handle remaining unbalanced double-open {{simple}
   // (outer } is missing — just strip the extra leading {)
   t = t.replace(/\{\{([^{}]*)\}/g, '{$1}');
+  // Strip orphan triple/double opening braces from text: {{{ For rolling wheel -> For rolling wheel
+  t = t.replace(/^\{\{\{+/g, '');
+  t = t.replace(/^\{\{+/g, '');
+  t = t.replace(/\{\{\{+(\s*[a-zA-Z])/g, '$1');
+  t = t.replace(/\{\{+(\s*[a-zA-Z])/g, '$1');
   return t;
 };
 
@@ -327,6 +332,9 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/\\(alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)\s*\.(?=\s|$|\\|\$)/g, '\\$1 ');
   m = m.replace(/(\\times|\\cdot)\s*10(?!\^)/g, '$1 10^');
   m = m.replace(/=\s*\\times/g, '= \\times');
+  m = m.replace(/(?<!\\)\btimes\b/gi, '\\times ');
+  m = m.replace(/(?<!\\)\btherefore\b/gi, '\\therefore ');
+  m = m.replace(/\\therefore\b/g, '\\Rightarrow ');
 
   return m;
 };
