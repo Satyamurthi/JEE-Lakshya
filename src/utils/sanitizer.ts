@@ -309,7 +309,45 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/\\\{\\\{([^{}\\]*)\\\}\\\}/g, '{$1}');
   m = m.replace(/\{\{([^{}\\]*)\}\}/g, '{$1}');
 
+  // 11. Fix corrupted SI unit dots and trailing punctuation attached to greek letters (e.g. \mu . N. -> \mu\text{N})
+  m = m.replace(/\\(mu|micro|nano|pico|femto|milli|kilo|mega|giga)\s*\.\s*([A-Za-z]+)\.?(?=\s|$|\\|\$)/gi, '\\$1\\text{$2}');
+  m = m.replace(/\\(mu|micro)\s*([NCFHzmVAKgJWsT]|mol|rad|cd)\b(?!\s*\{)/g, '\\mu\\text{$2}');
+  m = m.replace(/\\(alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)\s*\.(?=\s|$|\\|\$)/g, '\\$1 ');
+  m = m.replace(/(\\times|\\cdot)\s*10(?!\^)/g, '$1 10^');
+  m = m.replace(/=\s*\\times/g, '= \\times');
+
   return m;
+};
+
+/** Auto-balance and fix unclosed dollar delimiters in question text */
+export const autoFixDollarDelimiters = (raw: string): string => {
+  if (!raw || !raw.includes('$')) return raw;
+  
+  // Replace display math $$ first to count single inline dollars
+  const placeholders: string[] = [];
+  const withPlaceholders = raw.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => {
+    placeholders.push(inner);
+    return `___DISPLAY_MATH_${placeholders.length - 1}___`;
+  });
+
+  // Count single dollars
+  const singleDollarMatches = withPlaceholders.match(/(?<!\\)\$/g);
+  const count = singleDollarMatches ? singleDollarMatches.length : 0;
+
+  let fixed = withPlaceholders;
+  if (count % 2 !== 0) {
+    // Unclosed $ detected!
+    // If there is an unclosed $ containing a TeX macro before punctuation or end of text, close it
+    fixed = fixed.replace(/((?<!\\)\$[^\$\n]*?\\[a-zA-Z]+[^\$\n]*?)(?=\.|\,|$|\n|\?)/g, '$1$');
+    
+    const newCount = (fixed.match(/(?<!\\)\$/g) || []).length;
+    if (newCount % 2 !== 0) {
+      fixed += '$';
+    }
+  }
+
+  // Restore display math
+  return fixed.replace(/___DISPLAY_MATH_(\d+)___/g, (_, idx) => `$$${placeholders[parseInt(idx, 10)]}$$`);
 };
 
 // ─── Main text cleaning pipeline ─────────────────────────────────────────────
@@ -328,6 +366,9 @@ export const cleanQuestionText = (text: string): string => {
     .replace(/&nbsp;/g, ' ')
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
     .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+
+  // 1.5 Auto-fix unclosed dollar delimiters
+  cleaned = autoFixDollarDelimiters(cleaned);
 
   // 2. Extract raw TeX from MathML <annotation> blocks if present
   if (/<[\s]*annotation/i.test(cleaned)) {

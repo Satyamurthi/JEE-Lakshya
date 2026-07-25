@@ -140,6 +140,13 @@ const fixCorruptedTeX = (tex: string): string => {
   t = t.replace(/\\tg\b/g, '\\tan');     // Russian notation
   t = t.replace(/\\ctg\b/g, '\\cot');
 
+  // ── Fix unit dots and greek letter corruptions (e.g., \mu . N. → \mu\text{N}) ─────
+  t = t.replace(/\\(mu|micro|nano|pico|femto|milli|kilo|mega|giga)\s*\.\s*([A-Za-z]+)\.?(?=\s|$|\\|\$)/gi, '\\$1\\text{$2}');
+  t = t.replace(/\\(mu|micro)\s*([NCFHzmVAKgJWsT]|mol|rad|cd)\b(?!\s*\{)/g, '\\mu\\text{$2}');
+  t = t.replace(/\\(alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)\s*\.(?=\s|$|\\|\$)/g, '\\$1 ');
+  t = t.replace(/(\\times|\\cdot)\s*10(?!\^)/g, '$1 10^');
+  t = t.replace(/=\s*\\times/g, '= \\times');
+
   // ── Superscript/subscript spaces ─────────────────────────────────────────
   // ^{ - 1} → ^{-1},  ^{ 2 } → ^{2},  ^{-   1} → ^{-1}
   t = t.replace(/\^\{(\s*-?\s*\d+\s*)\}/g, (_, n) => `^{${n.replace(/\s+/g, '')}}`);
@@ -158,7 +165,6 @@ const fixCorruptedTeX = (tex: string): string => {
   const leftBracket = (t.match(/\\left\[/g) || []).length;
   const rightBracket = (t.match(/\\right\]/g) || []).length;
   if (leftBracket > rightBracket) {
-    // Replace the first unmatched \right. or \right) with \right]
     let replaced = 0;
     const needed = leftBracket - rightBracket;
     t = t.replace(/\\right[.)](?!\])/g, (m) => {
@@ -179,25 +185,17 @@ const fixCorruptedTeX = (tex: string): string => {
   }
 
   // ── Other common JEE/NEET corruption patterns ─────────────────────────────
-  // \times written as x or ×
   t = t.replace(/\btimes\b(?!\\)/g, '\\times');
-  // Extra space before/after _ or ^
   t = t.replace(/\s+([_^])\s*\{/g, '$1{');
-  // \cdot written without backslash between numbers: 3 . 5 → 3 \cdot 5
-  // Fix )( without operator
   t = t.replace(/\)\s*\((?!\s*[)\]}])/g, ') \\cdot (');
-  // Fix leading )) that break parse
   t = t.replace(/^\s*\)\s*\)/g, '');
-  // Fix \\over not converted: a \\over b → \\frac{a}{b}  (handled in preprocessTeXMacros too)
-  // Fix double backslash at end of env lines (\\\\) being misread
-  // Remove orphan \right or \left with nothing
   t = t.replace(/\\right\s*$/g, '');
   t = t.replace(/\\left\s*$/g, '');
 
   return t;
 };
 
-/** KaTeX render helper — returns rendered HTML or a styled fallback (never raw TeX) */
+/** KaTeX render helper — returns rendered HTML or a styled fallback (never raw TeX or red boxes) */
 const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
   try {
     const fixed = fixCorruptedTeX(mathContent.trim());
@@ -214,15 +212,33 @@ const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
         '\\d': '\\mathrm{d}',
       },
     });
+
+    // If KaTeX generated a red error box internally, clean up the error box styling
+    if (result.includes('katex-error')) {
+      const sanitizedResult = result
+        .replace(/katex-error/g, 'katex-rendered')
+        .replace(/color:\s*#cc0000/g, 'color:inherit')
+        .replace(/border:[^;"]+/g, 'border:none');
+      
+      try {
+        const textOnly = katex.renderToString(`\\text{${cleaned.replace(/[\$\\]/g, '').replace(/[\{\}]/g, ' ')}}`, {
+          displayMode: false,
+          throwOnError: false
+        });
+        if (!textOnly.includes('katex-error')) return textOnly;
+      } catch (e) {}
+
+      return sanitizedResult;
+    }
+
     return result;
   } catch (e) {
     console.warn('KaTeX render error:', e, 'Content:', mathContent);
-    // Return a safely escaped version styled as math-like text instead of raw LaTeX
     const safe = mathContent
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    return `<span class="katex" style="font-style:italic;color:inherit;">${safe}</span>`;
+    return `<span class="katex-fallback" style="font-family:inherit;color:inherit;font-style:normal;">${safe}</span>`;
   }
 };
 
@@ -236,19 +252,19 @@ const BARE_TEX_RE =
  */
 const processTextSegment = (text: string, inlineOnly: boolean): string => {
   if (!BARE_TEX_RE.test(text)) {
-    // Pure text — escape HTML entities for safe rendering
     return text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
   }
 
-  // Attempt to detect if the entire segment is a bare math formula
   const trimmed = text.trim();
-  const hasCases = trimmed.includes('\\begin{') || trimmed.includes('\\left\\{');
+  const hasCases = trimmed.includes('\\begin{') || trimmed.includes('\\left\\{') || trimmed.includes('\\[');
   const hasNewlines = trimmed.includes('\\\\');
-  const isLikelyFullFormula =
-    hasCases || hasNewlines || (BARE_TEX_RE.test(trimmed) && trimmed.length > 3);
+  const startsWithMacro = /^\\(frac|sqrt|matrix|cases|begin|int|sum|prod|lim|vec|hat|overline)\b/.test(trimmed);
+  const startsWithWord = /^[A-Za-z]{2,}\s/.test(trimmed);
+
+  const isLikelyFullFormula = (hasCases || hasNewlines || (startsWithMacro && !startsWithWord)) && trimmed.length > 3;
 
   if (isLikelyFullFormula) {
     const displayMode = !inlineOnly && (hasCases || hasNewlines || trimmed.length > 60);
@@ -256,9 +272,8 @@ const processTextSegment = (text: string, inlineOnly: boolean): string => {
   }
 
   // Otherwise scan for inline macro-containing sub-tokens
-  // Regex: matches common inline TeX groups like \frac{a}{b}, \sqrt{x}, etc.
   const INLINE_MATH_RE =
-    /\\(?:left[\s\S]*?\\right(?:\.|[|)])|begin\{[^}]+\}[\s\S]*?\\end\{[^}]+\}|(?:frac|sqrt|vec|hat|bar|tilde|overline|underline|text|mathrm|mathbf|mathit|mathcal|mathbb|operatorname)\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}(?:\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\})?|(?:alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|hbar|ell|infty|nabla|partial|forall|exists|emptyset|angle|parallel|perp|propto|pm|mp|times|div|cdot|le|ge|ne|approx|equiv|cong|sim|ll|gg|to|rightarrow|leftarrow|Rightarrow|Leftarrow|in|notin|subset|supset|cup|cap|sum|prod|int|oint|lim|sin|cos|tan|log|ln|exp|det)\b)/g;
+    /\\(?:left[\s\S]*?\\right(?:\.|[|)])|begin\{[^}]+\}[\s\S]*?\\end\{[^}]+\}|(?:frac|sqrt|vec|hat|bar|tilde|overline|underline|text|mathrm|mathbf|mathit|mathcal|mathbb|operatorname)\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}(?:\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\})?|(?:alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|hbar|ell|infty|nabla|partial|forall|exists|emptyset|angle|parallel|perp|propto|pm|mp|times|div|cdot|le|ge|ne|approx|equiv|cong|sim|ll|gg|to|rightarrow|leftarrow|Rightarrow|Leftarrow|in|notin|subset|supset|cup|cap|sum|prod|int|oint|lim|sin|cos|tan|log|ln|exp|det)\b(?:_\{?[^{}\s]+\}?)?(?:\^\{?[^{}\s]+\}?)?)/g;
 
   let result = '';
   let lastIndex = 0;
