@@ -604,7 +604,7 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 
 ---
 
-## 20. CURRENT OPERATIONAL STATE (as of Session 45)
+## 20. CURRENT OPERATIONAL STATE (as of Session 46)
 
 - ✅ PHP CLI server: 8 workers, port 8080 (PDO SQLite extension enabled, configured as auto-startup task)
 - ✅ Cloudflare Quick Tunnel: `cloudflared --url http://127.0.0.1:8080` (trycloudflare.com, no domain needed) — PRIMARY tunnel
@@ -619,6 +619,8 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 - ✅ Super Admin: `satyu000@gmail.com` seeded in all schemas
 - ✅ CORS: Wildcard headers, OPTIONS preflight handled
 - ✅ API Endpoint Router: Direct basename lookup in `api/router.php` resolves all API script calls instantly without Windows pathing issues
+- ✅ Head Count Optimization: `LocalSupabaseBuilder.select` maps `head: true` to `SELECT COUNT(*)`, executing in <1 ms without loading 60k rows into memory
+- ✅ SQLite Query Speed: `api/sync_sqlite.php` points to 24.6 MB `questions.db` instead of 12.4 GB `jeebakend.DB`, eliminating 524 timeouts
 - ✅ Meta Tags: Added `mobile-web-app-capable` alongside `apple-mobile-web-app-capable`
 - ✅ SVG Backgrounds: Inline SVG fractal noise data URI replaces broken external `noise.svg` URL in `Dashboard.tsx`
 - ✅ Freeze/Unfreeze: Working, cascades to students

@@ -210,7 +210,7 @@ try {
         $isMaybeSingle = isset($input['isMaybeSingle']) ? (bool)$input['isMaybeSingle'] : false;
         $countOption   = isset($input['countOption'])   ? $input['countOption']          : null;
 
-        if ($countOption === 'exact') {
+        if ($countOption === 'exact' || $columns === 'count(*)' || strtolower($columns) === 'count(1)') {
             $countSql = "SELECT COUNT(*) FROM `$table`";
             if (count($where_clauses) > 0) {
                 $countSql .= " WHERE " . implode(" AND ", $where_clauses);

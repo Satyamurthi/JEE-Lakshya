@@ -19,7 +19,7 @@ if (strpos($active_stream, 'neet') !== false) {
 } elseif (strpos($active_stream, 'upsc') !== false) {
     $sqlite_path = "d:/JEE/upsc/DB/questions.db";
 } else {
-    $sqlite_path = "d:/JEE/jee/DB/jeebakend.DB";
+    $sqlite_path = file_exists("d:/JEE/jee/DB/questions.db") ? "d:/JEE/jee/DB/questions.db" : "d:/JEE/jee/DB/jeebakend.DB";
 }
 
 if (!file_exists($sqlite_path)) {
@@ -54,12 +54,7 @@ try {
     $sdb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     if ($action === 'count') {
-        $sqlite_count = 0;
-        if (strpos($active_stream, 'jee') !== false) {
-            $sqlite_count = 18014173; // Pre-calculated to prevent slow SQLite index counts
-        } else {
-            $sqlite_count = (int)$sdb->query("SELECT COUNT(*) FROM questions")->fetchColumn();
-        }
+        $sqlite_count = (int)$sdb->query("SELECT COUNT(*) FROM questions")->fetchColumn();
         echo json_encode([
             "success" => true,
             "sqlite_count" => $sqlite_count,

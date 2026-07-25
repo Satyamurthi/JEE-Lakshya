@@ -80,11 +80,11 @@ class LocalSupabaseBuilder {
     this.table = table;
   }
 
-  select(columns: string = '*', options: { count?: string } = {}) {
+  select(columns: string = '*', options: { count?: string; head?: boolean } = {}) {
     this.action = 'select';
     this.columns = columns;
-    if (options.count) {
-      this.countOption = options.count;
+    if (options.count || options.head) {
+      this.countOption = options.count || 'exact';
     }
     return this;
   }

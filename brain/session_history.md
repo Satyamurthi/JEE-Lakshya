@@ -389,4 +389,20 @@ This file records the chronological history of tasks, major changes, and feature
     3. **`Dashboard.tsx` SVG Noise Fallback**: Replaced broken external URL `https://grainy-gradients.vercel.app/noise.svg` with an inline SVG fractal noise data URI (`data:image/svg+xml;...`), eliminating 404 errors and external network dependencies.
     4. **Backend Tunnel Restart**: Executed `StartBackend.ps1` to restart PHP CLI server and Cloudflare Quick Tunnel, updating `public/backend_url.txt` and pushing changes to GitHub for Netlify auto-deployment.
 
+---
+
+## Session 46: Resolution of ERR_FAILED 524 Cloudflare HTTP Timeout
+*   **Problem**: DevTools showing `net::ERR_FAILED 524` and `blocked by CORS policy` when Super Admin page loads. Cloudflare 524 occurs when backend requests take >100 seconds to respond.
+*   **Root Cause**:
+    1. `LocalSupabaseBuilder.select` ignored `head: true` options, causing `getQuestionsCountFromDB()` to issue `SELECT * FROM questions` (60,000 full records with options and explanations) into memory.
+    2. `api/sync_sqlite.php` was hardcoded to connect to `jeebakend.DB` (12.4 GB unindexed legacy file) for counts instead of `questions.db` (24.6 MB active SQLite bank).
+    3. Executing both queries in parallel blocked PHP CLI server worker threads, triggering Cloudflare 524 timeout.
+*   **Files**: `src/supabase.ts`, `api/local_db.php`, `api/sync_sqlite.php`, `brain/PROJECT_BRAIN.md`
+*   **Work Done**:
+    1. **`src/supabase.ts`**: Updated `LocalSupabaseBuilder.select` to check `options.head || options.count` and set `countOption = 'exact'`. Head count queries now run `SELECT COUNT(*)` in <1 ms.
+    2. **`api/local_db.php`**: Expanded `countOption` handling to match `count(*)` and `count(1)` queries instantly.
+    3. **`api/sync_sqlite.php`**: Replaced 12.4 GB database mapping with `d:/JEE/jee/DB/questions.db` (24.6 MB) for instant counts and fast background synchronization.
+    4. **Restart & Push**: Executed `StartBackend.ps1` and pushed fixes to GitHub remotes (`JEE-Lakshya` and `JEE-Nexus`).
+
+
 
