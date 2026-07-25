@@ -483,7 +483,7 @@ const ExamSetup = () => {
               </button>
             </div>
 
-            <form onSubmit={(e) => {
+            <form onSubmit={(e: React.FormEvent) => {
               e.preventDefault();
               if (!inputApiKey.trim()) return alert("Please enter a valid API Key.");
               localStorage.setItem('user_gemini_api_key', inputApiKey.trim());
@@ -496,7 +496,7 @@ const ExamSetup = () => {
                   type="password"
                   required
                   value={inputApiKey}
-                  onChange={(e) => setInputApiKey(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputApiKey(e.target.value)}
                   placeholder="AIzaSy..."
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-indigo-500 transition-all"
                 />
