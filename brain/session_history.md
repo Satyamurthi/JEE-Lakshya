@@ -462,7 +462,16 @@ This file records the chronological history of tasks, major changes, and feature
        - Integrated `normalizeOptions()` and `getQuestionSolution()` across all question rendering loops in exam, results, attempt history, and document export generators.
        - Verified that statements, options, explanations, tables, and match lists render seamlessly across all pages.
 
+---
 
-
-
-
+## Session 54: Resolution of Unmatched Delimiters & Prefix Artifacts in Aligned TeX Blocks
+*   **Request**: Inspect user's screenshot of `https://jeelakshya.netlify.app/#/results` showing raw unparsed `|||{\begin{aligned}` and fix the root cause.
+*   **Root Cause**:
+    1. Unmatched `\right)` without `\left(` in formula lines (e.g., `\frac{\frac{\Delta E}{10}\right)^2}{2 m}`) caused KaTeX `renderToString` to throw a fatal parse error (`Expected \left, got \right`), triggering text fallback that dumped raw `\begin{aligned}` text lines onto the page.
+    2. Prefix artifacts like `|||{` before `\begin{aligned}` prevented `splitIntoSegments` from matching `\begin{aligned}` at the start of string/line.
+*   **Files**: `src/components/MathText.tsx`, `src/utils/sanitizer.ts`, `brain/PROJECT_BRAIN.md`, `brain/session_history.md`
+*   **Work Done**:
+    1. **Bidirectional Delimiter Repair (`fixCorruptedTeX`)**: Implemented bidirectional `\left` and `\right` delimiter auto-balancing in both `MathText.tsx` and `sanitizer.ts`. Handles both `left > right` (adds missing `\right`) AND `right > left` (converts excess orphan `\right)` to `)`, `\right]` to `]`, and `\right\}` to `\}`) so KaTeX never encounters fatal unmatched `\right` errors.
+    2. **Prefix Pipe & Brace Stripping (`stripOrphanLeadingChars`)**: Expanded orphan character cleaner to strip leading `|||{`, `|||`, `||`, `|`, `((((`, `{{{` before `\begin{...}` or `\` TeX commands.
+    3. **Fallback Clean-up (`convertTeXToReadableHTML`)**: Enhanced fallback renderer to strip `&` alignment tokens and format clean line breaks in the rare event of extreme TeX corruption.
+    4. **GitHub & Netlify Auto-Deployment**: Pushed commit `0ab269c` to both `JEE-Lakshya` and `JEE-Nexus` GitHub remotes for instant Netlify auto-deployment.

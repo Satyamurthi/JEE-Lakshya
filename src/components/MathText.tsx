@@ -591,7 +591,7 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   const addKaTeXBlock = (html: string): string => {
     const idx = katexBlocks.length;
     katexBlocks.push(html);
-    return `___KATEX_BLOCK_${idx}___`;
+    return `%%%KATEXBLOCK${idx}%%%`;
   };
 
   const segments = splitIntoSegments(text);
@@ -622,7 +622,7 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   let finalHtml = renderMarkdownAndTables(combinedText);
 
   // Re-insert protected KaTeX blocks into the final HTML
-  finalHtml = finalHtml.replace(/___KATEX_BLOCK_(\d+)___/g, (_, idxStr) => {
+  finalHtml = finalHtml.replace(/%%%KATEXBLOCK(\d+)%%%/g, (_, idxStr) => {
     const idx = parseInt(idxStr, 10);
     return katexBlocks[idx] || '';
   });
