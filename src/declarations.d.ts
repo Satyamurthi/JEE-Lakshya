@@ -1,4 +1,4 @@
-// Global declarations for React, JSX, and module imports
+// Global ambient declarations for React and JSX
 declare module 'react' {
   export type FC<P = {}> = (props: P) => any;
   export type ReactNode = any;
@@ -21,9 +21,13 @@ declare module 'react/jsx-runtime' {
   export const Fragment: any;
 }
 
-declare namespace JSX {
-  interface IntrinsicElements {
-    [elemName: string]: any;
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+    type Element = any;
   }
-  type Element = any;
 }
+
+export {};
