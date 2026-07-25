@@ -160,36 +160,53 @@ const ExamSetup = () => {
           }
         }
 
-        // 3. Fallback / Top-Up to ensure exact question count
-        if (!questions || questions.length < totalPerSubject) {
-          try {
-            const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
-            const service = await getStreamGeminiService(activeStream);
-            source = questions && questions.length > 0 ? "Database + Top-up Bank" : "Synthesized Exam Bank";
-            
-            const currentMcqs = (questions || []).filter((q: any) => q.type !== 'Numerical');
-            const currentNums = (questions || []).filter((q: any) => q.type === 'Numerical');
-            
-            const neededMcq = Math.max(0, questionCounts.mcq - currentMcqs.length);
-            const neededNum = Math.max(0, questionCounts.numerical - currentNums.length);
-            
-            if (neededMcq > 0 || neededNum > 0) {
-              const fallbackQs = service.generateFallbackQuestions(sub, neededMcq, neededNum);
-              questions = [...(questions || []), ...fallbackQs];
-            }
-          } catch (fbErr) {
-            console.error(`[ExamSetup] Offline fallback synthesis failed for ${sub}:`, fbErr);
+        // 3. Deduplicate and Top-Up per subject to guarantee EXACT mcq + numerical counts
+        try {
+          const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
+          const service = await getStreamGeminiService(activeStream);
+          
+          let mcqs = (questions || []).filter((q: any) => q.type !== 'Numerical');
+          let nums = (questions || []).filter((q: any) => q.type === 'Numerical');
+
+          const mcqSeen = new Set<string>();
+          mcqs = mcqs.filter((q: any) => {
+            const stmt = (q.statement || q.question || '').trim();
+            if (!stmt || mcqSeen.has(stmt)) return false;
+            mcqSeen.add(stmt);
+            return true;
+          });
+
+          const numSeen = new Set<string>();
+          nums = nums.filter((q: any) => {
+            const stmt = (q.statement || q.question || '').trim();
+            if (!stmt || numSeen.has(stmt)) return false;
+            numSeen.add(stmt);
+            return true;
+          });
+
+          const neededMcq = Math.max(0, questionCounts.mcq - mcqs.length);
+          const neededNum = Math.max(0, questionCounts.numerical - nums.length);
+
+          if (neededMcq > 0 || neededNum > 0) {
+            source = (mcqs.length > 0 || nums.length > 0) ? "Database + Top-up Bank" : "Synthesized Exam Bank";
+            const fallbackQs = service.generateFallbackQuestions(sub, neededMcq, neededNum);
+            const fallbackMcqs = fallbackQs.filter((q: any) => q.type !== 'Numerical');
+            const fallbackNums = fallbackQs.filter((q: any) => q.type === 'Numerical');
+            mcqs = [...mcqs, ...fallbackMcqs];
+            nums = [...nums, ...fallbackNums];
           }
-        }
-        
-        if (questions && questions.length > 0) {
-            setPreparationLogs(prev => [...prev, `✅ ${sub} prepared via ${source}`]);
-            setProgress(prev => ({ ...prev, [sub]: 'done' }));
-            return questions;
-        } else {
-            setPreparationLogs(prev => [...prev, `❌ ${sub} failed completely.`]);
-            setProgress(prev => ({ ...prev, [sub]: 'error' }));
-            return [];
+
+          const finalSubMcqs = mcqs.slice(0, questionCounts.mcq);
+          const finalSubNums = nums.slice(0, questionCounts.numerical);
+          const finalSubQuestions = [...finalSubMcqs, ...finalSubNums];
+
+          setPreparationLogs(prev => [...prev, `✅ ${sub} prepared: ${finalSubMcqs.length} MCQs + ${finalSubNums.length} Numericals (via ${source})`]);
+          setProgress(prev => ({ ...prev, [sub]: 'done' }));
+          return finalSubQuestions;
+        } catch (fbErr) {
+          console.error(`[ExamSetup] Synthesis failed for ${sub}:`, fbErr);
+          setProgress(prev => ({ ...prev, [sub]: 'error' }));
+          return questions || [];
         }
       });
 
@@ -207,12 +224,9 @@ const ExamSetup = () => {
   };
 
   const launchExam = async () => {
-
-
     let finalQuestions = preparedQuestions;
     try {
-      const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
-      finalQuestions = filterUniqueQuestions(preparedQuestions, preparedQuestions.length);
+      const { recordSeenQuestions } = await import('../utils/questionTracker');
       recordSeenQuestions(finalQuestions);
     } catch (trackerErr) {
       console.warn("Question tracker error in launchExam, proceeding with prepared questions:", trackerErr);

@@ -6,11 +6,14 @@
 
 const HISTORY_KEY = 'seen_question_hashes_history_v2';
 
-// Generate a quick string hash from question statement
+// Generate a unique hash from question id or full statement + options + answer
 export const getQuestionHash = (q: any): string => {
   if (!q) return '';
+  if (q.id) return String(q.id);
   const stmt = (q.statement || q.question || '').replace(/\s+/g, '').toLowerCase();
-  return stmt.substring(0, 120);
+  const opts = q.options ? JSON.stringify(q.options).replace(/\s+/g, '') : '';
+  const ans = String(q.correctAnswer || '').trim();
+  return `${stmt}_${opts}_${ans}`;
 };
 
 export const getSeenQuestionHashes = (): Set<string> => {
