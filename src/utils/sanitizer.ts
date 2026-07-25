@@ -336,6 +336,16 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/(?<!\\)\btherefore\b/gi, '\\therefore ');
   m = m.replace(/\\therefore\b/g, '\\Rightarrow ');
 
+  // 13. Fix bare PDF OCR macros missing backslashes (frac 1 1 12 -> \frac{1}{12}, frac 24 1 25 -> \frac{24}{25}, left[ -> \left[, right] -> \right])
+  m = m.replace(/(?<!\\)\bfracfrac(\d)(\d{2})(\d{2})/gi, '\\frac{\\frac{$1}{$2}}{$3}');
+  m = m.replace(/(?<!\\)\bfracfrac/gi, '\\frac{\\frac');
+  m = m.replace(/(?<!\\)\bfrac\s+(\d+)\s+1\s+(\d+)\b/gi, '\\frac{$1}{$2}');
+  m = m.replace(/(?<!\\)\bfrac\s+(\d+)\s+(\d+)\b/gi, '\\frac{$1}{$2}');
+  m = m.replace(/(?<!\\)\bleft\[/gi, '\\left[');
+  m = m.replace(/(?<!\\)\bright\]/gi, '\\right]');
+  m = m.replace(/(?<!\\)\bleft\(/gi, '\\left(');
+  m = m.replace(/(?<!\\)\bright\)/gi, '\\right)');
+
   return m;
 };
 
