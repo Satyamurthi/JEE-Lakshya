@@ -495,5 +495,9 @@ export const cleanQuestionText = (text: string): string => {
   cleaned = cleaned.replace(/[ \t]+/g, ' ');
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
 
+  // 12. Strip orphan leading curly braces (e.g., {{{{ For rolling wheel or {{{ For rolling wheel)
+  cleaned = cleaned.replace(/^\{{1,4}}\s*/gm, '');
+  cleaned = cleaned.replace(/\{{2,}\s*([A-Za-z])/g, '$1');
+
   return cleaned.trim();
 };

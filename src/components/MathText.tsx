@@ -202,7 +202,17 @@ const fixCorruptedTeX = (tex: string): string => {
   }
 
   // ── Other common JEE/NEET corruption patterns ─────────────────────────────
-  t = t.replace(/\btimes\b(?!\\)/g, '\\times');
+  // Fix bare 'times' attached to letters/numbers (e.g. timesR, 2timesg, times12, times \frac)
+  t = t.replace(/(?<!\\)times(?=[A-Za-z0-9\s\\\[\(\{\_])/gi, '\\times ');
+  t = t.replace(/\btimes\b(?!\\)/gi, '\\times ');
+
+  // Fix PDF OCR Fraction & Minus Artifacts (\frac{-}{1} -> -, \frac{h}{1} -> h)
+  t = t.replace(/\\frac\s*\{\s*-\s*\}\s*\{\s*1\s*\}/g, ' - ');
+  t = t.replace(/\\frac\s*\{\s*\+\s*\}\s*\{\s*1\s*\}/g, ' + ');
+  t = t.replace(/\\frac\s*\{\s*([a-zA-Z0-9])\s*\}\s*\{\s*1\s*\}/g, ' $1 ');
+  t = t.replace(/\\frac\s*\{\s*\\text\{\s*-\s*\}\s*\}\s*\{\s*1\s*\}/g, ' - ');
+  t = t.replace(/_\s*\\frac\s*\{\s*1\s*\}\s*\{\s*1\s*\}/g, '_{1}');
+
   t = t.replace(/\s+([_^])\s*\{/g, '$1{');
   t = t.replace(/\)\s*\((?!\s*[)\]}])/g, ') \\cdot (');
   t = t.replace(/^\s*\)\s*\)/g, '');
@@ -227,6 +237,8 @@ const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
         '\\Celsius': '^{\\circ}\\text{C}',
         '\\eps': '\\varepsilon',
         '\\d': '\\mathrm{d}',
+        '\\therefore': '\\Rightarrow ',
+        '\\because': '\\Leftarrow ',
       },
     });
 
