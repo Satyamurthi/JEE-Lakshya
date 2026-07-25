@@ -987,31 +987,39 @@ const ExamPortal = () => {
                     </div>
                  </div>
 
-                 {currentQuestion?.type === 'MCQ' ? (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     {Object.entries(currentQuestion?.options || {}).map(([key, val]: [string, any]) => (
-                       <button
-                         key={key}
-                         onClick={() => handleAnswer(key)}
-                         className={`p-6 rounded-2xl border-2 text-left transition-all flex items-center gap-4 group ${
-                           answers[currentIndex] === key
-                             ? 'border-indigo-600 bg-indigo-50 shadow-md'
-                             : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'
-                         }`}
-                       >
-                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs transition-colors ${
-                           answers[currentIndex] === key ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border border-slate-200'
-                         }`}>
-                           {key}
-                         </div>
-                         <span className={`font-bold text-sm ${answers[currentIndex] === key ? 'text-indigo-900' : 'text-slate-600'} overflow-x-auto`}>
-                            <MathText inlineOnly>
-                              {val}
-                            </MathText>
-                          </span>
-                       </button>
-                     ))}
-                   </div>
+                 {currentQuestion?.type === 'MCQ' && currentQuestion?.options ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(Array.isArray(currentQuestion.options)
+                        ? currentQuestion.options.map((val: any, idx: number) => [String.fromCharCode(65 + idx), val, idx])
+                        : Object.entries(currentQuestion.options).map(([k, v], idx) => [k, v, idx])
+                      ).map(([key, val, idx]: any) => {
+                        const isSelected = answers[currentIndex] === key || answers[currentIndex] === String(idx) || answers[currentIndex] === String(val);
+                        const displayLabel = String(key).length === 1 && /[0-9]/.test(key) ? String.fromCharCode(65 + Number(key)) : String(key).toUpperCase();
+
+                        return (
+                          <button
+                            key={String(key) + idx}
+                            onClick={() => handleAnswer(key)}
+                            className={`p-6 rounded-2xl border-2 text-left transition-all flex items-center gap-4 group ${
+                              isSelected
+                                ? 'border-indigo-600 bg-indigo-50 shadow-md'
+                                : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs transition-colors ${
+                              isSelected ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border border-slate-200'
+                            }`}>
+                              {displayLabel}
+                            </div>
+                            <span className={`font-bold text-sm ${isSelected ? 'text-indigo-900' : 'text-slate-600'} overflow-x-auto`}>
+                               <MathText inlineOnly>
+                                 {String(val || '').trim() ? String(val) : `(Option ${displayLabel})`}
+                               </MathText>
+                             </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                  ) : (
                     <div className="space-y-4">
                       <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Numerical Answer</p>

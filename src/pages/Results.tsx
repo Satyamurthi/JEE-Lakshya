@@ -5,6 +5,7 @@ import {
   ArrowLeft, Download, Share2, AlertTriangle, X
 } from 'lucide-react';
 import MathText, { renderMathInText } from '../components/MathText';
+import { isOptionCorrect } from '../utils/sanitizer';
 
 const Results = () => {
   const navigate = useNavigate();
@@ -125,18 +126,23 @@ const Results = () => {
         : '<span style="color:#dc2626; background:#fef2f2; border:1px solid #fecaca; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px;">&#x274C; INCORRECT (-1)</span>';
 
       let optionsListHTML = '';
-      if (q.options && typeof q.options === 'object') {
-        optionsListHTML = Object.entries(q.options).map(([key, val]) => {
-          const isUserChoice = String(q.userAnswer) === String(key) || String(q.userAnswer) === String(val);
-          const isCorrectChoice = String(q.correctAnswer) === String(key) || String(q.correctAnswer) === String(val);
+      if (q.options) {
+        const optsArray = Array.isArray(q.options) 
+          ? q.options.map((val: any, idx: number) => [String.fromCharCode(65 + idx), val, idx])
+          : Object.entries(q.options).map(([k, v], idx) => [k, v, idx]);
+
+        optionsListHTML = optsArray.map(([key, val, idx]: any) => {
+          const isUserChoice = isOptionCorrect(q.userAnswer, key, idx, val);
+          const isCorrectChoice = isOptionCorrect(q.correctAnswer, key, idx, val);
           let optStyle = "padding:10px 14px; margin-bottom:8px; border-radius:10px; border:1px solid #e2e8f0; font-size:14px; background:#ffffff;";
           if (isCorrectChoice) {
             optStyle = "padding:10px 14px; margin-bottom:8px; border-radius:10px; border:2px solid #10b981; background:#ecfdf5; color:#065f46; font-weight:bold; font-size:14px;";
-          } else if (isUserChoice && !isCorrect) {
+          } else if (isUserChoice && !isCorrectChoice) {
             optStyle = "padding:10px 14px; margin-bottom:8px; border-radius:10px; border:2px solid #ef4444; background:#fef2f2; color:#991b1b; font-weight:bold; font-size:14px;";
           }
+          const label = String(key).length === 1 && /[0-9]/.test(key) ? String.fromCharCode(65 + Number(key)) : String(key).toUpperCase();
           const renderedVal = renderMathInText(String(val || ''), true);
-          return `<div style="${optStyle}"><strong>(${key.toUpperCase()})</strong> ${renderedVal}</div>`;
+          return `<div style="${optStyle}"><strong>(${label})</strong> ${renderedVal}</div>`;
         }).join('');
       }
 
@@ -375,24 +381,28 @@ const Results = () => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {q.type === 'MCQ' ? (
-                      Object.entries(q.options || {}).map(([key, val]: [string, any]) => {
-                        const isUserAnswer = q.userAnswer === key;
-                        const isCorrectAnswer = q.correctAnswer === key;
+                    {q.type === 'MCQ' && q.options ? (
+                      (Array.isArray(q.options)
+                        ? q.options.map((val: any, idx: number) => [String.fromCharCode(65 + idx), val, idx])
+                        : Object.entries(q.options).map(([k, v], idx) => [k, v, idx])
+                      ).map(([key, val, idx]: any) => {
+                        const isUserAnswer = isOptionCorrect(q.userAnswer, key, idx, val);
+                        const isCorrectAnswer = isOptionCorrect(q.correctAnswer, key, idx, val);
+                        const displayLabel = String(key).length === 1 && /[0-9]/.test(key) ? String.fromCharCode(65 + Number(key)) : String(key).toUpperCase();
                         
                         let borderClass = 'border-slate-100 bg-slate-50/50';
                         if (isCorrectAnswer) borderClass = 'border-emerald-500 bg-emerald-50 shadow-sm';
                         else if (isUserAnswer && !isCorrectAnswer) borderClass = 'border-rose-500 bg-rose-50 shadow-sm';
 
                         return (
-                          <div key={key} className={`p-5 rounded-2xl border-2 flex items-center gap-4 ${borderClass}`}>
+                          <div key={String(key) + idx} className={`p-5 rounded-2xl border-2 flex items-center gap-4 ${borderClass}`}>
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
                               isCorrectAnswer ? 'bg-emerald-500 text-white' : isUserAnswer ? 'bg-rose-500 text-white' : 'bg-white text-slate-400 border border-slate-200'
                             }`}>
-                              {key}
+                              {displayLabel}
                             </div>
                             <MathText inlineOnly className={`font-bold text-sm ${isCorrectAnswer ? 'text-emerald-900' : isUserAnswer ? 'text-rose-900' : 'text-slate-600'}`}>
-                              {val}
+                              {String(val || '').trim() ? String(val) : `(Option ${displayLabel})`}
                             </MathText>
                           </div>
                         );

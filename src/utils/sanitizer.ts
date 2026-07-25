@@ -455,8 +455,8 @@ export const cleanQuestionText = (text: string): string => {
   cleaned = cleaned.replace(/(\.?[a-zA-Z0-9_-]+\s*\{[^}]*(?:font|text|vertical|border|collapse|padding|margin|color|background|width|height)[^}]*\})/gi, ' ');
   cleaned = cleaned.replace(/\.tg[^{]*\{[^}]*\}/gi, ' ');
 
-  // 6. Strip valid HTML tags ONLY (preserving mathematical inequalities like 0 < x < 5)
-  cleaned = cleaned.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/gi, ' ');
+  // 6. Strip invalid HTML tags ONLY (preserving img, table, tr, td, th and mathematical inequalities like 0 < x < 5)
+  cleaned = cleaned.replace(/<\/?(?!img|table|tr|td|th|thead|tbody|p|br\b)[a-zA-Z][a-zA-Z0-9]*\b[^>]*>/gi, ' ');
 
   // 7. Decode HTML entities (&lt; → <, &gt; → >, &amp; → &, etc.)
   cleaned = cleaned

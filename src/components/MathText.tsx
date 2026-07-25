@@ -482,8 +482,16 @@ const formatTextContent = (html: string): string => {
   return lines.join('<br>');
 };
 
+const RENDER_CACHE = new Map<string, string>();
+const MAX_CACHE_SIZE = 5000;
+
 export const renderMathInText = (rawText: string, inlineOnly = false): string => {
   if (!rawText) return '';
+
+  const cacheKey = `${inlineOnly ? 'inline:' : 'full:'}${rawText}`;
+  if (RENDER_CACHE.has(cacheKey)) {
+    return RENDER_CACHE.get(cacheKey)!;
+  }
 
   const text = cleanQuestionText(String(rawText));
   if (!text) return '';
@@ -505,7 +513,15 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   }
 
   const joined = parts.join('');
-  return formatTextContent(joined);
+  const result = formatTextContent(joined);
+
+  if (RENDER_CACHE.size > MAX_CACHE_SIZE) {
+    const firstKey = RENDER_CACHE.keys().next().value;
+    if (firstKey) RENDER_CACHE.delete(firstKey);
+  }
+  RENDER_CACHE.set(cacheKey, result);
+
+  return result;
 };
 
 const MathText: FC<MathTextProps> = ({
@@ -516,7 +532,10 @@ const MathText: FC<MathTextProps> = ({
 }: MathTextProps) => {
   const contentToRender =
     children !== undefined ? children : text !== undefined ? text : '';
-  const htmlContent = renderMathInText(contentToRender, inlineOnly);
+
+  const htmlContent = React.useMemo(() => {
+    return renderMathInText(contentToRender, inlineOnly);
+  }, [contentToRender, inlineOnly]);
 
   return (
     <span
