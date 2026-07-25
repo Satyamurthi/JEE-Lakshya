@@ -201,6 +201,40 @@ const fixCorruptedTeX = (tex: string): string => {
   t = t.replace(/(?<!\\)times(?=[A-Za-z0-9\s\\\[\(\{\_])/gi, '\\times ');
   t = t.replace(/\btimes\b(?!\\)/gi, '\\times ');
 
+  // Fix double backslashes before TeX commands: \\times -> \times, \\frac -> \frac, \\Rightarrow -> \Rightarrow
+  t = t.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
+
+  // Fix unclosed opening braces before minus/fraction: { - \frac -> - \frac, { - \ -> - \
+  t = t.replace(/\{\s*-\s*\\frac/g, ' -\\frac');
+  t = t.replace(/\{\s*-\s*/g, ' - ');
+  t = t.replace(/^\{\s*/g, '');
+
+  // Fix orphan multi-braces at start of line: {{{{\Rightarrow -> \Rightarrow, {{{a_I -> a_I
+  t = t.replace(/^\{{1,6}}\s*/gm, '');
+  t = t.replace(/\{{2,}\s*\\?/g, '\\');
+
+  // Fix bare \frac v 1 -> \frac{v}{1}
+  t = t.replace(/(?<!\\)frac\s+([a-zA-Z0-9])\s+([a-zA-Z0-9])/g, '\\frac{$1}{$2}');
+  t = t.replace(/\\frac\s+([a-zA-Z0-9])\s+([a-zA-Z0-9])/g, '\\frac{$1}{$2}');
+
+  // Fix missing \frac before differential pairs: {dv}{dt} -> \frac{dv}{dt}
+  t = t.replace(/(?<!\\frac)\{([a-zA-Z0-9_\^\s]+)\}\s*\{([a-zA-Z0-9_\^\s]+)\}/g, (match, g1, g2) => {
+    if (g1.startsWith('d') || g2.startsWith('d') || g2 === 'dt' || g2 === 'dx' || g2 === 'dy' || g2 === 'dz') {
+      return `\\frac{${g1}}{${g2}}`;
+    }
+    return match;
+  });
+
+  // Fix OCR variable corruptions: {1v} -> {v}, {1u} -> {u}, {1a_i} -> {a_i}
+  t = t.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)\}/g, '{$1}');
+  t = t.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)/g, '{$1');
+  t = t.replace(/\\frac\s*\{\s*1\s*\}\s*\{\s*1([a-zA-Z])\s*\}/g, '\\frac{1}{$1}');
+  t = t.replace(/\\frac\s*\{\s*2\s*\}\s*\{\s*1([a-zA-Z])\s*\}/g, '\\frac{2}{$1}');
+
+  // Fix closing brace corruptions: ^2}{v_I} -> ^2 v_I
+  t = t.replace(/\}\}\s*([a-zA-Z0-9_\^]+)/g, '} $1');
+  t = t.replace(/\}\s*\{\s*([a-zA-Z0-9_]+)\s*\}/g, '} $1');
+
   // Double Frac / OCR artifacts
   t = t.replace(/(?<!\\)fracfrac/gi, '\\frac{\\frac');
   t = t.replace(/\\frac\s*\{\s*([^}]+)\s*\}\s*\{\s*--\s*\}/g, '-\\frac{$1}{1}');

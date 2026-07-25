@@ -449,12 +449,11 @@ export const cleanQuestionText = (text: string): string => {
     return texContent ? ` $$${texContent}$$ ` : '';
   });
 
-  // 5. Strip raw CSS style blocks, scripts, and table classes
+  // 5. Strip raw CSS style blocks, scripts, and ALL table/class CSS rules (.tg .tg-1wig{...})
   cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ');
   cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ');
-  cleaned = cleaned.replace(/\.tg\s*\{[^}]*\}/gi, ' ');
-  cleaned = cleaned.replace(/\.tg\s*td[^{]*\{[^}]*\}/gi, ' ');
-  cleaned = cleaned.replace(/\.tg\s*th[^{]*\{[^}]*\}/gi, ' ');
+  cleaned = cleaned.replace(/(\.?[a-zA-Z0-9_-]+\s*\{[^}]*(?:font|text|vertical|border|collapse|padding|margin|color|background|width|height)[^}]*\})/gi, ' ');
+  cleaned = cleaned.replace(/\.tg[^{]*\{[^}]*\}/gi, ' ');
 
   // 6. Strip valid HTML tags ONLY (preserving mathematical inequalities like 0 < x < 5)
   cleaned = cleaned.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/gi, ' ');
