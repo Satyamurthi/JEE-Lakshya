@@ -145,32 +145,27 @@ const SuperAdmin = () => {
       
       const allUsers = data || [];
       
-      // Filter Admins
+      // Filter Admins and calculate student counts in-memory from allUsers
       const adminList: AdminUser[] = allUsers.filter((u: any) => u.role === 'admin');
-      
-      // Calculate student counts for admins
-      const enrichedAdmins = await Promise.all(
-        adminList.map(async (admin) => {
-          const count = await getAdminStudentCount(admin.id);
-          return { ...admin, studentCount: count };
-        })
-      );
+      const enrichedAdmins = adminList.map((admin) => {
+        const count = allUsers.filter((u: any) => u.role === 'student' && u.admin_id === admin.id).length;
+        return { ...admin, studentCount: count };
+      });
       setAdmins(enrichedAdmins);
 
       // Filter Independent Students (no admin assigned)
       const indStudents = allUsers.filter((u: any) => u.role === 'student' && !u.admin_id);
       setIndependentStudents(indStudents);
 
-      // Fetch Live Question Count, SQLite Count, Actual Revenue & Plans
-      const [qCount, sqCount, rev, dbPlans] = await Promise.all([
-        getQuestionsCountFromDB(),
-        getSQLiteQuestionsCount(),
-        getActualTotalRevenue(),
-        getSubscriptionPlans()
-      ]);
+      // Fetch Live Question Count, SQLite Count, Actual Revenue & Plans sequentially to avoid PHP queue congestion
+      const qCount = await getQuestionsCountFromDB();
+      const sqCount = await getSQLiteQuestionsCount();
+      const rev = await getActualTotalRevenue();
+      const dbPlans = await getSubscriptionPlans();
+
       setDbQuestionCount(qCount);
       setSqliteQuestionCount(sqCount);
-      setTotalRevenue(rev.total);
+      setTotalRevenue(rev?.total || 0);
       setPlansList(dbPlans || []);
 
     } catch (err: any) {
