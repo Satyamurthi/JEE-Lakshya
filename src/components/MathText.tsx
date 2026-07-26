@@ -620,15 +620,25 @@ const autoWrapMultiLineDerivations = (text: string): string => {
     const trimmed = l.trim();
     if (!trimmed) return false;
     if (trimmed.startsWith('\\begin{') || trimmed.startsWith('\\[') || trimmed.startsWith('$$')) return false;
-    // Starts with a math operator or leading LaTeX command
+
+    // Starts with a math operator or leading LaTeX command (with or without backslash)
     const startsWithMathOp =
       /^[=\+\-\\\u0026]\s*/.test(trimmed) ||
-      /^\\(Rightarrow|Leftarrow|rightarrow|leftarrow|frac|int|sum|prod|lim|vec|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|nu|xi|pi|rho|sigma|tau|phi|psi|omega|Delta|Omega)\b/i.test(trimmed);
+      /^\\(Rightarrow|Leftarrow|rightarrow|leftarrow|frac|int|sum|prod|lim|vec|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|nu|xi|pi|rho|sigma|tau|phi|psi|omega|Delta|Omega)\b/i.test(trimmed) ||
+      // Bare OCR patterns: lines starting with "=frac...", "=fracfrac...", etc.
+      /^=\s*frac/.test(trimmed) ||
+      /^frac/.test(trimmed);
+
     // Contains ANY LaTeX macro (all Greek letters + common commands)
     const hasMathSymbols =
-      (trimmed.match(/\\(frac|sqrt|Rightarrow|Leftarrow|rightarrow|leftarrow|alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega|int|oint|sum|prod|lim|vec|hat|bar|tilde|partial|nabla|hbar|infty|cdot|times|div|pm|mp)/g) || []).length >= 1;
-    // Has = sign AND any LaTeX command (not just \frac)
-    const hasEqAndTeX = /[=]\s*\\[a-zA-Z]|\\[a-zA-Z].*=|=.*\\[a-zA-Z]/i.test(trimmed);
+      (trimmed.match(/\\(frac|sqrt|Rightarrow|Leftarrow|rightarrow|leftarrow|alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega|int|oint|sum|prod|lim|vec|hat|bar|tilde|partial|nabla|hbar|infty|cdot|times|div|pm|mp)/g) || []).length >= 1 ||
+      // Bare OCR macros still present as words (preprocessTeXMacros hasn't run on this segment yet)
+      /\bfracfrac\b|\bfrac[A-Za-z\\]|\blimits\b|\bvec[a-z]\b/.test(trimmed);
+
+    // Has = sign AND any LaTeX command (not just \\frac)
+    const hasEqAndTeX = /[=]\s*\\[a-zA-Z]|\\[a-zA-Z].*=|=.*\\[a-zA-Z]/i.test(trimmed) ||
+      /[=]\s*frac[A-Za-z\\{(]|=\s*\\frac/.test(trimmed);
+
     return startsWithMathOp || (hasMathSymbols && hasEqAndTeX);
   };
 
