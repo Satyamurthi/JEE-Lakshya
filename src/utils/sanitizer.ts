@@ -431,7 +431,7 @@ export const preprocessTeXMacros = (tex: string): string => {
   // Fix sqrt{ without backslash
   m = m.replace(/(?<!\\)\bsqrt\s*\{/g, '\\sqrt{');
   // Fix bare vec+LETTER (PDF OCR): veca -> \vec{a}, vecu -> \vec{u}, etc.
-  m = m.replace(/(?<!\\)\bvec([a-zA-Z])(?=[_^,.\s)\]}|$)/g, '\\vec{$1}');
+  m = m.replace(/(?<!\\)\bvec([a-zA-Z])(?=[\W_]|$)/g, '\\vec{$1}');
   // Fix limits/ell without backslash
   m = m.replace(/(?<!\\)\blimits\b/g, '\\limits');
   m = m.replace(/(?<!\\)\bell\b/g, '\\ell');
