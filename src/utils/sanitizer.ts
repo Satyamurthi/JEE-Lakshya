@@ -527,11 +527,16 @@ export const cleanQuestionText = (text: string): string => {
   // 5. Strip raw CSS style blocks, scripts, and ALL table/class CSS rules (.tg .tg-1wig{...})
   cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ');
   cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ');
+  // Also strip entity-encoded style/script blocks that PHP htmlspecialchars() may produce
+  cleaned = cleaned.replace(/&lt;style[^&]*&gt;[\s\S]*?&lt;\/style&gt;/gi, ' ');
+  cleaned = cleaned.replace(/&lt;script[^&]*&gt;[\s\S]*?&lt;\/script&gt;/gi, ' ');
   cleaned = cleaned.replace(/(\.?[a-zA-Z0-9_-]+\s*\{[^}]*(?:font|text|vertical|border|collapse|padding|margin|color|background|width|height)[^}]*\})/gi, ' ');
   cleaned = cleaned.replace(/\.tg[^{]*\{[^}]*\}/gi, ' ');
 
-  // 6. Strip invalid HTML tags ONLY (preserving img, table, tr, td, th and mathematical inequalities like 0 < x < 5)
-  cleaned = cleaned.replace(/<\/?(?!img|table|tr|td|th|thead|tbody|p|br\b)[a-zA-Z][a-zA-Z0-9]*\b[^>]*>/gi, ' ');
+  // 6. Strip invalid HTML tags ONLY
+  // Preserve: img, table, tr, td, th, thead, tbody, p, br, b, i, strong, em, sub, sup, ul, ol, li, div, span, h1-h6
+  // Also preserve mathematical inequalities like 0 < x < 5 (handled by context — only strip actual tags)
+  cleaned = cleaned.replace(/<\/?(?!img|table|tr|td|th|thead|tbody|p|br\b|b\b|i\b|strong|em|sub|sup|ul|ol|li|div|span|h[1-6]\b)[a-zA-Z][a-zA-Z0-9]*\b[^>]*>/gi, ' ');
 
   // 7. Decode HTML entities (&lt; → <, &gt; → >, &amp; → &, etc.)
   cleaned = cleaned

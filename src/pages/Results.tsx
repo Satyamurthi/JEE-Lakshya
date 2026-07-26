@@ -382,34 +382,68 @@ const Results = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {isQuestionMCQ(q) ? (
-                      normalizeOptions(q.options).map((opt) => {
-                        const isUserAnswer = isOptionCorrect(q.userAnswer, opt.key, opt.index, opt.val);
-                        const isCorrectAnswer = isOptionCorrect(q.correctAnswer || q.answer, opt.key, opt.index, opt.val);
-                        
-                        let borderClass = 'border-slate-100 bg-slate-50/50';
-                        if (isCorrectAnswer) borderClass = 'border-emerald-500 bg-emerald-50 shadow-sm';
-                        else if (isUserAnswer && !isCorrectAnswer) borderClass = 'border-rose-500 bg-rose-50 shadow-sm';
+                      <>
+                        {normalizeOptions(q.options).map((opt) => {
+                          const isUserAnswer = isOptionCorrect(q.userAnswer, opt.key, opt.index, opt.val);
+                          const isCorrectAnswer = isOptionCorrect(q.correctAnswer || q.answer, opt.key, opt.index, opt.val);
+                          
+                          let borderClass = 'border-slate-100 bg-slate-50/50';
+                          if (isCorrectAnswer) borderClass = 'border-emerald-500 bg-emerald-50 shadow-sm';
+                          else if (isUserAnswer && !isCorrectAnswer) borderClass = 'border-rose-500 bg-rose-50 shadow-sm';
 
-                        return (
-                          <div key={opt.key + opt.index} className={`p-5 rounded-2xl border-2 flex items-center gap-4 ${borderClass}`}>
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
-                              isCorrectAnswer ? 'bg-emerald-500 text-white' : isUserAnswer ? 'bg-rose-500 text-white' : 'bg-white text-slate-400 border border-slate-200'
-                            }`}>
-                              {opt.label}
+                          return (
+                            <div key={opt.key + opt.index} className={`p-5 rounded-2xl border-2 flex items-center gap-4 ${borderClass}`}>
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
+                                isCorrectAnswer ? 'bg-emerald-500 text-white' : isUserAnswer ? 'bg-rose-500 text-white' : 'bg-white text-slate-400 border border-slate-200'
+                              }`}>
+                                {opt.label}
+                              </div>
+                              <MathText inlineOnly className={`font-bold text-sm ${isCorrectAnswer ? 'text-emerald-900' : isUserAnswer ? 'text-rose-900' : 'text-slate-600'}`}>
+                                {opt.val}
+                              </MathText>
                             </div>
-                            <MathText inlineOnly className={`font-bold text-sm ${isCorrectAnswer ? 'text-emerald-900' : isUserAnswer ? 'text-rose-900' : 'text-slate-600'}`}>
-                              {opt.val}
-                            </MathText>
-                          </div>
-                        );
-                      })
+                          );
+                        })}
+                        {/* Your Answer summary row for MCQ */}
+                        <div className="col-span-2">
+                          {(() => {
+                            const opts = normalizeOptions(q.options);
+                            const selectedOpt = opts.find(o => isOptionCorrect(q.userAnswer, o.key, o.index, o.val));
+                            const corrOpt = opts.find(o => isOptionCorrect(q.correctAnswer || q.answer, o.key, o.index, o.val));
+                            const hasAnswer = q.userAnswer != null && String(q.userAnswer).trim() !== '';
+                            const isCorrect = q.isCorrect;
+                            return (
+                              <div className="flex gap-3">
+                                <div className={`flex-1 p-4 rounded-2xl border-2 ${ isCorrect ? 'border-emerald-200 bg-emerald-50' : hasAnswer ? 'border-rose-200 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}>
+                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Your Answer</p>
+                                  <p className={`text-sm font-black ${ isCorrect ? 'text-emerald-800' : hasAnswer ? 'text-rose-800' : 'text-slate-500'}`}>
+                                    {hasAnswer
+                                      ? selectedOpt
+                                        ? `(${selectedOpt.label}) ${selectedOpt.val.slice(0, 60)}${selectedOpt.val.length > 60 ? '…' : ''}`
+                                        : String(q.userAnswer)
+                                      : 'Not Answered'}
+                                  </p>
+                                </div>
+                                <div className="flex-1 p-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50">
+                                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Correct Answer</p>
+                                  <p className="text-sm font-black text-emerald-800">
+                                    {corrOpt
+                                      ? `(${corrOpt.label}) ${corrOpt.val.slice(0, 60)}${corrOpt.val.length > 60 ? '…' : ''}`
+                                      : String(q.correctAnswer || q.answer || '—')}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </>
                     ) : (
                       <div className="col-span-2 space-y-4">
                         <div className="flex gap-4">
-                          <div className="flex-1 p-5 rounded-2xl border-2 border-rose-100 bg-rose-50/30">
+                          <div className={`flex-1 p-5 rounded-2xl border-2 ${ q.isCorrect ? 'border-emerald-200 bg-emerald-50/30' : (q.userAnswer != null && String(q.userAnswer).trim() !== '') ? 'border-rose-200 bg-rose-50/30' : 'border-slate-200 bg-slate-50/30'}`}>
                             <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">Your Answer</p>
                             <p className="text-xl font-black text-rose-900">
-                              {q.userAnswer !== undefined && String(q.userAnswer).trim() !== '' ? String(q.userAnswer) : 'Unattempted'}
+                              {(q.userAnswer != null && String(q.userAnswer).trim() !== '') ? String(q.userAnswer) : 'Not Answered'}
                             </p>
                           </div>
                           <div className="flex-1 p-5 rounded-2xl border-2 border-emerald-100 bg-emerald-50/30">

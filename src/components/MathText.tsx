@@ -429,6 +429,7 @@ const processSingleTextLine = (
   addKaTeXBlock: (html: string) => string
 ): string => {
   if (!BARE_TEX_RE.test(text)) {
+    // No TeX macros — escape HTML but preserve HTML placeholder tokens intact
     return text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -442,8 +443,19 @@ const processSingleTextLine = (
   const startsWithWord = /^[A-Za-z]{3,}\s/.test(trimmed.replace(/^\{\{+/, ''));
   const containsEqOrTeX = /[=\+\-]\s*\\frac|\\frac.*\\frac|\\Rightarrow|\\int|\\sum|\^\\frac|\{.*\\frac|\\frac.*=|=.*\\frac|\{+\\Rightarrow/i.test(trimmed);
   const hasMultipleMacros = (trimmed.match(/\\(frac|sqrt|Rightarrow|alpha|beta|gamma|theta|int|sum|vec|_|\^)/g) || []).length >= 1;
+  // Detect bare ^ or _ superscript/subscript patterns (e.g. 10^-n, x^{2}, n_{0})
+  const hasBareExponent = /\^\s*[\{\-]?\s*[a-zA-Z0-9]|_\s*\{/.test(trimmed);
+  // Detect simple equations that look like math results: e.g. "n = 7", "x = 10^{-3}"
+  const isShortEquation = /^[a-zA-Z_]\s*[=<>]\s*[-+]?[0-9a-zA-Z\^\{\}\\_.]+$/.test(trimmed.replace(/\s+/g, ' '));
 
-  const isLikelyFullFormula = (hasCases || hasNewlines || (hasMultipleMacros && containsEqOrTeX) || (startsWithMacro && !startsWithWord)) && trimmed.length > 3;
+  const isLikelyFullFormula = (
+    hasCases ||
+    hasNewlines ||
+    (hasMultipleMacros && containsEqOrTeX) ||
+    (startsWithMacro && !startsWithWord) ||
+    (hasBareExponent && BARE_TEX_RE.test(trimmed)) ||
+    isShortEquation
+  ) && trimmed.length > 2;
 
   if (isLikelyFullFormula) {
     const displayMode = !inlineOnly && (hasCases || hasNewlines || trimmed.length > 30);
@@ -636,6 +648,33 @@ const autoWrapMultiLineDerivations = (text: string): string => {
 const RENDER_CACHE = new Map<string, string>();
 const MAX_CACHE_SIZE = 5000;
 
+/** Decode HTML entities in a string (used before HTML-tag stashing) */
+const decodeHTMLEntities = (str: string): string => {
+  return str
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+};
+
+/**
+ * Regex matching HTML tags we want to preserve as raw HTML (not escape through processSingleTextLine).
+ * EXCLUDED from stashing (handled by cleanQuestionText instead):
+ *   <p>, <br> — cleanQuestionText converts these to \n separators
+ *   <sub>, <sup> — cleanQuestionText converts these to _{} and ^{} TeX notation
+ * INCLUDED (must survive as raw HTML in the final rendered output):
+ *   <img> — question/explanation diagrams
+ *   <table>, <thead>, <tbody>, <tr>, <td>, <th> — structured comparison tables
+ *   <b>, <i>, <strong>, <em> — inline emphasis (appears in explanation text)
+ *   <ul>, <ol>, <li> — bulleted/numbered lists in explanations
+ *   <span>, <h1>-<h6> — generic inlines and headers in explanation HTML
+ */
+const PRESERVE_HTML_RE = /<(?:img|table|thead|tbody|tr|td|th|b|i|strong|em|ul|ol|li|span|h[1-6])\b[^>]*\/?>|<\/(?:table|thead|tbody|tr|td|th|b|i|strong|em|ul|ol|li|span|h[1-6])>/gi;
+
 export const renderMathInText = (rawText: string, inlineOnly = false): string => {
   if (!rawText) return '';
 
@@ -644,15 +683,26 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
     return RENDER_CACHE.get(cacheKey)!;
   }
 
-  // Stash HTML <img> tags before processing text so they don't get escaped
-  const imgBlocks: string[] = [];
-  const addImgBlock = (imgHtml: string): string => {
-    const idx = imgBlocks.length;
-    imgBlocks.push(imgHtml);
-    return `%%%HTMLIMG${idx}%%%`;
+  // ── Step 0: Pre-decode HTML entities BEFORE stashing ─────────────────────
+  let rawDecoded = decodeHTMLEntities(String(rawText));
+
+  // ── Step 1: Stash ALL preserved HTML blocks before any text processing ────
+  const htmlBlocks: string[] = [];
+  const addHtmlBlock = (htmlStr: string): string => {
+    const idx = htmlBlocks.length;
+    htmlBlocks.push(htmlStr);
+    return `%%%HTMLBLOCK${idx}%%%`;
   };
 
-  let textToProcess = String(rawText).replace(/<img\b[^>]*\/?>/gi, (match) => addImgBlock(match));
+  // Stash complete multi-line HTML table blocks first (greedy, captures whole table)
+  let textToProcess = rawDecoded.replace(
+    /<table\b[^>]*>[\s\S]*?<\/table>/gi,
+    (match) => addHtmlBlock(match)
+  );
+
+  // Stash remaining individual preserved HTML tags (img, b, i, strong, em, ul, ol, li, span, h1-h6)
+  textToProcess = textToProcess.replace(PRESERVE_HTML_RE, (match) => addHtmlBlock(match));
+
   let text = cleanQuestionText(textToProcess);
   if (!text) return '';
 
@@ -698,10 +748,10 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
     return katexBlocks[idx] || '';
   });
 
-  // Re-insert protected HTML <img> tags into the final HTML
-  finalHtml = finalHtml.replace(/%%%HTMLIMG(\d+)%%%/g, (_, idxStr) => {
+  // Re-insert protected HTML blocks (img, table, sub, sup, b, i, etc.) into the final HTML
+  finalHtml = finalHtml.replace(/%%%HTMLBLOCK(\d+)%%%/g, (_, idxStr) => {
     const idx = parseInt(idxStr, 10);
-    return imgBlocks[idx] || '';
+    return htmlBlocks[idx] || '';
   });
 
   if (RENDER_CACHE.size > MAX_CACHE_SIZE) {
