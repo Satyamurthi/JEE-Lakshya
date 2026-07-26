@@ -501,3 +501,39 @@ This file records the chronological history of tasks, major changes, and feature
     2. **Text Macro Math Extraction**: Built TeX command extractor inside `\text{...}` in `fixCorruptedTeX`, extracting macros like `\pi`, `\alpha`, `\beta`, `\gamma`, `\theta` outside `\text{}` so KaTeX parses them cleanly.
     3. **`autoWrapMultiLineDerivations`**: Automatically detects multi-line equation sequences and wraps them in `$$\n\begin{aligned}\n...\n\end{aligned}\n$$` so KaTeX renders complete derivation blocks seamlessly.
     4. **GitHub & Netlify Auto-Deployment**: Pushed commit `2cf4ac1` to `JEE-Lakshya` and `JEE-Nexus` GitHub main branches for live Netlify deployment.
+
+---
+
+## Session 57: Resolution of "Your Answer: N/A" State Mapping & Dynamic CORS Header Optimization
+*   **Request**: Trace and fix why "Your Answer" shows "N/A" on results page even when student submitted an answer, verify multi-stream codebase structure, audit rendering pipeline, and fix CORS header failures for remote backend endpoints.
+*   **Root Cause**:
+    1. **"Your Answer: N/A" Bug**: `Results.tsx` checked `q.type === 'MCQ'` strictly. Questions with `q.type` = `undefined`, `'mcq'`, `'SINGLE'`, `'MULTIPLE'` or custom type strings failed the strict check and fell into the numerical response branch, rendering `q.userAnswer || 'N/A'` as N/A.
+    2. **Answer Correctness Evaluation**: `ExamPortal.tsx` evaluated correctness via rigid `userAnswer === q.correctAnswer` strict equality instead of using `isOptionCorrect` or numerical range/floating point tolerance checks.
+    3. **CORS Headers**: Backend PHP scripts hardcoded `Access-Control-Allow-Origin: *` without dynamic origin echoing, triggering cross-origin credential preflight rejections on remote browsers.
+*   **Files**: `src/utils/sanitizer.ts`, `src/pages/Results.tsx`, `src/pages/ExamPortal.tsx`, `api/db.php`, `brain/PROJECT_BRAIN.md`, `brain/session_history.md`
+*   **Work Done**:
+    1. **`isQuestionMCQ(q)` Helper**: Created universal checker in [sanitizer.ts](file:///d:/JEE/src/utils/sanitizer.ts) that checks option count (`normOpts.length >= 2`) and case-insensitive type strings, ensuring 100% of MCQ questions render 4 option cards and numerical questions render numerical answer fields.
+    2. **`checkUserAnswerCorrect(q, userAnswer)`**: Implemented robust answer matcher handling option keys (`A`/`B`/`C`/`D`), index mappings (`0`/`1`/`2`/`3`), option text matches, numerical float tolerance (<0.05 difference or <1% relative error), and string comparison fallbacks.
+    3. **Updated `Results.tsx` & `ExamPortal.tsx`**: Integrated `isQuestionMCQ` and `checkUserAnswerCorrect` across test execution and results views. Rendered `'Unattempted'` instead of `'N/A'` for empty numerical responses.
+    4. **Dynamic CORS Headers in `api/db.php`**: Updated headers to dynamically reflect request `HTTP_ORIGIN` with `Access-Control-Allow-Credentials: true` and `X-Active-Stream` header approval.
+    5. **GitHub & Netlify Auto-Deployment**: Pushed commits `2cf4ac1` and latest main updates to `Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus` GitHub remotes.
+
+---
+
+## Session 58: Root-Cause Rendering Pipeline Fix — LaTeX/HTML Across All 4 Streams
+*   **Request**: Fix LaTeX/math and HTML rendering across the entire JEE Lakshya app (all 4 streams) at the pipeline level, not one-off patches. Specific bugs: raw LaTeX visible as text (e.g. `1 x 10^-n`, `\Delta E \times 10^0`, `n=7`), raw `<img ...>` tags visible as text in Solution boxes, and "Your Answer: N/A" display on results page.
+*   **Root Cause**:
+    1. **Entity-encoded HTML bypassed stash**: `renderMathInText()` stashed `<img>` tags BEFORE calling `cleanQuestionText()` which decodes `&lt;img&gt;` → `<img>`. So entity-encoded images (PHP `htmlspecialchars` output) were never stashed, ended up in text segments, and got escaped to `&lt;img&gt;` by `processSingleTextLine()` — making them visible as literal text.
+    2. **HTML stash too narrow**: Only `<img>` was stashed. Table HTML, bold/italic, list tags that survived `cleanQuestionText()` step 6 were also escaped by `processSingleTextLine()`.
+    3. **Bare-math heuristic missed short expressions**: `isLikelyFullFormula` in `processSingleTextLine()` required multiple TeX macros or specific patterns. Short expressions like `n=7`, `10^-n`, bare exponent patterns (`^{2}`, `^-n`) fell through to the text-escape path and were rendered as raw strings.
+    4. **MCQ "Your Answer" hidden**: Results.tsx had no explicit "Your Answer" label for MCQ questions — the selected option was indicated only by color on the option cards, not a dedicated row.
+*   **Files**: `src/components/MathText.tsx`, `src/utils/sanitizer.ts`, `src/pages/Results.tsx`, `brain/PROJECT_BRAIN.md`, `brain/session_history.md`
+*   **Work Done**:
+    1. **Pre-decode step (Step 0) in `renderMathInText()`**: Added `decodeHTMLEntities()` function that converts `&lt;` → `<`, `&gt;` → `>`, `&amp;` → `&` etc. BEFORE the HTML stash regex runs. Entity-encoded `&lt;img class="..."&gt;` is now decoded to `<img ...>` before stashing, fixing the core bug.
+    2. **Extended HTML stash (`PRESERVE_HTML_RE`)**: Stash now covers `<table>/<tbody>/<tr>/<td>/<th>`, `<b>/<i>/<strong>/<em>`, `<ul>/<ol>/<li>`, `<span>`, `<h1>–<h6>` in addition to `<img>`. Complete table blocks are stashed as a unit first, then individual tags. Re-insertion token renamed from `%%%HTMLIMG0%%%` to `%%%HTMLBLOCK0%%%`.
+    3. **Improved bare-math heuristic**: Added `hasBareExponent` check (`/\^\s*[\{\-]?\s*[a-zA-Z0-9]|_\s*\{/`) and `isShortEquation` check (`/^[a-zA-Z_]\s*[=<>]\s*...$/`) to `isLikelyFullFormula`, ensuring `n=7`, `10^-n`, `x^{-3}` are rendered as KaTeX instead of plain text.
+    4. **Entity-encoded style/script stripping in `cleanQuestionText()`**: Added `&lt;style&gt;` and `&lt;script&gt;` block stripping (entity-encoded form) at Step 5, before the entity decoder runs.
+    5. **Expanded preserved tag allowlist in `cleanQuestionText()` Step 6**: Added b, i, strong, em, ul, ol, li, div, span, h1-h6 to the tag preservation regex so they survive `cleanQuestionText()` when called standalone.
+    6. **MCQ "Your Answer" summary row in `Results.tsx`**: Added explicit "Your Answer / Correct Answer" row below MCQ option cards showing option letter + truncated text. Color-coded green (correct) / red (wrong) / grey (not answered).
+    7. **Numerical answer zero-fix**: Changed `userAnswer !== undefined` to `userAnswer != null` so numeric zero displays correctly as an answer rather than "Not Answered".
+    8. **GitHub Push**: Committed as `6b9350b` to `JEE-Lakshya` and `JEE-Nexus` main branches.

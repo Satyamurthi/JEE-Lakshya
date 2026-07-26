@@ -604,7 +604,13 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 
 ---
 
-## 20. CURRENT OPERATIONAL STATE (as of Session 50)
+## 20. CURRENT OPERATIONAL STATE (as of Session 58)
+
+- ✅ **Rendering Pipeline Bug Fixes (Session 58)** — Three files changed, 3 bugs fully resolved:
+  - **`src/components/MathText.tsx`** — `renderMathInText()` now pre-decodes HTML entities (Step 0) BEFORE stashing, so entity-encoded `&lt;img class="..."&gt;` in PHP/DB responses is decoded to `<img>` before the stash regex runs. This eliminates the "raw `<img>` as literal text" bug in Solution & Explanation boxes. Extended HTML stash from `<img>` only to include `<table>/<tbody>/<tr>/<td>/<th>`, `<b>/<i>/<strong>/<em>`, `<ul>/<ol>/<li>`, `<span>`, `<h1>–<h6>` — all structural HTML now survives `processSingleTextLine()` intact. Added `hasBareExponent` (`^{`, `^-` patterns) and `isShortEquation` (`n = 7`, `x = 10^{-3}` patterns) to `isLikelyFullFormula` heuristic, fixing bare LaTeX showing as plain text.
+  - **`src/utils/sanitizer.ts`** — `cleanQuestionText()` now also strips entity-encoded `&lt;style&gt;` and `&lt;script&gt;` blocks (Step 5). Expanded preserved HTML tag allowlist in Step 6 to match new stash list (b, i, strong, em, ul, ol, li, div, span, h1-h6).
+  - **`src/pages/Results.tsx`** — MCQ questions now show a "Your Answer / Correct Answer" summary row below the option cards (showing option letter + text). Numerical answer card now color-codes green/red/grey based on correctness. Fixed `userAnswer === 0` falsy check (`!== undefined` → `!= null`) so numeric zero displays correctly.
+
 
 - ✅ Active Backend Tunnel: `https://varying-bucks-bacterial-convert.trycloudflare.com` (Verified working, 1.2s response time)
 - ✅ Multi-Threaded Web Server: **Windows IIS FastCGI** (`W3SVC` on port `8080`) with `C:\php\php-cgi.exe` dynamic worker pool (resolves single-thread `php -S` socket deadlocks on Windows)
@@ -623,7 +629,11 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
   - **HTML `<img>` Protection**: Raw HTML `<img class="question-image"...>` tags are stashed into `%%%HTMLIMG${idx}%%%` tokens before line escaping and re-inserted as raw HTML tags, fixing diagram/figure display across all questions and solutions.
   - **Text Macro Math Extraction**: Automatically extracts math commands (e.g. `\pi`, `\alpha`, `\beta`, `\gamma`, `\theta`) out of `\text{...}` macros in `fixCorruptedTeX` so KaTeX parses `\begin{aligned}` environments without `Can't use function '\pi' in text mode` errors.
   - **Multi-Line Derivations Auto-Wrapper**: `autoWrapMultiLineDerivations` detects multi-line equation sequences and auto-wraps them in `$$\n\begin{aligned}\n...\n\end{aligned}\n$$` for unified KaTeX display rendering.
-- ✅ Auto-Deployed to GitHub & Netlify: Pushed commit `2cf4ac1` to `JEE-Lakshya` and `JEE-Nexus` GitHub main branches.
+- ✅ "Your Answer: N/A" State Mapping & Dynamic CORS Resolution (Session 57):
+  - **`isQuestionMCQ(q)`**: Checks option count (`normOpts.length >= 2`) and case-insensitive type strings, ensuring MCQ option cards and numerical response cards are categorized accurately across all database question schemas.
+  - **`checkUserAnswerCorrect(q, userAnswer)`**: Evaluates correctness across MCQ option keys/indexes/values and numerical floating point values (<0.05 absolute or <1% relative error tolerance).
+  - **Dynamic CORS Headers in `api/db.php`**: Replaced static wildcard with `Access-Control-Allow-Origin: " . $origin` + `Access-Control-Allow-Credentials: true` to prevent browser preflight rejections.
+- ✅ Auto-Deployed to GitHub & Netlify: Pushed main commits to `JEE-Lakshya` and `JEE-Nexus` GitHub remotes.
 - ✅ Ambient TypeScript Declarations (`src/declarations.d.ts` & `tsconfig.json`): Configured `declare global` namespace for `JSX.IntrinsicElements` in `src/declarations.d.ts` and `"include": ["src/**/*", "src/declarations.d.ts"]` in `tsconfig.json`, declaring modules for `react`, `react/jsx-runtime`, and `JSX.IntrinsicElements`, resolving 100% of IDE static type diagnostics.
 - ✅ Cloudflare Quick Tunnel: `cloudflared --url http://127.0.0.1:8080` (trycloudflare.com, no domain needed) — PRIMARY tunnel
 - ✅ SSH Serveo Tunnel: Fallback if Cloudflare Quick Tunnel fails (in StartBackend.ps1)
