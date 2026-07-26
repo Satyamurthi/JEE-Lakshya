@@ -604,9 +604,8 @@ Netlify auto-deploys within ~60 seconds of push. No manual build steps needed.
 
 ---
 
-## 20. CURRENT OPERATIONAL STATE (as of Session 59)
+## 20. CURRENT OPERATIONAL STATE (as of Session 58)
 
-- ✅ **Netlify Build esbuild Fix (Session 59)** — Resolved Vite/esbuild compilation error (`Unterminated regular expression`) in `src/utils/sanitizer.ts`. Replaced `(?=[_^,.\s)\]]|$)` lookahead with `(?=[\W_]|$)` to safely match vector letter boundaries without triggering esbuild syntax parser failures.
 - ✅ **Rendering Pipeline Bug Fixes (Session 58)** — Three files changed, 3 bugs fully resolved:
   - **`src/components/MathText.tsx`** — `renderMathInText()` now pre-decodes HTML entities (Step 0) BEFORE stashing, so entity-encoded `&lt;img class="..."&gt;` in PHP/DB responses is decoded to `<img>` before the stash regex runs. This eliminates the "raw `<img>` as literal text" bug in Solution & Explanation boxes. Extended HTML stash from `<img>` only to include `<table>/<tbody>/<tr>/<td>/<th>`, `<b>/<i>/<strong>/<em>`, `<ul>/<ol>/<li>`, `<span>`, `<h1>–<h6>` — all structural HTML now survives `processSingleTextLine()` intact. Added `hasBareExponent` (`^{`, `^-` patterns) and `isShortEquation` (`n = 7`, `x = 10^{-3}` patterns) to `isLikelyFullFormula` heuristic, fixing bare LaTeX showing as plain text.
   - **`src/utils/sanitizer.ts`** — `cleanQuestionText()` now also strips entity-encoded `&lt;style&gt;` and `&lt;script&gt;` blocks (Step 5). Expanded preserved HTML tag allowlist in Step 6 to match new stash list (b, i, strong, em, ul, ol, li, div, span, h1-h6).

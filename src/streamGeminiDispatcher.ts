@@ -1,14 +1,18 @@
 import { Subject, ExamType, Question } from './types';
+import * as neetService from './neetGeminiService';
+import * as kcetService from './kcetGeminiService';
+import * as upscService from './upscGeminiService';
+import * as jeeService from './geminiService';
 
-export const getStreamGeminiService = async (stream: string) => {
-  const normStream = stream.toLowerCase();
+export const getStreamGeminiService = (stream: string) => {
+  const normStream = (stream || '').toLowerCase();
   if (normStream.includes('neet')) {
-    return await import('./neetGeminiService');
+    return neetService;
   } else if (normStream.includes('kcet')) {
-    return await import('./kcetGeminiService');
+    return kcetService;
   } else if (normStream.includes('upsc')) {
-    return await import('./upscGeminiService');
+    return upscService;
   } else {
-    return await import('./geminiService'); // Default JEE
+    return jeeService; // Default JEE
   }
 };

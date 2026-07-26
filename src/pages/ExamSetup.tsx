@@ -4,6 +4,7 @@ import { ShieldCheck, Zap, BookOpen, Clock, AlertTriangle, CheckCircle2, Loader2
 import { ExamType, Subject } from '../types';
 import { initiateRazorpayPayment, checkSubscriptionActive } from '../utils/payment';
 import { supabase } from '../supabase';
+import { getStreamGeminiService } from '../streamGeminiDispatcher';
 
 const ExamSetup = () => {
   const navigate = useNavigate();
@@ -162,8 +163,7 @@ const ExamSetup = () => {
 
         // 3. Deduplicate and Top-Up per subject to guarantee EXACT mcq + numerical counts
         try {
-          const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
-          const service = await getStreamGeminiService(activeStream);
+          const service = getStreamGeminiService(activeStream);
           
           let mcqs = (questions || []).filter((q: any) => q.type !== 'Numerical');
           let nums = (questions || []).filter((q: any) => q.type === 'Numerical');

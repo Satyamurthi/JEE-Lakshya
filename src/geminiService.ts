@@ -191,7 +191,16 @@ const generateJEEQuestionsBatch = async (subject: Subject, count: number, mcqTar
   try {
       console.log(`[AI] [Batch ${batchIdx + 1} of ${totalBatches}] Generating ${count} questions for ${subject} (Batch Target: ${mcqTarget} MCQ, ${numTarget} Num)...`);
       const sessionEntropy = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-      const systemInstruction = `You are an expert JEE coach. Generate HIGHLY UNIQUE, ORIGINAL, and concept-heavy problems. Do not provide common textbook problems. Use LaTeX for math. Ensure output matches the exact JSON schema.`;
+      const systemInstruction = `You are an expert JEE coach creating problems strictly for NTA JEE Main 2026 Syllabus.
+CRITICAL SYLLABUS RULE:
+You MUST ONLY generate questions for topics in the official JEE Main 2026 Syllabus.
+ABSOLUTELY FORBIDDEN DELETED TOPICS:
+- Physics: NO Radioactivity (half-life, decay law, decay constant), NO Transistors/Amplifiers, NO Communication Systems, NO Potentiometer, NO Earth's Magnetism/Hysteresis, NO Davisson-Germer, NO Doppler Effect, NO Carnot engine, NO Cyclotron.
+- Chemistry: NO Solid State, NO Surface Chemistry, NO Metallurgy, NO Hydrogen, NO s-Block Elements, NO Environmental Chemistry, NO Polymers, NO Chemistry in Everyday Life, NO States of Matter (Gaseous/Liquid).
+- Mathematics: NO Mathematical Induction, NO Mathematical Reasoning (tautology/logic), NO Linear Programming, NO 3D Geometry Planes (only line geometry allowed), NO Rolle's/Lagrange's theorems, NO Heights & Distances.
+
+OPTIONS RULE:
+For MCQ questions, options MUST be 4 distinct, plausible choices in standard LaTeX formatting or proper scientific notation. NEVER generate artificial numeric offset numbers.`;
       
       const prompt = `BatchID: ${sessionEntropy}. 
       Generate EXACTLY ${count} UNIQUE questions for ${subject} (${type} level). 

@@ -537,15 +537,3 @@ This file records the chronological history of tasks, major changes, and feature
     6. **MCQ "Your Answer" summary row in `Results.tsx`**: Added explicit "Your Answer / Correct Answer" row below MCQ option cards showing option letter + truncated text. Color-coded green (correct) / red (wrong) / grey (not answered).
     7. **Numerical answer zero-fix**: Changed `userAnswer !== undefined` to `userAnswer != null` so numeric zero displays correctly as an answer rather than "Not Answered".
     8. **GitHub Push**: Committed as `6b9350b` to `JEE-Lakshya` and `JEE-Nexus` main branches.
-
----
-
-## Session 59: Resolution of Netlify Build Failure (esbuild Regex Syntax Error)
-*   **Request**: Resolve Netlify build error `ERROR: Unterminated regular expression` at `src/utils/sanitizer.ts:434:73`.
-*   **Root Cause**: The lookahead regex `(?=[_^,.\s)\]]|$)` in `sanitizer.ts` contained `\]` inside a character set `[...]` without proper escaping for `esbuild`, causing esbuild's JS parser to fail with an unterminated regular expression error during Vite build.
-*   **Files**: `src/utils/sanitizer.ts`, `brain/PROJECT_BRAIN.md`, `brain/session_history.md`
-*   **Work Done**:
-    1. Replaced `(?=[_^,.\s)\]]|$)` with `(?=[\W_]|$)` in `sanitizer.ts`. This matches any non-word character (`\W`), underscore (`_`), or line boundary (`$`), robustly matching vector notation boundaries (`veca` -> `\vec{a}`) while avoiding nested bracket escaping syntax issues in esbuild.
-    2. Verified clean syntax across all regexes in `sanitizer.ts`.
-    3. Pushed fixes to `JEE-Lakshya` and `JEE-Nexus` GitHub remotes to trigger successful Netlify production deployment.
-

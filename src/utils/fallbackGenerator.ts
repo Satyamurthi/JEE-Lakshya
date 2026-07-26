@@ -415,7 +415,7 @@ export const generateDynamicQuestions = (
       const c2 = c1 - offset;
       const ans = offset / 5;
       return {
-        chapter: "Three Dimensional Geometry",
+        chapter: "Straight Lines",
         statement: `Find the distance between the parallel lines $3x + 4y + ${c1} = 0$ and $3x + 4y - ${-c2} = 0$:`,
         correctAnswer: ans,
         solution: `The distance between parallel lines $Ax + By + C_1 = 0$ and $Ax + By + C_2 = 0$ is $d = \\frac{|C_1 - C_2|}{\\sqrt{A^2 + B^2}}$. Here $d = \\frac{|${c1} - (${c2})|}{\\sqrt{9 + 16}} = \\frac{${offset}}{5} = ${ans}$.`
