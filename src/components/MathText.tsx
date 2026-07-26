@@ -442,11 +442,14 @@ const processSingleTextLine = (
   const startsWithMacro = /^[\(\{\[\s\-+]*\\(frac|sqrt|matrix|cases|begin|int|sum|prod|lim|vec|hat|overline|Rightarrow|Leftarrow)\b/i.test(trimmed);
   const startsWithWord = /^[A-Za-z]{3,}\s/.test(trimmed.replace(/^\{\{+/, ''));
   const containsEqOrTeX = /[=\+\-]\s*\\frac|\\frac.*\\frac|\\Rightarrow|\\int|\\sum|\^\\frac|\{.*\\frac|\\frac.*=|=.*\\frac|\{+\\Rightarrow/i.test(trimmed);
-  const hasMultipleMacros = (trimmed.match(/\\(frac|sqrt|Rightarrow|alpha|beta|gamma|theta|int|sum|vec|_|\^)/g) || []).length >= 1;
+  const hasMultipleMacros =
+    (trimmed.match(/\\(frac|sqrt|Rightarrow|Leftarrow|rightarrow|leftarrow|alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega|int|oint|sum|prod|lim|vec|hat|bar|tilde|partial|nabla|hbar|infty|cdot|times|div|pm|mp)/g) || []).length >= 1;
   // Detect bare ^ or _ superscript/subscript patterns (e.g. 10^-n, x^{2}, n_{0})
   const hasBareExponent = /\^\s*[\{\-]?\s*[a-zA-Z0-9]|_\s*\{/.test(trimmed);
-  // Detect simple equations that look like math results: e.g. "n = 7", "x = 10^{-3}"
+  // Detect simple equations: e.g. "n = 7", "x = 10^{-3}"
   const isShortEquation = /^[a-zA-Z_]\s*[=<>]\s*[-+]?[0-9a-zA-Z\^\{\}\\_.]+$/.test(trimmed.replace(/\s+/g, ' '));
+  // Detect lines that start with = and contain any LaTeX command → derivation step
+  const isDerivationStep = /^[=\+\-]\s*.*\\[a-zA-Z]/.test(trimmed) || /^\\[a-zA-Z].*=/.test(trimmed);
 
   const isLikelyFullFormula = (
     hasCases ||
@@ -454,7 +457,8 @@ const processSingleTextLine = (
     (hasMultipleMacros && containsEqOrTeX) ||
     (startsWithMacro && !startsWithWord) ||
     (hasBareExponent && BARE_TEX_RE.test(trimmed)) ||
-    isShortEquation
+    isShortEquation ||
+    isDerivationStep
   ) && trimmed.length > 2;
 
   if (isLikelyFullFormula) {
@@ -609,9 +613,15 @@ const autoWrapMultiLineDerivations = (text: string): string => {
     const trimmed = l.trim();
     if (!trimmed) return false;
     if (trimmed.startsWith('\\begin{') || trimmed.startsWith('\\[') || trimmed.startsWith('$$')) return false;
-    const startsWithMathOp = /^[=\+\-\\\&]\s*/.test(trimmed) || /^\\(Rightarrow|Leftarrow|rightarrow|leftarrow|frac|int|sum|prod|lim|vec)\b/i.test(trimmed);
-    const hasMathSymbols = (trimmed.match(/\\(frac|sqrt|Rightarrow|alpha|beta|gamma|theta|psi|omega|pi|mu|lambda|Delta|int|sum|vec|_|\^)/g) || []).length >= 1;
-    const hasEqAndTeX = /[=\+\-]\s*\\frac|\\frac.*\\frac|\\Rightarrow|\\int|\\sum|\^\\frac|\{.*\\frac|\\frac.*=|=.*\\frac/i.test(trimmed);
+    // Starts with a math operator or leading LaTeX command
+    const startsWithMathOp =
+      /^[=\+\-\\\u0026]\s*/.test(trimmed) ||
+      /^\\(Rightarrow|Leftarrow|rightarrow|leftarrow|frac|int|sum|prod|lim|vec|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|nu|xi|pi|rho|sigma|tau|phi|psi|omega|Delta|Omega)\b/i.test(trimmed);
+    // Contains ANY LaTeX macro (all Greek letters + common commands)
+    const hasMathSymbols =
+      (trimmed.match(/\\(frac|sqrt|Rightarrow|Leftarrow|rightarrow|leftarrow|alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega|int|oint|sum|prod|lim|vec|hat|bar|tilde|partial|nabla|hbar|infty|cdot|times|div|pm|mp)/g) || []).length >= 1;
+    // Has = sign AND any LaTeX command (not just \frac)
+    const hasEqAndTeX = /[=]\s*\\[a-zA-Z]|\\[a-zA-Z].*=|=.*\\[a-zA-Z]/i.test(trimmed);
     return startsWithMathOp || (hasMathSymbols && hasEqAndTeX);
   };
 
@@ -627,7 +637,10 @@ const autoWrapMultiLineDerivations = (text: string): string => {
       });
       resultLines.push('$$\n\\begin{aligned}\n' + cleanedBuffer.join(' \\\\\n') + '\n\\end{aligned}\n$$');
     } else {
-      resultLines.push(...mathBuffer);
+      // Single math line — wrap in $$ display block so it renders via KaTeX
+      // instead of falling through to processSingleTextLine as unwrapped text
+      const singleLine = mathBuffer[0].trim();
+      resultLines.push(`$$${singleLine}$$`);
     }
     mathBuffer = [];
   };

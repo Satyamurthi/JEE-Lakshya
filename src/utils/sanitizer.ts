@@ -418,6 +418,10 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/(?<!\\)\bfracfrac/gi, '\\frac{\\frac');
   m = m.replace(/(?<!\\)\bfrac\s+(\d+)\s+1\s+(\d+)\b/gi, '\\frac{$1}{$2}');
   m = m.replace(/(?<!\\)\bfrac\s+(\d+)\s+(\d+)\b/gi, '\\frac{$1}{$2}');
+  // Fix frac{ without backslash (PDF OCR drops the leading \)
+  m = m.replace(/(?<!\\)\bfrac\s*\{/g, '\\frac{');
+  // Fix sqrt{ without backslash
+  m = m.replace(/(?<!\\)\bsqrt\s*\{/g, '\\sqrt{');
   m = m.replace(/(?<!\\)\bleft\[/gi, '\\left[');
   m = m.replace(/(?<!\\)\bright\]/gi, '\\right]');
   m = m.replace(/(?<!\\)\bleft\(/gi, '\\left(');
