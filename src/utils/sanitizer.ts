@@ -416,22 +416,38 @@ export const preprocessTeXMacros = (tex: string): string => {
   // 11. Fix bare PDF OCR macros missing backslashes
   m = m.replace(/(?<!\\)\bfracfrac(\d)(\d{2})(\d{2})/gi, '\\frac{\\frac{$1}{$2}}{$3}');
   m = m.replace(/(?<!\\)\bfracfrac/gi, '\\frac{\\frac');
+
+  // frac with decimal number numerator e.g. "frac1.89 × 1.6 × 10^-19 1 ×" — handle frac[decimal] 1 [expr]
+  m = m.replace(/(?<!\\)\bfrac\s*([0-9]+[.,][0-9]+(?:[eE][+-]?[0-9]+)?)\s+([0-9]+(?:[.,][0-9]+)?)\b/gi, '\\frac{$1}{$2}');
+  // frac NUM 1 NUM pattern
   m = m.replace(/(?<!\\)\bfrac\s+(\d+)\s+1\s+(\d+)\b/gi, '\\frac{$1}{$2}');
   m = m.replace(/(?<!\\)\bfrac\s+(\d+)\s+(\d+)\b/gi, '\\frac{$1}{$2}');
-  // frac LETTER... 1 LETTER... e.g. "frac v^2 1 r" -> "\frac{v^2}{r}"
-  m = m.replace(/(?<!\\)\bfrac\s+([a-zA-Z][a-zA-Z0-9_^]*)\s+1\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)\b/gi, '\\frac{$1}{$2}');
-  // frac LETTER... LETTER... e.g. "frac dv dt" -> "\frac{dv}{dt}"
-  m = m.replace(/(?<!\\)\bfrac\s+([a-zA-Z][a-zA-Z0-9_^]*)\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)\b/gi, '\\frac{$1}{$2}');
-  // fracLETTER (no space/brace) 1 ARG e.g. "fracv^2 1 r" -> "\frac{v^2}{r}"
-  m = m.replace(/(?<!\\)\bfrac([a-zA-Z][a-zA-Z0-9_^]*)\s+1\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)\b/gi, '\\frac{$1}{$2}');
+  // frac LETTER^EXPONENT 1 LETTER e.g. "frac v^2 1 r" -> "\frac{v^2}{r}"
+  m = m.replace(/(?<!\\)\bfrac\s+([a-zA-Z][a-zA-Z0-9_^{}]*)\s+1\s+([a-zA-Z0-9][a-zA-Z0-9_^{}]*)\b/gi, '\\frac{$1}{$2}');
+  // frac LETTER LETTER  e.g. "frac dv dt" -> "\frac{dv}{dt}"
+  m = m.replace(/(?<!\\)\bfrac\s+([a-zA-Z][a-zA-Z0-9_^{}]*)\s+([a-zA-Z0-9][a-zA-Z0-9_^{}]*)\b/gi, '\\frac{$1}{$2}');
+  // fracLETTER^EXP 1 ARG e.g. "fracv^2 1 r" -> "\frac{v^2}{r}"
+  m = m.replace(/(?<!\\)\bfrac([a-zA-Z][a-zA-Z0-9_^{}]*)\s+1\s+([a-zA-Z0-9][a-zA-Z0-9_^{}]*)\b/gi, '\\frac{$1}{$2}');
   // fracLETTER ARG e.g. "fracdt dr" -> "\frac{dt}{dr}"
-  m = m.replace(/(?<!\\)\bfrac([a-zA-Z][a-zA-Z0-9_^]*)\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)\b/gi, '\\frac{$1}{$2}');
+  m = m.replace(/(?<!\\)\bfrac([a-zA-Z][a-zA-Z0-9_^{}]*)\s+([a-zA-Z0-9][a-zA-Z0-9_^{}]*)\b/gi, '\\frac{$1}{$2}');
+  // Fix [frac - 1 v] pattern: frac followed by - sign e.g. "frac - 1 v" -> "\frac{-1}{v}"
+  m = m.replace(/(?<!\\)\bfrac\s*-\s*(\d+)\s+([a-zA-Z0-9_^{}]+)/gi, '\\frac{-$1}{$2}');
   // Fix frac{ without backslash (PDF OCR drops the leading \)
   m = m.replace(/(?<!\\)\bfrac\s*\{/g, '\\frac{');
   // Fix sqrt{ without backslash
   m = m.replace(/(?<!\\)\bsqrt\s*\{/g, '\\sqrt{');
+
   // Fix bare vec+LETTER (PDF OCR): veca -> \vec{a}, vecu -> \vec{u}, etc.
+  // Also handles |veca_c| → |\vec{a}_c|
   m = m.replace(/(?<!\\)\bvec([a-zA-Z])(?=[_^,.\s)}|$]|\])/g, '\\vec{$1}');
+
+  // Fix bare greek letter names without backslash (very common in OCR output)
+  // epsilon_0, varepsilon, epsilon alone
+  m = m.replace(/(?<!\\)\b(varepsilon|epsilon)(?=_|\b)/g, '\\$1');
+  m = m.replace(/(?<!\\)\b(varphi|phi|psi|omega|Omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi)(?=_|\^|\b)(?!\w)/g, '\\$1');
+  // Single-word greek without backslash (only when clearly standalone to avoid false matches)
+  m = m.replace(/(?<![a-zA-Z\\])\b(alpha|beta|gamma|delta|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|chi)(?=_|\^|\s|$|[,.)\]])/g, '\\$1');
+
   // Fix limits/ell without backslash
   m = m.replace(/(?<!\\)\blimits\b/g, '\\limits');
   m = m.replace(/(?<!\\)\bell\b/g, '\\ell');
@@ -439,6 +455,11 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/(?<!\\)\bright\]/gi, '\\right]');
   m = m.replace(/(?<!\\)\bleft\(/gi, '\\left(');
   m = m.replace(/(?<!\\)\bright\)/gi, '\\right)');
+
+  // Remove orphan backslash-space artifacts: "\ " (backslash followed by space) → " "
+  m = m.replace(/\\ (?![a-zA-Z{(])/g, ' ');
+  // Remove lone backslash at start of line
+  m = m.replace(/^\\\s*$/gm, '');
 
   // 12. Fix PDF OCR variable corruption artifacts inside braces ({1v} -> {v}, {1u} -> {u})
   m = m.replace(/\{1\s*([a-zA-Z][a-zA-Z0-9_]*)\}/g, '{$1}');
@@ -606,6 +627,7 @@ export const cleanQuestionText = (text: string): string => {
     .replace(/∞/g, '\\infty ')
     .replace(/∑/g, '\\sum ')
     .replace(/∏/g, '\\prod ')
+    .replace(/∫\s*limits\b/g, '\\int\\limits')
     .replace(/∫/g, '\\int ')
     .replace(/√/g, '\\sqrt ')
     .replace(/π/g, '\\pi ')
