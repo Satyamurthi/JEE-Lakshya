@@ -418,10 +418,23 @@ export const preprocessTeXMacros = (tex: string): string => {
   m = m.replace(/(?<!\\)\bfracfrac/gi, '\\frac{\\frac');
   m = m.replace(/(?<!\\)\bfrac\s+(\d+)\s+1\s+(\d+)\b/gi, '\\frac{$1}{$2}');
   m = m.replace(/(?<!\\)\bfrac\s+(\d+)\s+(\d+)\b/gi, '\\frac{$1}{$2}');
+  // frac LETTER... 1 LETTER... e.g. "frac v^2 1 r" -> "\frac{v^2}{r}"
+  m = m.replace(/(?<!\\)\bfrac\s+([a-zA-Z][a-zA-Z0-9_^]*)\s+1\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)\b/gi, '\\frac{$1}{$2}');
+  // frac LETTER... LETTER... e.g. "frac dv dt" -> "\frac{dv}{dt}"
+  m = m.replace(/(?<!\\)\bfrac\s+([a-zA-Z][a-zA-Z0-9_^]*)\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)\b/gi, '\\frac{$1}{$2}');
+  // fracLETTER (no space/brace) 1 ARG e.g. "fracv^2 1 r" -> "\frac{v^2}{r}"
+  m = m.replace(/(?<!\\)\bfrac([a-zA-Z][a-zA-Z0-9_^]*)\s+1\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)\b/gi, '\\frac{$1}{$2}');
+  // fracLETTER ARG e.g. "fracdt dr" -> "\frac{dt}{dr}"
+  m = m.replace(/(?<!\\)\bfrac([a-zA-Z][a-zA-Z0-9_^]*)\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)\b/gi, '\\frac{$1}{$2}');
   // Fix frac{ without backslash (PDF OCR drops the leading \)
   m = m.replace(/(?<!\\)\bfrac\s*\{/g, '\\frac{');
   // Fix sqrt{ without backslash
   m = m.replace(/(?<!\\)\bsqrt\s*\{/g, '\\sqrt{');
+  // Fix bare vec+LETTER (PDF OCR): veca -> \vec{a}, vecu -> \vec{u}, etc.
+  m = m.replace(/(?<!\\)\bvec([a-zA-Z])(?=[_^,.\s)\]}|$)/g, '\\vec{$1}');
+  // Fix limits/ell without backslash
+  m = m.replace(/(?<!\\)\blimits\b/g, '\\limits');
+  m = m.replace(/(?<!\\)\bell\b/g, '\\ell');
   m = m.replace(/(?<!\\)\bleft\[/gi, '\\left[');
   m = m.replace(/(?<!\\)\bright\]/gi, '\\right]');
   m = m.replace(/(?<!\\)\bleft\(/gi, '\\left(');
@@ -650,7 +663,8 @@ export const cleanQuestionText = (text: string): string => {
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
 
   // 17. Strip orphan leading curly braces (e.g., {{{{ For rolling wheel)
-  cleaned = cleaned.replace(/^\{{1,4}}\s*/gm, '');
+  // NOTE: /^\{{N,M}}/ matches { repeated N-M times FOLLOWED BY literal }. Use /^\{{2,}/ for bare {{.
+  cleaned = cleaned.replace(/^\{{2,}\s*/gm, '');   // Remove 2+ orphan { at line start
   cleaned = cleaned.replace(/\{{2,}\s*([A-Za-z])/g, '$1');
 
   return cleaned.trim();

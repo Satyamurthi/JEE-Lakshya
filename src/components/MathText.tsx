@@ -278,11 +278,12 @@ const fixCorruptedTeX = (tex: string): string => {
   t = t.replace(/\{\s*-\s*/g, ' - ');
   t = t.replace(/^\{\s*/g, '');
 
-  t = t.replace(/^\{{1,6}}\s*/gm, '');
-  t = t.replace(/\{{2,}\s*\\?/g, '\\');
+  t = t.replace(/^\{{2,}\s*/gm, '');   // Remove 2+ orphan leading braces at line start
+  t = t.replace(/\{{3,}\s*\\?/g, '\\'); // Collapse 3+ braces to single backslash
 
-  t = t.replace(/(?<!\\)frac\s+([a-zA-Z0-9])\s+([a-zA-Z0-9])/g, '\\frac{$1}{$2}');
-  t = t.replace(/\\frac\s+([a-zA-Z0-9])\s+([a-zA-Z0-9])/g, '\\frac{$1}{$2}');
+  // frac with space-separated args (multi-char): "frac 1 v" -> "\frac{1}{v}"
+  t = t.replace(/(?<!\\)frac\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)/g, '\\frac{$1}{$2}');
+  t = t.replace(/\\frac\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)\s+([a-zA-Z0-9][a-zA-Z0-9_^]*)/g, '\\frac{$1}{$2}');
 
   t = t.replace(/(?<!\\frac)\{([a-zA-Z0-9_\^\s]+)\}\s*\{([a-zA-Z0-9_\^\s]+)\}/g, (match, g1, g2) => {
     if (g1.startsWith('d') || g2.startsWith('d') || g2 === 'dt' || g2 === 'dx' || g2 === 'dy' || g2 === 'dz') {
@@ -355,6 +356,12 @@ const parseBareTeXTokenAt = (text: string, startIdx: number): { token: string; e
 
   let cmd = '\\';
   i++;
+
+  // Handle single-char TeX special escapes: \%, \$, \{, \}, \_, \&, \#, \~, \,, \;, \:
+  if (i < len && /[%${}&#~_,;:!]/.test(text[i])) {
+    return { token: cmd + text[i], endIdx: i + 1 };
+  }
+
   while (i < len && /[a-zA-Z]/.test(text[i])) {
     cmd += text[i];
     i++;
