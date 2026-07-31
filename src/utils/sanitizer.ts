@@ -177,6 +177,9 @@ export const fixOCRMacros = (text: string): string => {
   m = m.replace(/\\eft\b/g, '\\left');
   m = m.replace(/\\ight\b/g, '\\right');
 
+  // OCR typos: \rimes → \times, \simes → \times, etc.
+  m = m.replace(/\\(rimes|simes|dimes|vimes)\b/g, '\\times');
+
   // times / therefore as bare words
   m = m.replace(/(?<!\\)\btimes\b/gi, '\\times ');
   m = m.replace(/(?<!\\)\btherefore\b/gi, '\\Rightarrow ');
@@ -254,15 +257,30 @@ export const fixTeXSyntax = (tex: string): string => {
   // Fix unescaped % in math
   t = t.replace(/([^\\])%/g, '$1\\%').replace(/^%/, '\\%');
 
-  // Balance unclosed braces (small imbalances only, up to 6)
-  let open = 0, close = 0;
+  // Balance braces surgically: discard orphan closing braces, close unclosed opening braces
+  let result = '';
+  let openCount = 0;
   for (let ci = 0; ci < t.length; ci++) {
-    if (t[ci] === '{' && (ci === 0 || t[ci - 1] !== '\\')) open++;
-    else if (t[ci] === '}' && (ci === 0 || t[ci - 1] !== '\\')) close++;
+    const char = t[ci];
+    if (char === '{' && (ci === 0 || t[ci - 1] !== '\\')) {
+      openCount++;
+      result += char;
+    } else if (char === '}' && (ci === 0 || t[ci - 1] !== '\\')) {
+      if (openCount > 0) {
+        openCount--;
+        result += char;
+      } else {
+        // Discard orphan closing brace
+        continue;
+      }
+    } else {
+      result += char;
+    }
   }
-  const diff = open - close;
-  if (diff > 0 && diff <= 6) t += '}'.repeat(diff);
-  else if (diff < 0 && diff >= -6) t = '{'.repeat(-diff) + t;
+  if (openCount > 0) {
+    result += '}'.repeat(openCount);
+  }
+  t = result;
 
   return t;
 };
@@ -409,10 +427,36 @@ export const autoFixSlashDelimiters = (raw: string): string => {
   return text;
 };
 
+// === autoWrapMathInText =======================================================
+export const autoWrapMathInText = (text: string): string => {
+  if (!text) return '';
+  const dollarCount = (text.match(/(?<!\\)\$/g) || []).length;
+  if (dollarCount >= 4) return text;
+
+  let t = text;
+
+  // Pattern 1: q_1 = 38 \mu C or similar math equations
+  t = t.replace(/(?<!\$)\b([a-zA-Z_][0-9a-zA-Z_]*(\^|\_)[0-9a-zA-Z_]*)?\s*([=<>])\s*([^$\n\r]+?)(?=\s+(?:and|or|are|is|placed|at|in|vacuum|meters|respectively|find|the|to)\b|$)/gi, (match, p1, p2, op, p3) => {
+    if (/\b(and|or|are|is|placed|at|in|vacuum|meters|respectively|find|the|to|with|of)\b/i.test(p3)) {
+      return match;
+    }
+    return `$${match.trim()}$`;
+  });
+
+  // Pattern 2: Coordinates like (-3, -5)
+  t = t.replace(/(?<!\$)\(\s*-\d+\s*,\s*-\d+\s*\)(?!\$)/g, '$$&$$');
+
+  // Pattern 3: Subscripts/superscripts like q_1, q_2, r^2 when they are standalone
+  t = t.replace(/(?<![\w$])([a-zA-Z])([_^])([0-9a-zA-Z\-+]+)(?![\w$])/g, '$$$1$2$3$$');
+
+  return t;
+};
+
 // === Main text cleaning pipeline =============================================
 export const cleanQuestionText = (text: string): string => {
   if (!text) return '';
-  let cleaned = fixControlChars(String(text));
+  let cleaned = autoWrapMathInText(String(text));
+  cleaned = fixControlChars(cleaned);
 
   // 1. HTML sub/sup → TeX
   cleaned = cleaned
