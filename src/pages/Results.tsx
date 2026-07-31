@@ -4,7 +4,7 @@ import {
   Trophy, Target, CheckCircle2, XCircle, AlertCircle, Brain, Sparkles,
   ArrowLeft, Download, Share2, AlertTriangle, X
 } from 'lucide-react';
-import MathText, { renderMathInText } from '../components/MathText';
+import MathRenderer, { renderMathInText } from '../components/MathRenderer';
 import { isOptionCorrect, normalizeOptions, getQuestionSolution, isQuestionMCQ, checkUserAnswerCorrect } from '../utils/sanitizer';
 
 const Results = () => {
@@ -374,9 +374,9 @@ const Results = () => {
 
                   <div className="max-w-none overflow-x-auto">
                     <div className="text-lg font-bold text-slate-800 leading-relaxed">
-                      <MathText>
+                      <MathRenderer>
                         {q.statement}
-                      </MathText>
+                      </MathRenderer>
                     </div>
                   </div>
 
@@ -385,7 +385,7 @@ const Results = () => {
                       <>
                         {normalizeOptions(q.options).map((opt) => {
                           const isUserAnswer = isOptionCorrect(q.userAnswer, opt.key, opt.index, opt.val);
-                          const isCorrectAnswer = isOptionCorrect(q.correctAnswer || q.answer, opt.key, opt.index, opt.val);
+                          const isCorrectAnswer = isOptionCorrect(q.correctAnswer || q.correct_answer || q.answer, opt.key, opt.index, opt.val);
                           
                           let borderClass = 'border-slate-100 bg-slate-50/50';
                           if (isCorrectAnswer) borderClass = 'border-emerald-500 bg-emerald-50 shadow-sm';
@@ -398,18 +398,18 @@ const Results = () => {
                               }`}>
                                 {opt.label}
                               </div>
-                              <MathText inlineOnly className={`font-bold text-sm ${isCorrectAnswer ? 'text-emerald-900' : isUserAnswer ? 'text-rose-900' : 'text-slate-600'}`}>
+                              <MathRenderer inlineOnly className={`font-bold text-sm ${isCorrectAnswer ? 'text-emerald-900' : isUserAnswer ? 'text-rose-900' : 'text-slate-600'}`}>
                                 {opt.val}
-                              </MathText>
+                              </MathRenderer>
                             </div>
                           );
                         })}
                         {/* Your Answer summary row for MCQ */}
                         <div className="col-span-2">
-                          {(() => {
+                           {(() => {
                             const opts = normalizeOptions(q.options);
                             const selectedOpt = opts.find(o => isOptionCorrect(q.userAnswer, o.key, o.index, o.val));
-                            const corrOpt = opts.find(o => isOptionCorrect(q.correctAnswer || q.answer, o.key, o.index, o.val));
+                            const corrOpt = opts.find(o => isOptionCorrect(q.correctAnswer || q.correct_answer || q.answer, o.key, o.index, o.val));
                             const hasAnswer = q.userAnswer != null && String(q.userAnswer).trim() !== '';
                             const isCorrect = q.isCorrect;
                             return (
@@ -429,7 +429,7 @@ const Results = () => {
                                   <p className="text-sm font-black text-emerald-800">
                                     {corrOpt
                                       ? `(${corrOpt.label}) ${corrOpt.val.slice(0, 60)}${corrOpt.val.length > 60 ? '…' : ''}`
-                                      : String(q.correctAnswer || q.answer || '—')}
+                                      : String(q.correctAnswer || q.correct_answer || q.answer || '—')}
                                   </p>
                                 </div>
                               </div>
@@ -448,7 +448,7 @@ const Results = () => {
                           </div>
                           <div className="flex-1 p-5 rounded-2xl border-2 border-emerald-100 bg-emerald-50/30">
                             <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Correct Answer</p>
-                            <MathText className="text-xl font-black text-emerald-900">{String(q.correctAnswer || q.answer || '')}</MathText>
+                            <MathRenderer className="text-xl font-black text-emerald-900">{String(q.correctAnswer || q.correct_answer || q.answer || '')}</MathRenderer>
                           </div>
                         </div>
                       </div>
@@ -461,9 +461,9 @@ const Results = () => {
                          <Brain className="w-3.5 h-3.5" /> Solution & Explanation
                        </h4>
                        <div className="text-sm font-medium text-indigo-900/80 leading-relaxed overflow-x-auto">
-                         <MathText>
+                         <MathRenderer>
                            {getQuestionSolution(q)}
-                         </MathText>
+                         </MathRenderer>
                        </div>
                     </div>
                   )}

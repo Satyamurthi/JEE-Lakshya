@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { History as HistoryIcon, Search, Target, Zap, ChevronRight, Award, BookOpen, FileText, CheckCircle2, HelpCircle, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { getUserExamAttempts, getUserAllDailyAttempts, getAllDailyChallenges } from '../supabase';
-import MathText from '../components/MathText';
+import MathRenderer from '../components/MathRenderer';
 import { isOptionCorrect, normalizeOptions, getQuestionSolution } from '../utils/sanitizer';
 
 const History = () => {
@@ -206,7 +206,7 @@ const History = () => {
                               </div>
 
                               <div className="text-sm font-bold text-slate-900 leading-relaxed">
-                                <MathText text={q.statement || q.question_text || ''} />
+                                <MathRenderer text={q.statement || q.question_text || ''} />
                               </div>
 
                               {/* Options */}
@@ -230,7 +230,7 @@ const History = () => {
                                           {opt.label}
                                         </span>
                                         <div className="flex-1 pt-0.5">
-                                           <MathText inlineOnly text={opt.val} />
+                                           <MathRenderer inlineOnly text={opt.val} />
                                         </div>
                                         {isCorrectOpt && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />}
                                       </div>
@@ -252,7 +252,7 @@ const History = () => {
                                 <div className="p-4 bg-indigo-50/60 border border-indigo-100 rounded-2xl space-y-1 mt-2">
                                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest block">Solution & Explanation</span>
                                   <div className="text-xs text-slate-700 font-medium leading-relaxed">
-                                    <MathText text={solText} />
+                                    <MathRenderer text={solText} />
                                   </div>
                                 </div>
                               )}

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Question & Math Sanitizer Utility — Complete Rewrite (Session 59)
  *
  * Preprocessing pipeline (order is critical):
@@ -335,13 +335,19 @@ export const replaceRaiseLower = (text: string): string => {
 };
 
 // === normalizeOptions =========================================================
-export const normalizeOptions = (options: any): { key: string; value: any }[] => {
+export const normalizeOptions = (options: any): { key: string; value: any; label: string; val: any; index: number }[] => {
   if (!options) return [];
   if (Array.isArray(options)) {
-    return options.map((v, i) => ({ key: String.fromCharCode(65 + i), value: v }));
+    return options.map((v, i) => {
+      const key = String.fromCharCode(65 + i);
+      return { key, value: v, label: key, val: v, index: i };
+    });
   }
   if (typeof options === 'object') {
-    return Object.entries(options).map(([k, v]) => ({ key: k, value: v }));
+    return Object.entries(options).map(([k, v], i) => {
+      const label = String(k).length === 1 && /[0-9]/.test(k) ? String.fromCharCode(65 + Number(k)) : String(k).toUpperCase();
+      return { key: k, value: v, label: label, val: v, index: i };
+    });
   }
   return [];
 };
@@ -505,13 +511,13 @@ export const checkUserAnswerCorrect = (q: any, userAnswer: any): boolean => {
   const normOpts = normalizeOptions(q.options);
   if (normOpts.length > 0) {
     return normOpts.some((opt, optIdx) =>
-      isOptionCorrect(q.correct_answer ?? q.answer, opt.key, optIdx, opt.value) &&
+      isOptionCorrect(q.correct_answer ?? q.correctAnswer ?? q.answer, opt.key, optIdx, opt.value) &&
       (String(userAnswer).toUpperCase() === opt.key.toUpperCase() ||
        String(userAnswer) === String(optIdx) ||
        String(userAnswer) === String(optIdx + 1))
     );
   }
-  const ans = String(q.correct_answer ?? q.answer ?? '').trim();
+  const ans = String(q.correct_answer ?? q.correctAnswer ?? q.answer ?? '').trim();
   const ua = String(userAnswer).trim();
   if (!ans) return false;
   if (ans.toUpperCase() === ua.toUpperCase()) return true;

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Loader2, Crown, Zap, Trash2, Copy, X, Eye, CheckCircle2, Sliders, Atom, Beaker, FunctionSquare, FileUp, FileText, AlertTriangle, Terminal, File, Settings2, Sparkles, Database, ShieldAlert, XCircle, Settings, UserPlus, Edit3, Key } from 'lucide-react';
 import { supabase, getAllProfiles, updateProfileStatus, deleteProfile, createDailyChallenge, getDailyAttempts, getAllDailyChallenges, fetchQuestionsFromDB, updateStudentCredentials } from '../supabase';
 import { NCERT_CHAPTERS } from '../constants';
-import MathText from '../components/MathText';
+import MathRenderer from '../components/MathRenderer';
 
 interface SubjectConfig {
     mcq: number;
@@ -625,9 +625,10 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
           const { getStreamGeminiService } = await import('../streamGeminiDispatcher');
           const service = await getStreamGeminiService(activeStream);
           const result = await service.generateFullJEEDailyPaper(generationConfig);
+          const r = result as any;
           const allQs = isNeet 
-            ? [...result.physics, ...result.chemistry, ...(result.biology || [])]
-            : [...result.physics, ...result.chemistry, ...(result.mathematics || [])];
+            ? [...(r.physics || []), ...(r.chemistry || []), ...(r.biology || []), ...(r.botany || []), ...(r.zoology || [])]
+            : [...(r.physics || []), ...(r.chemistry || []), ...(r.mathematics || [])];
           
           const { filterUniqueQuestions, recordSeenQuestions } = await import('../utils/questionTracker');
           const uniqueQs = filterUniqueQuestions(allQs);
@@ -1021,9 +1022,9 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                                             <span className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em] bg-indigo-50 px-3 py-1 rounded-full">{q.subject}</span>
                                             <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{q.type}</span>
                                         </div>
-                                        <MathText className="text-sm font-bold text-slate-700 leading-relaxed">
+                                        <MathRenderer className="text-sm font-bold text-slate-700 leading-relaxed">
                                             {q.statement}
-                                        </MathText>
+                                        </MathRenderer>
                                     </div>
                                 ))}
                             </div>

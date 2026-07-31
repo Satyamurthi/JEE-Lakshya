@@ -14,7 +14,7 @@ import {
   getSubscriptionPlans, saveSubscriptionPlan, deleteSubscriptionPlan, grantFreePremiumAccess,
   getSQLiteQuestionsCount, syncSQLiteQuestions, getSyncStatus
 } from '../supabase';
-import MathText, { renderMathInText } from '../components/MathText';
+import MathRenderer, { renderMathInText } from '../components/MathRenderer';
 import { normalizeOptions, getQuestionSolution } from '../utils/sanitizer';
 import YearWisePYQ from './YearWisePYQ';
 

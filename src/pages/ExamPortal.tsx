@@ -5,7 +5,7 @@ import {
   RotateCcw, Send, Menu, X, Brain, ShieldAlert, Lock
 } from 'lucide-react';
 import { submitExamAttempt, submitDailyAttempt, supabase, logActivity } from '../supabase';
-import MathText from '../components/MathText';
+import MathRenderer from '../components/MathRenderer';
 import { cleanQuestionText, normalizeOptions, checkUserAnswerCorrect, isQuestionMCQ } from '../utils/sanitizer';
 import { recordSeenQuestions } from '../utils/questionTracker';
 
@@ -981,9 +981,9 @@ const ExamPortal = () => {
               <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-slate-200 space-y-10">
                  <div className="max-w-none overflow-x-auto">
                     <div className="text-xl font-bold text-slate-800 leading-relaxed">
-                      <MathText>
+                      <MathRenderer>
                         {currentQuestion?.statement}
-                      </MathText>
+                      </MathRenderer>
                     </div>
                  </div>
 
@@ -1008,9 +1008,9 @@ const ExamPortal = () => {
                               {opt.label}
                             </div>
                             <span className={`font-bold text-sm ${isSelected ? 'text-indigo-900' : 'text-slate-600'} overflow-x-auto`}>
-                               <MathText inlineOnly>
+                               <MathRenderer inlineOnly>
                                  {opt.val}
-                               </MathText>
+                               </MathRenderer>
                              </span>
                           </button>
                         );

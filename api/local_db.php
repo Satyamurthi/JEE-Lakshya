@@ -316,6 +316,27 @@ try {
                 $processed_row = $filtered;
             }
 
+            // Mirror questions table fields defensively
+            if ($table === 'questions') {
+                if (isset($processed_row['correctAnswer']) && (!isset($processed_row['correct_answer']) || $processed_row['correct_answer'] === null || $processed_row['correct_answer'] === '')) {
+                    $processed_row['correct_answer'] = $processed_row['correctAnswer'];
+                } elseif (isset($processed_row['correct_answer']) && (!isset($processed_row['correctAnswer']) || $processed_row['correctAnswer'] === null || $processed_row['correctAnswer'] === '')) {
+                    $processed_row['correctAnswer'] = $processed_row['correct_answer'];
+                }
+
+                if (isset($processed_row['solution']) && (!isset($processed_row['explanation']) || $processed_row['explanation'] === null || $processed_row['explanation'] === '')) {
+                    $processed_row['explanation'] = $processed_row['solution'];
+                } elseif (isset($processed_row['explanation']) && (!isset($processed_row['solution']) || $processed_row['solution'] === null || $processed_row['solution'] === '')) {
+                    $processed_row['solution'] = $processed_row['explanation'];
+                }
+
+                if (isset($processed_row['chapter']) && (!isset($processed_row['concept']) || $processed_row['concept'] === null || $processed_row['concept'] === '')) {
+                    $processed_row['concept'] = $processed_row['chapter'];
+                } elseif (isset($processed_row['concept']) && (!isset($processed_row['chapter']) || $processed_row['chapter'] === null || $processed_row['chapter'] === '')) {
+                    $processed_row['chapter'] = $processed_row['concept'];
+                }
+            }
+
             // Resolve primary key value (from payload OR filters)
             $pk_val = (isset($processed_row[$primary_key]) && $processed_row[$primary_key] !== '') ? $processed_row[$primary_key] : null;
             if ($pk_val === null && !empty($filters)) {

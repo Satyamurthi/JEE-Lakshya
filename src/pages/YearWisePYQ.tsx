@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Award, Calendar, Sparkles, Lock, CheckCircle2, ChevronRight, BookOpen, Search, Filter, ShieldCheck, DollarSign, Loader2, Crown } from 'lucide-react';
 import { initiateRazorpayPayment, checkSubscriptionActive } from '../utils/payment';
-import MathText from '../components/MathText';
+import MathRenderer from '../components/MathRenderer';
 import { officialJeePyqList } from '../data/officialJeePyqList';
 
 interface PYQPaper {
@@ -168,7 +168,7 @@ const YearWisePYQ = () => {
       });
 
       // Filter out any duplicate questions within this paper
-      questions = filterUniqueQuestions(questions, false);
+      questions = filterUniqueQuestions(questions);
 
       const sessionData = {
         id: attemptId,
