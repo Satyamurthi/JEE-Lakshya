@@ -251,8 +251,13 @@ const renderKaTeX = (mathContent: string, displayMode: boolean): string => {
 const isMathLine = (line: string): boolean => {
   const t = line.trim();
   if (!t) return false;
-  // Don't re-wrap already-wrapped math
-  if (t.startsWith('\\begin{') || t.startsWith('\\[') || t.startsWith('$$')) return false;
+  // Don't re-wrap already-wrapped math or lines with explicit dollar signs
+  if (t.startsWith('\\begin{') || t.startsWith('\\[') || t.startsWith('$$') || t.includes('$')) return false;
+
+  // If the line contains common English text words, it's a sentence, not a pure formula line.
+  if (/\b(the|of|and|is|are|a|an|in|on|at|for|to|with|by|from|has|have|had|been|this|that|these|those|find|determine|calculate|show|prove|what|which|where|when|who|how|remaining|initial|number|nuclei|sample|years|radioactive|mass|velocity|force|energy|power|work|time|speed|constant|ratio|value|equal|given|each|both|between|through|under|over|into|about|after|before)\b/i.test(t)) {
+    return false;
+  }
 
   // Lines starting with math operators or leading TeX commands (with backslash)
   if (/^[=+\-\\&]\s*/.test(t)) return true;
@@ -356,13 +361,15 @@ const processSingleTextLine = (
   const isShortEquation = /^[a-zA-Z_]\s*[=<>]\s*[-+]?[0-9a-zA-Z\^\{\}\\.]+$/.test(trimmed.replace(/\s+/g, ' '));
   const isDerivationStep = /^[=+\-]\s*.*\\[a-zA-Z]/.test(trimmed) || /^\\[a-zA-Z].*=/.test(trimmed);
 
+  const hasTextWords = /\b(the|of|and|is|are|a|an|in|on|at|for|to|with|by|from|has|have|had|this|that|find|determine|calculate|show|prove|given|each|both|between|after|before|under|over|into)\b/i.test(trimmed);
+
   const isLikelyFullFormula = (
     hasCases || hasNewlines ||
     (macroCount >= 2 && containsEqAndTeX) ||
     (startsWithMacro && !startsWithWord) ||
     (hasBareExponent && BARE_TEX_RE.test(trimmed)) ||
     isShortEquation || isDerivationStep
-  ) && trimmed.length > 2;
+  ) && trimmed.length > 2 && !hasTextWords;
 
   if (isLikelyFullFormula) {
     const displayMode = !inlineOnly && (hasCases || hasNewlines || trimmed.length > 30);
