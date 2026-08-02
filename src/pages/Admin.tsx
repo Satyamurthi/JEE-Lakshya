@@ -190,6 +190,7 @@ const Admin = () => {
   // Daily Paper Upload State
   const [uploadDate, setUploadDate] = useState(new Date().toISOString().split('T')[0]);
   const [dailyDifficulty, setDailyDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
+  const [dailyPyqFilter, setDailyPyqFilter] = useState<'all' | 'pyq_only' | 'practice_only'>('all');
   const [hideConfig, setHideConfig] = useState(false);
   const [qFile, setQFile] = useState<File | null>(null);
   const [sFile, setSFile] = useState<File | null>(null);
@@ -648,7 +649,8 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                       generationConfig.physics.topics,
                       generationConfig.physics.mcq,
                       generationConfig.physics.numerical,
-                      dailyDifficulty
+                      dailyDifficulty,
+                      dailyPyqFilter
                   ),
                   fetchQuestionsFromDB(
                       'Chemistry',
@@ -656,7 +658,8 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                       generationConfig.chemistry.topics,
                       generationConfig.chemistry.mcq,
                       generationConfig.chemistry.numerical,
-                      dailyDifficulty
+                      dailyDifficulty,
+                      dailyPyqFilter
                   ),
                   fetchQuestionsFromDB(
                       thirdSubject,
@@ -664,7 +667,8 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                       generationConfig.mathematics.topics,
                       generationConfig.mathematics.mcq,
                       generationConfig.mathematics.numerical,
-                      dailyDifficulty
+                      dailyDifficulty,
+                      dailyPyqFilter
                   )
               ]);
               
@@ -904,6 +908,32 @@ create policy "Admins view all attempts" on daily_attempts for select using (pub
                                   }`}
                                 >
                                     <span className="text-xs font-black uppercase tracking-wider">{lvl}</span>
+                                    <span className="text-[9px] opacity-70">{desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* PYQ Filter Toggle */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Question Source (PYQ Filter)</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { filter: 'all', label: 'All Questions', desc: 'Mix of PYQs & Generated' },
+                              { filter: 'practice_only', label: 'Practice Only', desc: 'Exclude real PYQs' },
+                              { filter: 'pyq_only', label: 'PYQs Only', desc: 'Filter strictly to past exams' }
+                            ].map(({ filter, label, desc }) => (
+                                <button
+                                  key={filter}
+                                  type="button"
+                                  onClick={() => setDailyPyqFilter(filter as any)}
+                                  className={`p-3 rounded-xl border transition-all text-left flex flex-col justify-between ${
+                                    dailyPyqFilter === filter 
+                                      ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 shadow-sm font-black' 
+                                      : 'border-slate-100 bg-white text-slate-600 font-bold hover:bg-slate-50'
+                                  }`}
+                                >
+                                    <span className="text-xs font-black uppercase tracking-wider">{label}</span>
                                     <span className="text-[9px] opacity-70">{desc}</span>
                                 </button>
                             ))}

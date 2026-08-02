@@ -20,22 +20,10 @@ const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const [isIndependent, setIsIndependent] = useState(true);
-  const [adminList, setAdminList] = useState<any[]>([]);
-  const [selectedAdminId, setSelectedAdminId] = useState('');
-
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const { getApprovedAdmins } = await import('../supabase');
-        const [admins, sysStreams] = await Promise.all([
-          getApprovedAdmins(),
-          getSystemStreams()
-        ]);
-        setAdminList(admins || []);
-        if (admins && admins.length > 0) {
-          setSelectedAdminId(admins[0].id);
-        }
+        const sysStreams = await getSystemStreams();
         setStreams(sysStreams || ['JEE Main & Advanced', 'NEET UG', 'KCET']);
         if (sysStreams && sysStreams.length > 0) {
           setSelectedStream(sysStreams[0]);
@@ -64,118 +52,34 @@ const Signup = () => {
       return;
     }
 
-    if (!isIndependent) {
-      if (!selectedAdminId) {
-        setError("Please select a coaching administrator.");
-        setIsLoading(false);
-        return;
-      }
-      try {
-        const { getAdminStudentCount } = await import('../supabase');
-        const count = await getAdminStudentCount(selectedAdminId);
-        const selectedAdmin = adminList.find(a => a.id === selectedAdminId);
-        const maxLimit = selectedAdmin?.admin_max_students ?? 30;
-        
-        if (count >= maxLimit) {
-          setError(`Selected Admin capacity limit reached (${maxLimit} students). Please enroll independently or select another admin.`);
-          setIsLoading(false);
-          return;
-        }
-      } catch (countErr) {
-        console.error("Error checking capacity:", countErr);
-      }
-    }
-
-    if (supabase) {
-      try {
-        const { data: existingUser } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', email.toLowerCase().trim())
-          .maybeSingle();
-
-        if (existingUser) {
-          setError("An account has already been registered with this email address. Please log in instead.");
-          setIsLoading(false);
-          return;
-        }
-      } catch (err) {
-        console.warn("Pre-enrollment email verification check bypassed:", err);
-      }
-    }
-
     try {
-      let finalUserId = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
+      const { getApiUrl } = await import('../supabase');
+      const apiUrl = await getApiUrl();
+      const res = await fetch(`${apiUrl}/auth.php?action=signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName,
+          mobileNumber,
+          email,
+          password,
+          collegeName,
+          collegeAddress,
+          stream: selectedStream
+        })
       });
 
-      // 1. Trigger Supabase Auth Email Verification SignUp
-      if (supabase) {
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: email,
-          password: password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/login`,
-            data: {
-              full_name: fullName,
-              mobile_number: mobileNumber,
-              college_name: collegeName,
-              college_address: collegeAddress,
-              stream: selectedStream,
-              status: isIndependent ? 'approved' : 'pending',
-              admin_id: isIndependent ? null : selectedAdminId
-            }
-          }
-        });
-
-        if (authError) {
-          console.error("Supabase auth signup failed:", authError);
-          setError(`Enrollment failed: ${authError.message}`);
-          setIsLoading(false);
-          return;
-        }
-
-        if (authData.user) {
-          finalUserId = authData.user.id;
-        }
-      }
-
-      const newUser = {
-        id: finalUserId,
-        email: email.toLowerCase().trim(),
-        full_name: fullName,
-        mobile_number: mobileNumber,
-        college_name: collegeName,
-        college_address: collegeAddress,
-        stream: selectedStream,
-        password: password,
-        role: 'student',
-        status: isIndependent ? 'approved' : 'pending',
-        admin_id: isIndependent ? null : selectedAdminId,
-        has_used_free_test: false,
-        created_at: new Date().toISOString()
-      };
-
-      if (supabase) {
-        // Use upsert to cleanly merge profile fields whether inserted by Auth trigger or direct enrollment
-        const { error: dbError } = await supabase.from('profiles').upsert(newUser, { onConflict: 'id' });
-        if (dbError) {
-          console.warn("Supabase profile upsert warning, attempting update fallback:", dbError.message);
-          const { error: updateErr } = await supabase.from('profiles').update(newUser).eq('id', finalUserId);
-          if (updateErr) {
-            console.error("Supabase profile creation/update failed:", updateErr);
-            setError(`Profile setup error: ${updateErr.message}`);
-            setIsLoading(false);
-            return;
-          }
-        }
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || "Registration failed.");
+        setIsLoading(false);
+        return;
       }
 
       setIsSuccess(true);
     } catch (err: any) {
       console.error("Signup error:", err);
-      setError("An unexpected error occurred during enrollment.");
+      setError("An unexpected error occurred during registration. Local authentication backend might be offline.");
     } finally {
       setIsLoading(false);
     }
@@ -185,28 +89,17 @@ const Signup = () => {
     return (
       <div className="min-h-screen bg-[#f8faff] flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-500">
         <div className="bg-white p-12 rounded-[3rem] shadow-2xl shadow-indigo-100 max-w-lg space-y-6 border border-slate-100 relative overflow-hidden">
-          <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-indigo-100/60">
-            <Send className="w-10 h-10 animate-bounce" />
+          <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-emerald-100/60">
+            <CheckCircle2 className="w-10 h-10 animate-pulse" />
           </div>
           <div className="space-y-2">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100">
-              Gmail Verification Required
+              Registration Successful
             </span>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight pt-2">Check Your Inbox!</h1>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight pt-2">Account Created!</h1>
             <p className="text-xs font-bold text-slate-500 leading-relaxed">
-              We have dispatched a verification link to <strong className="text-slate-800">{email}</strong>.
+              Your profile is registered and approved. You can log in right away using your credentials.
             </p>
-          </div>
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-left space-y-3">
-            <div className="flex items-center gap-2 text-slate-700 font-black text-xs uppercase tracking-wider">
-              <CheckCircle2 className="w-4 h-4 text-indigo-500" />
-              <span>Next Steps to Enter App</span>
-            </div>
-            <ol className="text-xs text-slate-600 font-medium leading-relaxed list-decimal list-inside space-y-1">
-              <li>Open your Gmail inbox for <span className="font-bold text-slate-800">{email}</span>.</li>
-              <li>Click the confirmation link to verify your email identity.</li>
-              <li>Return here and authorize your access.</li>
-            </ol>
           </div>
           <button
             onClick={() => navigate('/login')}
@@ -376,60 +269,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Enrollment Route */}
-            <div className="space-y-2 pt-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Enrollment Category</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsIndependent(true)}
-                  className={`p-3 rounded-2xl border-2 text-center transition-all ${
-                    isIndependent 
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-sm' 
-                      : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50 text-slate-500'
-                  }`}
-                >
-                  <span className="block font-black text-xs uppercase tracking-wider">Independent</span>
-                  <span className="text-[9px] font-bold text-slate-400 mt-0.5 block">1 Free Test, then ₹10</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsIndependent(false)}
-                  className={`p-3 rounded-2xl border-2 text-center transition-all ${
-                    !isIndependent 
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-sm' 
-                      : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50 text-slate-500'
-                  }`}
-                >
-                  <span className="block font-black text-xs uppercase tracking-wider">Coaching Admin</span>
-                  <span className="text-[9px] font-bold text-slate-400 mt-0.5 block">Admin Assigned</span>
-                </button>
-              </div>
-            </div>
-
-            {!isIndependent && (
-              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Coaching Admin</label>
-                {adminList.length === 0 ? (
-                  <div className="p-3 bg-amber-50 border border-amber-100 text-amber-800 text-xs font-bold rounded-2xl">
-                    ⚠️ No coaching admins available. Please enroll as Independent student.
-                  </div>
-                ) : (
-                  <select
-                    value={selectedAdminId}
-                    onChange={(e) => setSelectedAdminId(e.target.value)}
-                    className="w-full p-3.5 bg-slate-50/50 border border-slate-100 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/30 rounded-2xl text-xs font-bold outline-none transition-all"
-                  >
-                    {adminList.map((admin) => (
-                      <option key={admin.id} value={admin.id}>
-                        {admin.full_name} ({admin.email})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            )}
-
             <button 
               type="submit" 
               disabled={isLoading}
@@ -439,7 +278,7 @@ const Signup = () => {
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  Register & Verify Gmail
+                  Register Student Account
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </>
               )}

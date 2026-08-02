@@ -2,38 +2,62 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Subject, ExamType, Question, QuestionType } from "./types";
 import { generateDynamicQuestions } from "./utils/fallbackGenerator";
 
-const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-const getAIClient = (overrideKey?: string) => {
-    const apiKey = overrideKey || localStorage.getItem('user_gemini_api_key') || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-        throw new Error("AI Generation Failed: Gemini API Key is not configured.");
-    }
-    return new GoogleGenAI({ apiKey });
-};
-
-const callAIWithFallback = async (ai: GoogleGenAI, contents: any, config: any) => {
-  let lastError: any = null;
-  for (const model of MODELS) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents,
-          config
-        });
-        if (response && response.text) {
-          return response;
-        }
-      } catch (err: any) {
-        lastError = err;
-        console.warn(`[AI] Model ${model} attempt ${attempt} failed: ${err.message || err}`);
-        await delay(attempt * 500);
+const getApiUrl = async (): Promise<string> => {
+  try {
+    const res = await fetch('/backend_url.txt?t=' + Date.now(), { cache: 'no-store' });
+    if (res.ok) {
+      let text = (await res.text()).trim();
+      if (text && text.startsWith('http')) {
+        text = text.replace(/\/$/, '');
+        if (!text.endsWith('/api')) text += '/api';
+        return text;
       }
     }
+  } catch (e) {}
+  return (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080/api';
+};
+
+export const callAIProxy = async (prompt: string, systemInstruction: string, responseSchema?: any, customApiKey?: string, model?: string) => {
+  const apiUrl = await getApiUrl();
+  let token = '';
+  try {
+    const lp = localStorage.getItem('user_profile');
+    if (lp) {
+      const user = JSON.parse(lp);
+      token = user.session_token || '';
+    }
+  } catch (e) {}
+
+  const response = await fetch(`${apiUrl}/ai.php`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      prompt,
+      systemInstruction,
+      responseSchema,
+      apiKey: customApiKey,
+      model
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let parsedErr = errorText;
+    try {
+      const errJson = JSON.parse(errorText);
+      parsedErr = errJson.error || errorText;
+    } catch (e) {}
+    throw new Error(parsedErr);
   }
-  throw lastError || new Error("All Gemini AI models and retries exhausted.");
+
+  const data = await response.json();
+  if (data.success && data.text) {
+    return data.text;
+  }
+  throw new Error(data.error || "Failed to generate AI response.");
 };
 
 export const getCleanedNvidiaKey = (apiKey: string): string => {
@@ -63,93 +87,20 @@ export const isNvidiaKey = (apiKey: string): boolean => {
 };
 
 export const callNvidiaAPI = async (apiKey: string, prompt: string, systemInstruction: string, isVerification = false): Promise<string> => {
-  const cleanedKey = getCleanedNvidiaKey(apiKey);
-  const authHeader = `Bearer ${cleanedKey}`;
-  
   let model = localStorage.getItem('user_ai_model') || 'google/gemma-4-31b-it';
   if (model.includes('gemini')) {
     model = 'google/gemma-4-31b-it';
   }
-
-  // Force fast gemma-4-31b-it for verification to ensure rapid (<1s) execution to stay well below Netlify's 10s timeout
   if (isVerification) {
     model = 'google/gemma-4-31b-it';
   }
-
-  const bodyData: any = {
-    "model": model,
-    "messages": [
-      { "role": "system", "content": systemInstruction },
-      { "role": "user", "content": prompt }
-    ],
-    "max_tokens": isVerification ? 100 : 4096,
-    "stream": false
-  };
-
-  if (model === 'z-ai/glm-5.2') {
-    bodyData.temperature = 1;
-    bodyData.top_p = 1;
-    bodyData.seed = 42;
-    bodyData.chat_template_kwargs = { "enable_thinking": false, "clear_thinking": false };
-  } else {
-    // Default fallback to gemma-4-31b-it parameters
-    bodyData.temperature = 1.00;
-    bodyData.top_p = 0.95;
-    bodyData.chat_template_kwargs = { "enable_thinking": false };
-  }
-
-  // Use the native proxy endpoint `/nvidia-api` which is configured in Netlify (_redirects)
-  // and Vite (vite.config.ts) with built-in retries and backoff for rate limiting (429).
-  let lastError: any = null;
-  const maxAttempts = 5;
-  
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const response = await fetch("/nvidia-api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": authHeader,
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(bodyData)
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content) return content;
-      }
-      
-      if (response.status === 429) {
-        console.warn(`[NVIDIA] Rate limit (429) hit. Attempt ${attempt} of ${maxAttempts}. Retrying in ${attempt * 4}s...`);
-        await delay(attempt * 4000);
-      } else {
-        const errorText = await response.text();
-        throw new Error(`NVIDIA API Error (${response.status}): ${errorText || response.statusText}`);
-      }
-    } catch (err: any) {
-      lastError = err;
-      console.warn(`[NVIDIA] Attempt ${attempt} failed:`, err.message || err);
-      if (attempt < maxAttempts) {
-        await delay(attempt * 2000);
-      }
-    }
-  }
-  
-  throw lastError || new Error("NVIDIA API call failed after max retries.");
+  return callAIProxy(prompt, systemInstruction, undefined, apiKey, model);
 };
 
 export const verifyGeminiAPIKey = async (apiKey: string): Promise<boolean> => {
   try {
-    if (isNvidiaKey(apiKey)) {
-      const text = await callNvidiaAPI(apiKey, "Respond with exactly the word 'OK' if you can read this.", "Answer concisely.", true);
-      return text.trim().toUpperCase().includes("OK") || false;
-    } else {
-      const ai = getAIClient(apiKey);
-      const response = await callAIWithFallback(ai, "Respond with exactly the word 'OK' if you can read this.", { systemInstruction: "Answer concisely." });
-      return response.text?.trim().toUpperCase().includes("OK") || false;
-    }
+    const text = await callAIProxy("Respond with exactly the word 'OK' if you can read this.", "Answer concisely.", undefined, apiKey);
+    return text.trim().toUpperCase().includes("OK") || false;
   } catch (e: any) {
     console.error("API Key verification failed:", e);
     throw new Error(e.message || "Invalid API key or network error.");
@@ -213,20 +164,7 @@ For MCQ questions, options MUST be 4 distinct, plausible choices in standard LaT
       
       const resolvedKey = apiKey || localStorage.getItem('user_gemini_api_key') || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
 
-      let text = '';
-      if (isNvidiaKey(resolvedKey)) {
-        text = await callNvidiaAPI(resolvedKey, prompt, systemInstruction);
-      } else {
-        const ai = getAIClient(resolvedKey);
-        const response = await callAIWithFallback(ai, prompt, { 
-          responseMimeType: "application/json", 
-          responseSchema: questionSchema,
-          systemInstruction: systemInstruction,
-          temperature: 0.8,
-          topP: 0.9,
-        });
-        text = response.text || '';
-      }
+      let text = await callAIProxy(prompt, systemInstruction, isNvidiaKey(resolvedKey) ? undefined : questionSchema, resolvedKey);
       text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
 
       if (text) {
@@ -388,17 +326,10 @@ export const parseDocumentToQuestions = async (questionFile: File, solutionFile?
         parts.push({ inlineData: { mimeType: solutionFile.type, data: sData } });
     }
 
-    const ai = getAIClient();
     const prompt = `Digitize and structure the JEE questions from these documents. Output a JSON array matching the JEE question schema. Use LaTeX for math. Format as an EXACT JSON array.`;
-    
     parts.push({ text: prompt });
 
-    const response = await callAIWithFallback(ai, parts, { 
-      responseMimeType: "application/json",
-      responseSchema: questionSchema 
-    });
-
-    const text = response.text;
+    const text = await callAIProxy(parts as any, "Digitizer assistant.", questionSchema);
     if (!text) throw new Error("Parser response empty");
     
     const parsed = JSON.parse(text);
@@ -413,9 +344,9 @@ export const parseDocumentToQuestions = async (questionFile: File, solutionFile?
 
 export const getDeepAnalysis = async (result: any) => {
     try {
-        const ai = getAIClient();
-        const response = await callAIWithFallback(ai, `Review this JEE performance data and provide a mentorship summary including strong areas and critical improvements: ${JSON.stringify(result).substring(0, 8000)}`, { systemInstruction: "You are an expert tutor providing constructive feedback." });
-        return response.text || "Analysis complete. Keep practicing consistent drills.";
+        const prompt = `Review this JEE performance data and provide a mentorship summary including strong areas and critical improvements: ${JSON.stringify(result).substring(0, 8000)}`;
+        const text = await callAIProxy(prompt, "You are an expert tutor providing constructive feedback.");
+        return text || "Analysis complete. Keep practicing consistent drills.";
     } catch (e) { 
         return "Cognitive analysis is temporarily unavailable due to a network disruption."; 
     }

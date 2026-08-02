@@ -11,7 +11,17 @@ $CfExe        = "C:\Program Files (x86)\cloudflared\cloudflared.exe"
 $UrlFile      = "$JeeRoot\public\backend_url.txt"
 $CfLog        = "$JeeRoot\cf_quicktunnel.log"
 $LogFile      = "$JeeRoot\StartBackend.log"
-$Pat          = "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"
+$Pat = [System.Environment]::GetEnvironmentVariable("GITHUB_PAT", "User")
+if (-not $Pat) {
+    $Pat = [System.Environment]::GetEnvironmentVariable("GITHUB_PAT", "Machine")
+}
+if (-not $Pat) {
+    $Pat = $env:GITHUB_PAT
+}
+$PatFile = "$JeeRoot\.github_pat"
+if (-not $Pat -and (Test-Path $PatFile)) {
+    $Pat = (Get-Content $PatFile -Raw).Trim()
+}
 
 function Log($msg) {
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"

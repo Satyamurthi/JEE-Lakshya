@@ -47,6 +47,7 @@ const ExamSetup = () => {
   const initialCounts = isNeet ? { mcq: 45, numerical: 0 } : { mcq: 25, numerical: 5 };
   const [questionCounts, setQuestionCounts] = useState(initialCounts);
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
+  const [pyqFilter, setPyqFilter] = useState<'all' | 'pyq_only' | 'practice_only'>('all');
   const [preparationLogs, setPreparationLogs] = useState<string[]>([]);
   
   const [isPaid, setIsPaid] = useState(false);
@@ -120,13 +121,14 @@ const ExamSetup = () => {
         // 1. Try fetching from Database Question Bank first
         try {
           setPreparationLogs((prev: string[]) => [...prev, `Fetching ${difficulty} level questions for ${sub} from Question Bank...`]);
-          questions = await fetchQuestionsFromDB(
+           questions = await fetchQuestionsFromDB(
             sub,
             undefined,
             undefined,
             questionCounts.mcq,
             questionCounts.numerical,
-            difficulty
+            difficulty,
+            pyqFilter
           );
         } catch (dbErr: any) {
           console.error(`[ExamSetup] Database fetch failed for ${sub}:`, dbErr);
@@ -375,9 +377,7 @@ const ExamSetup = () => {
                   </div>
                 )}
             </div>
-          </div>
-
-          {/* Difficulty Selection */}
+            {/* Difficulty Selection */}
           <div className={`glass-panel p-8 rounded-[2.5rem] transition-opacity ${isPreparing ? 'opacity-50 pointer-events-none' : ''}`}>
             <h2 className="text-lg font-black text-slate-900 mb-2 flex items-center gap-3">
               <div className="p-2 bg-amber-100 text-amber-600 rounded-lg"><Sparkles className="w-5 h-5" /></div>
@@ -405,6 +405,36 @@ const ExamSetup = () => {
               ))}
             </div>
           </div>
+
+          {/* PYQ Source Selection */}
+          <div className={`glass-panel p-8 rounded-[2.5rem] transition-opacity ${isPreparing ? 'opacity-50 pointer-events-none' : ''}`}>
+            <h2 className="text-lg font-black text-slate-900 mb-2 flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><Database className="w-5 h-5" /></div>
+              Question Source Filter
+            </h2>
+            <p className="text-xs text-slate-400 font-medium mb-6 font-bold uppercase tracking-tight">Configure PYQ presence in generated exam.</p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { filter: 'all', label: 'All Pool', desc: 'Mix of PYQs & Practice' },
+                { filter: 'practice_only', label: 'Practice Only', desc: 'Exclude past real exams' },
+                { filter: 'pyq_only', label: 'PYQs Only', desc: 'Exclusively real past papers' }
+              ].map(({ filter, label, desc }) => (
+                <button
+                  key={filter}
+                  onClick={() => setPyqFilter(filter as any)}
+                  className={`p-4 rounded-2xl border-2 transition-all text-left flex flex-col justify-between ${
+                    pyqFilter === filter 
+                      ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 shadow-sm' 
+                      : 'border-slate-100 bg-white hover:border-slate-200 text-slate-600'
+                  }`}
+                >
+                  <span className="font-black text-xs uppercase tracking-wider block mb-1">{label}</span>
+                  <span className="text-[10px] font-bold opacity-75 leading-tight">{desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
         </div>
 
         <div className="lg:col-span-5 space-y-8">

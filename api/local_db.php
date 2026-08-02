@@ -21,6 +21,199 @@ if (empty($table) || empty($action)) {
     exit;
 }
 
+// 1. Extract Token from Authorization header
+$auth_header = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
+if (empty($auth_header) && isset(getallheaders()['Authorization'])) {
+    $auth_header = getallheaders()['Authorization'];
+}
+if (empty($auth_header) && isset(getallheaders()['authorization'])) {
+    $auth_header = getallheaders()['authorization'];
+}
+
+$token = '';
+if (preg_match('/Bearer\s(\S+)/i', $auth_header, $matches)) {
+    $token = $matches[1];
+}
+
+// 2. Lookup user profile
+$user_profile = null;
+if (!empty($token)) {
+    $stmt = $conn->prepare("SELECT * FROM profiles WHERE session_token = ?");
+    $stmt->execute([$token]);
+    $user_profile = $stmt->fetch();
+    
+    // Check if session has expired
+    if ($user_profile && isset($user_profile['session_expires_at'])) {
+        $expiry = strtotime($user_profile['session_expires_at']);
+        if ($expiry !== false && $expiry < time()) {
+            $user_profile = null; // Session expired
+        }
+    }
+}
+
+// 3. Public access rules (subscription_plans select is public)
+$is_public_action = ($table === 'subscription_plans' && $action === 'select');
+
+if (!$is_public_action && !$user_profile) {
+    http_response_code(401);
+    echo json_encode(["error" => "Unauthorized access. Please log in again."]);
+    exit;
+}
+
+// 4. Enforce Row-Level Security (RLS) & Access Control
+if ($user_profile && $user_profile['role'] !== 'super_admin') {
+    // Only super_admin can write to core config or questions
+    if (in_array($table, ['questions', 'subscription_plans', 'system_config']) && in_array($action, ['insert', 'update', 'upsert', 'delete'])) {
+        http_response_code(403);
+        echo json_encode(["error" => "Forbidden: You do not have permission to modify system configuration, pricing, or questions."]);
+        exit;
+    }
+
+    if ($table === 'profiles') {
+        if ($user_profile['role'] === 'student') {
+            if ($action === 'select') {
+                $input['filters'] = [['column' => 'id', 'op' => 'eq', 'value' => $user_profile['id']]];
+            } elseif (in_array($action, ['update', 'upsert'])) {
+                if (isset($input['payload'])) {
+                    $pl = $input['payload'];
+                    if (isset($pl[0]) && is_array($pl[0])) {
+                        foreach ($pl as &$row) {
+                            if (isset($row['id']) && $row['id'] !== $user_profile['id']) {
+                                http_response_code(403);
+                                echo json_encode(["error" => "Forbidden: You cannot modify other profiles."]);
+                                exit;
+                            }
+                            unset($row['role'], $row['subscription_tier'], $row['subscription_expires_at'], $row['admin_max_students'], $row['super_admin_permission']);
+                        }
+                        $input['payload'] = $pl;
+                    } else {
+                        if (isset($pl['id']) && $pl['id'] !== $user_profile['id']) {
+                            http_response_code(403);
+                            echo json_encode(["error" => "Forbidden: You cannot modify other profiles."]);
+                            exit;
+                        }
+                        unset($pl['role'], $pl['subscription_tier'], $pl['subscription_expires_at'], $pl['admin_max_students'], $pl['super_admin_permission']);
+                        $input['payload'] = $pl;
+                    }
+                }
+                if (isset($input['filters'])) {
+                    foreach ($input['filters'] as $f) {
+                        if (isset($f['column']) && $f['column'] === 'id' && $f['value'] !== $user_profile['id']) {
+                            http_response_code(403);
+                            echo json_encode(["error" => "Forbidden: You cannot modify other profiles."]);
+                            exit;
+                        }
+                    }
+                }
+            } elseif ($action === 'delete') {
+                http_response_code(403);
+                echo json_encode(["error" => "Forbidden: Students cannot delete profiles."]);
+                exit;
+            }
+        } elseif ($user_profile['role'] === 'admin') {
+            if ($action === 'select') {
+                $has_admin_id_filter = false;
+                $has_self_filter = false;
+                if (isset($input['filters'])) {
+                    foreach ($input['filters'] as $f) {
+                        if (isset($f['column']) && $f['column'] === 'admin_id' && $f['value'] === $user_profile['id']) {
+                            $has_admin_id_filter = true;
+                        }
+                        if (isset($f['column']) && $f['column'] === 'id' && $f['value'] === $user_profile['id']) {
+                            $has_self_filter = true;
+                        }
+                    }
+                }
+                if (!$has_admin_id_filter && !$has_self_filter) {
+                    $input['filters'][] = ['column' => 'admin_id', 'op' => 'eq', 'value' => $user_profile['id']];
+                }
+            } elseif (in_array($action, ['update', 'upsert', 'delete'])) {
+                if (isset($input['payload'])) {
+                    $pl = &$input['payload'];
+                    if (isset($pl[0]) && is_array($pl[0])) {
+                        foreach ($pl as &$row) {
+                            unset($row['role'], $row['super_admin_permission']);
+                        }
+                    } else {
+                        unset($pl['role'], $pl['super_admin_permission']);
+                    }
+                }
+            }
+        }
+    }
+
+    if (in_array($table, ['exam_attempts', 'daily_attempts'])) {
+        if ($user_profile['role'] === 'student') {
+            if ($action === 'select') {
+                $has_user_id_filter = false;
+                if (isset($input['filters'])) {
+                    foreach ($input['filters'] as &$f) {
+                        if (isset($f['column']) && $f['column'] === 'user_id') {
+                            $f['value'] = $user_profile['id'];
+                            $has_user_id_filter = true;
+                        }
+                    }
+                }
+                if (!$has_user_id_filter) {
+                    $input['filters'][] = ['column' => 'user_id', 'op' => 'eq', 'value' => $user_profile['id']];
+                }
+            } elseif (in_array($action, ['insert', 'update', 'upsert'])) {
+                if (isset($input['payload'])) {
+                    $pl = &$input['payload'];
+                    if (isset($pl[0]) && is_array($pl[0])) {
+                        foreach ($pl as &$row) {
+                            $row['user_id'] = $user_profile['id'];
+                        }
+                    } else {
+                        $pl['user_id'] = $user_profile['id'];
+                    }
+                }
+            } elseif ($action === 'delete') {
+                $has_user_id_filter = false;
+                if (isset($input['filters'])) {
+                    foreach ($input['filters'] as &$f) {
+                        if (isset($f['column']) && $f['column'] === 'user_id') {
+                            $f['value'] = $user_profile['id'];
+                            $has_user_id_filter = true;
+                        }
+                    }
+                }
+                if (!$has_user_id_filter) {
+                    $input['filters'][] = ['column' => 'user_id', 'op' => 'eq', 'value' => $user_profile['id']];
+                }
+            }
+        }
+    }
+}
+
+// 5. Restrict columns list to prevent SQL injections
+if (isset($input['columns'])) {
+    $columns_str = trim($input['columns']);
+    if ($columns_str !== '*' && !preg_match('/^[a-zA-Z0-9_*, .()]+$/', $columns_str)) {
+        http_response_code(400);
+        echo json_encode(["error" => "Invalid columns selected."]);
+        exit;
+    }
+    if (preg_match('/\b(union|select|insert|update|delete|drop|alter|truncate|from|where|join|replace)\b/i', $columns_str)) {
+        http_response_code(400);
+        echo json_encode(["error" => "SQL injection detected in columns selection."]);
+        exit;
+    }
+}
+
+// Static columns map to avoid SHOW COLUMNS query latency
+$table_columns = [
+    'profiles' => ['id', 'email', 'full_name', 'mobile_number', 'college_name', 'college_address', 'stream', 'selected_stream', 'password', 'role', 'status', 'admin_id', 'has_used_free_test', 'admin_max_students', 'subscription_expires_at', 'subscription_tier', 'is_frozen', 'super_admin_permission', 'can_access_daily', 'can_access_full_exam', 'can_access_practice', 'current_exam_token', 'current_exam_started_at', 'gemini_api_key', 'failed_attempts', 'session_token', 'session_expires_at', 'created_at'],
+    'exam_attempts' => ['id', 'user_id', 'user_name', 'user_email', 'score', 'total_marks', 'accuracy', 'config', 'questions', 'paid', 'stream', 'submitted_at'],
+    'daily_challenges' => ['id', 'date', 'questions', 'subject', 'admin_id', 'created_at'],
+    'daily_attempts' => ['id', 'user_id', 'challenge_id', 'score', 'total_marks', 'accuracy', 'config', 'paid', 'submitted_at'],
+    'system_config' => ['key', 'value', 'updated_at'],
+    'subscription_plans' => ['id', 'name', 'price_monthly', 'price_yearly', 'price', 'duration_days', 'description', 'badge', 'highlighted', 'color', 'glow_color', 'features', 'updated_at'],
+    'questions' => ['id', 'paper_id', 'subject', 'chapter', 'topic', 'concept', 'type', 'difficulty', 'statement', 'options', 'correctAnswer', 'correct_answer', 'solution', 'explanation', 'markingScheme', 'year', 'created_at', 'metadata'],
+    'payment_logs' => ['id', 'payment_id', 'order_id', 'user_id', 'user_email', 'user_name', 'amount_paise', 'amount_rupees', 'plan_id', 'plan_name', 'stream', 'status', 'verified_at', 'created_at'],
+    'activity_log' => ['id', 'user_id', 'user_email', 'user_name', 'event_type', 'metadata', 'stream', 'ip_address', 'created_at']
+];
+
 // Allowed tables list for security
 $allowed_tables = [
     'profiles',
@@ -287,14 +480,8 @@ try {
 
         $results_arr = [];
 
-        // Fetch valid columns once
-        $valid_cols_map = [];
-        try {
-            $cols_query = $conn->query("SHOW COLUMNS FROM `$table`")->fetchAll(PDO::FETCH_COLUMN);
-            if ($cols_query) {
-                $valid_cols_map = array_flip($cols_query);
-            }
-        } catch (Exception $e) {}
+        // Fetch valid columns from our static map
+        $valid_cols_map = isset($table_columns[$table]) ? array_flip($table_columns[$table]) : [];
 
         $filters = isset($input['filters']) ? $input['filters'] : [];
 
@@ -463,10 +650,18 @@ try {
     }
 
 } catch (Throwable $e) {
-    http_response_code(200);
     $msg = $e->getMessage();
+    // Log the detailed error message server-side securely
+    error_log("[local_db error] " . $msg . " in " . $e->getFile() . " on line " . $e->getLine());
+    
     if (strpos($msg, 'Duplicate entry') !== false) {
+        http_response_code(409); // Conflict
         $msg = "An account with this email address already exists.";
+    } elseif (strpos($msg, 'Safe check') !== false || strpos($msg, 'required') !== false || strpos($msg, 'Invalid') !== false) {
+        http_response_code(400); // Bad Request
+    } else {
+        http_response_code(500); // Internal Server Error
+        $msg = "Internal database error occurred. Please try again later.";
     }
     echo json_encode(["data" => null, "error" => ["message" => $msg]]);
 }

@@ -118,81 +118,33 @@ const Login = () => {
     try {
       const cleanEmail = forgotEmail.toLowerCase().trim();
       
-      if (isOffline) {
-        if (forgotPasswordText !== forgotConfirmPassword) {
-          setForgotMessage("❌ Passwords do not match.");
-          setIsResetting(false);
-          return;
-        }
-        
-        try {
-          const apiUrl = await getApiUrl();
-          const res = await fetch(`${apiUrl}/auth.php?action=reset_password`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: cleanEmail, password: forgotPasswordText })
-          });
-          const data = await res.json();
-          if (res.ok && data.success) {
-            setForgotMessage("🎉 Password successfully changed and account unlocked! You can now log in.");
-            setForgotEmail('');
-            setForgotPasswordText('');
-            setForgotConfirmPassword('');
-          } else {
-            setForgotMessage(`❌ Reset error: ${data.error || 'Failed to update password'}`);
-          }
-        } catch (e) {
-          setForgotMessage("❌ Local authentication backend is unreachable.");
-        }
+      if (forgotPasswordText !== forgotConfirmPassword) {
+        setForgotMessage("❌ Passwords do not match.");
         setIsResetting(false);
         return;
       }
       
-      let fallbackPassword = null;
-      if (supabase) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('password')
-          .eq('email', cleanEmail)
-          .maybeSingle();
-          
-        if (data && data.password) {
-          fallbackPassword = data.password;
-        }
-      }
-
-      if (supabase) {
-        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-          redirectTo: `${window.location.origin}/login`
+      try {
+        const apiUrl = await getApiUrl();
+        const res = await fetch(`${apiUrl}/auth.php?action=reset_password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, password: forgotPasswordText })
         });
-        if (error) throw error;
-        
-        setForgotMessage(`🎉 A password reset link has been dispatched to ${cleanEmail}! Please check your inbox.`);
-      } else {
-        if (fallbackPassword) {
-          setForgotMessage(`🔑 Your registered account access key is: "${fallbackPassword}"`);
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setForgotMessage("🎉 Password successfully changed and account unlocked! You can now log in.");
+          setForgotEmail('');
+          setForgotPasswordText('');
+          setForgotConfirmPassword('');
         } else {
-          setForgotMessage("❌ No account found matching this email address.");
+          setForgotMessage(`❌ Reset error: ${data.error || 'Failed to update password'}`);
         }
+      } catch (e) {
+        setForgotMessage("❌ Local authentication backend is unreachable.");
       }
     } catch (err: any) {
-      console.warn("Auth reset failed, attempting fallback password lookup:", err.message);
-      try {
-        const cleanEmail = forgotEmail.toLowerCase().trim();
-        const { data } = await supabase
-          .from('profiles')
-          .select('password')
-          .eq('email', cleanEmail)
-          .maybeSingle();
-          
-        if (data && data.password) {
-          setForgotMessage(`🔑 Fallback Lookup: Your password is "${data.password}"`);
-        } else {
-          setForgotMessage(`❌ Reset error: ${err.message || 'Email lookup failed'}`);
-        }
-      } catch (_) {
-        setForgotMessage(`❌ Failed to send reset link: ${err.message}`);
-      }
+      setForgotMessage(`❌ Failed to reset password: ${err.message || String(err)}`);
     } finally {
       setIsResetting(false);
     }

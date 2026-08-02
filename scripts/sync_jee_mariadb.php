@@ -20,9 +20,8 @@ if (strpos($active_stream, 'neet') !== false) {
     $db_name = "upsc_nexus";
 }
 
-$host = "127.0.0.1";
-$username = "root";
-$password = "";
+$_GET['stream'] = $active_stream;
+require_once __DIR__ . '/../api/db.php';
 $progress_file = "d:/JEE/sync_progress.json";
 
 function updateProgress($data) {
@@ -66,8 +65,7 @@ try {
     ]);
 
     echo "[" . date("H:i:s") . "] Connecting to MariaDB...\n";
-    $mdb = new PDO("mysql:host=$host;dbname=$db_name;charset=utf8mb4", $username, $password);
-    $mdb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $mdb = $conn;
 
     // Load subjects
     echo "[" . date("H:i:s") . "] Loading subjects...\n";
@@ -169,6 +167,15 @@ try {
                 continue;
             }
             $existing_hashes[$hash] = true;
+
+            // Prevent memory leaks: Keep the deduplication sliding window cache under 100,000 items
+            if (count($existing_hashes) > 100000) {
+                reset($existing_hashes);
+                $oldest_key = key($existing_hashes);
+                if ($oldest_key !== null) {
+                    unset($existing_hashes[$oldest_key]);
+                }
+            }
 
             $subject_name = $subject_map[$q_meta['subject_id']] ?? 'Physics';
             $chapter_name = $chapter_map[$q_meta['chapter_id']] ?? 'General Concepts';

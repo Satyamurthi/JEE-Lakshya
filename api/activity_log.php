@@ -37,7 +37,6 @@ $ip_address = $_SERVER['HTTP_CF_CONNECTING_IP']
 if ($ip_address && strpos($ip_address, ',') !== false) {
     $ip_address = trim(explode(',', $ip_address)[0]); // take first IP if multiple
 }
-
 $allowed_events = ['login', 'exam_start', 'exam_submit', 'daily_submit', 'practice_start', 'page_view', 'signup', 'logout'];
 
 if (empty($user_id) || empty($event_type)) {
@@ -51,20 +50,34 @@ if (!in_array($event_type, $allowed_events)) {
     $event_type = preg_replace('/[^a-z0-9_]/', '', strtolower($event_type));
 }
 
-try {
-    // Ensure table exists (idempotent)
-    $conn->exec("CREATE TABLE IF NOT EXISTS `activity_log` (
-        `id` INT AUTO_INCREMENT PRIMARY KEY,
-        `user_id` VARCHAR(36) NOT NULL,
-        `user_email` VARCHAR(255) NULL,
-        `user_name` VARCHAR(255) NULL,
-        `event_type` VARCHAR(100) NOT NULL,
-        `metadata` JSON NULL,
-        `stream` VARCHAR(100) NULL,
-        `ip_address` VARCHAR(45) NULL,
-        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
+// Extract and verify session token
+$auth_header = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
+if (empty($auth_header) && isset(getallheaders()['Authorization'])) {
+    $auth_header = getallheaders()['Authorization'];
+}
+if (empty($auth_header) && isset(getallheaders()['authorization'])) {
+    $auth_header = getallheaders()['authorization'];
+}
+$token = '';
+if (preg_match('/Bearer\s(\S+)/i', $auth_header, $matches)) {
+    $token = $matches[1];
+}
 
+$user_profile = null;
+if (!empty($token)) {
+    $stmt = $conn->prepare("SELECT * FROM profiles WHERE session_token = ?");
+    $stmt->execute([$token]);
+    $user_profile = $stmt->fetch();
+}
+
+$allowed_without_token = ['login', 'signup'];
+if (!in_array($event_type, $allowed_without_token) && !$user_profile) {
+    http_response_code(401);
+    echo json_encode(["error" => "Unauthorized access."]);
+    exit;
+}
+
+try {
     $stmt = $conn->prepare("INSERT INTO `activity_log` (`user_id`, `user_email`, `user_name`, `event_type`, `metadata`, `stream`, `ip_address`) VALUES (?, ?, ?, ?, ?, ?, ?)");
     $stmt->execute([
         $user_id,

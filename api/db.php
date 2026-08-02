@@ -1,8 +1,27 @@
 <?php
-// Enable CORS dynamically for web apps, netlify, and mobile apps
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
-header("Access-Control-Allow-Origin: " . $origin);
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Active-Stream, x-active-stream, *");
+// Enable CORS dynamically for web apps, netlify, and mobile apps (whitelisted)
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+$allowed_origins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173',
+];
+$is_allowed = false;
+if (empty($origin)) {
+    $is_allowed = true; // Non-browser clients (like postman or curl)
+} elseif (in_array($origin, $allowed_origins)) {
+    $is_allowed = true;
+} elseif (preg_match('/^https:\/\/([a-zA-Z0-9\-]+\.)*netlify\.app$/', $origin)) {
+    $is_allowed = true;
+}
+
+if ($is_allowed && !empty($origin)) {
+    header("Access-Control-Allow-Origin: " . $origin);
+} else {
+    header("Access-Control-Allow-Origin: http://localhost:3000"); // Safe fallback
+}
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Active-Stream, x-active-stream");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS");
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Max-Age: 86400");
@@ -56,9 +75,10 @@ try {
     $conn = new PDO($dsn, $username, $password, $options);
 } catch (PDOException $exception) {
     http_response_code(500);
+    // Log the detailed error securely on the server
+    error_log("[Database Connection Error] " . $exception->getMessage());
     echo json_encode([
-        "error"   => "Database connection failure.",
-        "details" => $exception->getMessage(),
+        "error"   => "Database connection failure. Please try again later.",
         "db"      => $db_name
     ]);
     exit(0);

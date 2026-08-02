@@ -56,6 +56,8 @@ foreach ($databases as $db_name) {
             `current_exam_started_at` VARCHAR(50) NULL,
             `gemini_api_key` TEXT NULL,
             `failed_attempts` INT DEFAULT 0,
+            `session_token` VARCHAR(255) NULL,
+            `session_expires_at` VARCHAR(50) NULL,
             `created_at` VARCHAR(50) NULL
         )");
 
@@ -76,7 +78,9 @@ foreach ($databases as $db_name) {
             "ALTER TABLE `profiles` ADD COLUMN IF NOT EXISTS `can_access_practice` TINYINT(1) DEFAULT 1",
             "ALTER TABLE `profiles` ADD COLUMN IF NOT EXISTS `mobile_number` VARCHAR(20) NULL",
             "ALTER TABLE `profiles` ADD COLUMN IF NOT EXISTS `college_name` VARCHAR(255) NULL",
-            "ALTER TABLE `profiles` ADD COLUMN IF NOT EXISTS `college_address` VARCHAR(255) NULL"
+            "ALTER TABLE `profiles` ADD COLUMN IF NOT EXISTS `college_address` VARCHAR(255) NULL",
+            "ALTER TABLE `profiles` ADD COLUMN IF NOT EXISTS `session_token` VARCHAR(255) NULL",
+            "ALTER TABLE `profiles` ADD COLUMN IF NOT EXISTS `session_expires_at` VARCHAR(50) NULL"
         ];
         foreach ($profile_migrations as $mig) {
             try { $conn->exec($mig); } catch (Exception $e) {}
@@ -285,13 +289,14 @@ foreach ($databases as $db_name) {
         if ((int)$checkAdmin->fetchColumn() === 0) {
             $adminId = '00000000-0000-0000-0000-000000000000';
             $insertAdmin = $conn->prepare("INSERT INTO `profiles` (`id`, `email`, `full_name`, `role`, `status`, `password`, `can_access_daily`, `can_access_full_exam`, `can_access_practice`, `super_admin_permission`) VALUES (?, ?, ?, ?, ?, ?, 1, 1, 1, 1)");
+            $hashedPassword = password_hash('satyupassword', PASSWORD_BCRYPT);
             $insertAdmin->execute([
-                $adminId,
-                'satyu000@gmail.com',
-                'Super Admin',
-                'super_admin',
-                'approved',
-                'satyupassword'
+                $uuid_for_bind = $adminId,
+                $email_for_bind = 'satyu000@gmail.com',
+                $name_for_bind = 'Super Admin',
+                $role_for_bind = 'super_admin',
+                $status_for_bind = 'approved',
+                $password_for_bind = $hashedPassword
             ]);
         }
 

@@ -23,6 +23,7 @@ import android.webkit.JavascriptInterface
 import android.widget.ProgressBar
 import android.widget.Toast
 import android.content.Context
+import android.app.ActivityManager
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONArray
@@ -143,8 +144,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
-                // Proceed smoothly through minor SSL handshake redirects
-                handler?.proceed()
+                // Securely reject SSL errors to prevent MitM attacks
+                handler?.cancel()
             }
         }
 

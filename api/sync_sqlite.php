@@ -6,6 +6,42 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 ini_set('memory_limit', '512M');
 
+// Check if executing via CLI or by an authenticated Super Admin
+if (php_sapi_name() !== 'cli') {
+    $auth_header = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
+    if (empty($auth_header) && isset(getallheaders()['Authorization'])) {
+        $auth_header = getallheaders()['Authorization'];
+    }
+    if (empty($auth_header) && isset(getallheaders()['authorization'])) {
+        $auth_header = getallheaders()['authorization'];
+    }
+
+    $token = '';
+    if (preg_match('/Bearer\s(\S+)/i', $auth_header, $matches)) {
+        $token = $matches[1];
+    }
+
+    $user_profile = null;
+    if (!empty($token)) {
+        $stmt = $conn->prepare("SELECT * FROM profiles WHERE session_token = ?");
+        $stmt->execute([$token]);
+        $user_profile = $stmt->fetch();
+        
+        if ($user_profile && isset($user_profile['session_expires_at'])) {
+            $expiry = strtotime($user_profile['session_expires_at']);
+            if ($expiry !== false && $expiry < time()) {
+                $user_profile = null;
+            }
+        }
+    }
+
+    if (!$user_profile || $user_profile['role'] !== 'super_admin') {
+        http_response_code(403);
+        echo json_encode(["error" => "Forbidden: This action requires Super Admin authorization."]);
+        exit;
+    }
+}
+
 // Read request payload or query parameter
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 $action = isset($input['action']) ? trim($input['action']) : (isset($_GET['action']) ? trim($_GET['action']) : 'count');
@@ -83,10 +119,11 @@ try {
             }
         }
 
-        // Trigger CLI script in background
-        $cli_path = "d:\\JEE\\scripts\\sync_jee_mariadb.php";
-        $php_path = "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\php.exe";
-        $cmd = 'cmd /c start /B "" "' . $php_path . '" "' . $cli_path . '" ' . escapeshellarg($active_stream) . ' > "d:\\JEE\\sync_debug.log" 2>&1';
+        // Trigger CLI script in background (portable PHP path & relative script path)
+        $php_path = getenv('PHP_PATH') ?: 'php';
+        $cli_path = realpath(__DIR__ . '/../scripts/sync_jee_mariadb.php');
+        $log_path = realpath(__DIR__ . '/..') . '/sync_debug.log';
+        $cmd = 'cmd /c start /B "" "' . $php_path . '" "' . $cli_path . '" ' . escapeshellarg($active_stream) . ' > "' . $log_path . '" 2>&1';
         pclose(popen($cmd, "r"));
 
         $est_count = (strpos($active_stream, 'jee') !== false) ? 18014173 : (int)$sdb->query("SELECT COUNT(*) FROM questions")->fetchColumn();

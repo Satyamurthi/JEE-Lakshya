@@ -1,41 +1,7 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Subject, ExamType, Question, QuestionType } from "./types";
 import { generateDynamicQuestions } from "./utils/fallbackGenerator";
-import { callNvidiaAPI, isNvidiaKey } from "./geminiService";
-
-const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-const getAIClient = (overrideKey?: string) => {
-    const apiKey = overrideKey || localStorage.getItem('user_gemini_api_key') || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-        throw new Error("AI Generation Failed: Gemini API Key is not configured.");
-    }
-    return new GoogleGenAI({ apiKey });
-};
-
-const callAIWithFallback = async (ai: GoogleGenAI, contents: any, config: any) => {
-  let lastError: any = null;
-  for (const model of MODELS) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents,
-          config
-        });
-        if (response && response.text) {
-          return response;
-        }
-      } catch (err: any) {
-        lastError = err;
-        console.warn(`[AI-UPSC] Model ${model} attempt ${attempt} failed: ${err.message || err}`);
-        await delay(attempt * 500);
-      }
-    }
-  }
-  throw lastError || new Error("All Gemini AI models and retries exhausted.");
-};
+import { callAIProxy, isNvidiaKey } from "./geminiService";
 
 const questionSchema: Schema = {
   type: Type.ARRAY,
@@ -82,20 +48,7 @@ const generateUPSCQuestionsBatch = async (subject: Subject, count: number, mcqTa
       
       const resolvedKey = apiKey || localStorage.getItem('user_gemini_api_key') || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
 
-      let text = '';
-      if (isNvidiaKey(resolvedKey)) {
-        text = await callNvidiaAPI(resolvedKey, prompt, systemInstruction);
-      } else {
-        const ai = getAIClient(resolvedKey);
-        const response = await callAIWithFallback(ai, prompt, { 
-          responseMimeType: "application/json", 
-          responseSchema: questionSchema,
-          systemInstruction: systemInstruction,
-          temperature: 0.85,
-          topP: 0.95,
-        });
-        text = response.text || '';
-      }
+      let text = await callAIProxy(prompt, systemInstruction, isNvidiaKey(resolvedKey) ? undefined : questionSchema, resolvedKey);
       text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
 
       if (text) {

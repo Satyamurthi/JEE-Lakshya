@@ -35,33 +35,9 @@ function loadEnv(): void {
 loadEnv();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MariaDB connection (uses the X-Active-Stream header or defaults to jee_nexus)
+// MariaDB connection via db.php
 // ─────────────────────────────────────────────────────────────────────────────
-$active_stream = 'jee';
-if (isset($_GET['stream'])) {
-    $active_stream = strtolower($_GET['stream']);
-} elseif (isset($_SERVER['HTTP_X_ACTIVE_STREAM'])) {
-    $active_stream = strtolower($_SERVER['HTTP_X_ACTIVE_STREAM']);
-}
-
-$db_name = 'jee_nexus';
-if (strpos($active_stream, 'neet')  !== false) $db_name = 'neet_nexus';
-elseif (strpos($active_stream, 'kcet')  !== false) $db_name = 'kcet_nexus';
-elseif (strpos($active_stream, 'upsc')  !== false) $db_name = 'upsc_nexus';
-
-$host     = getenv('DB_HOST')     ?: '127.0.0.1';
-$db_user  = getenv('DB_USER')     ?: 'root';
-$db_pass  = getenv('DB_PASSWORD') ?: '';
-
-try {
-    $conn = new PDO("mysql:host=$host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass);
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    http_response_code(200);
-    echo json_encode(["data" => null, "error" => ["message" => "Database connection failure: " . $e->getMessage()]]);
-    exit(0);
-}
+require_once __DIR__ . '/db.php';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Razorpay credentials
@@ -112,8 +88,33 @@ if (!hash_equals($expected_signature, $signature)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Signature verified → write payment record to payment_logs table
+// Signature verified → Retrieve actual order details from Razorpay API
 // ─────────────────────────────────────────────────────────────────────────────
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, 'https://api.razorpay.com/v1/orders/' . $order_id);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_USERPWD, $key_id . ':' . $key_secret);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+$res = curl_exec($ch);
+$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+if ($http_code !== 200) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'error' => 'Could not retrieve verified order details from Razorpay API.']);
+    exit;
+}
+
+$order_details = json_decode($res, true);
+$notes = $order_details['notes'] ?? [];
+
+// Override client-supplied parameters with server-side verified notes
+$meta_user_id = isset($notes['user_id']) ? trim($notes['user_id']) : $meta_user_id;
+$meta_user_email = isset($notes['user_email']) ? trim($notes['user_email']) : $meta_user_email;
+$meta_plan_id = isset($notes['plan_id']) ? trim($notes['plan_id']) : $meta_plan_id;
+$meta_amount = isset($order_details['amount']) ? (int)$order_details['amount'] : $meta_amount;
+$meta_stream = isset($notes['stream']) ? trim($notes['stream']) : $meta_stream;
+
 $log_id       = sprintf(
     '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
     mt_rand(0,0xffff), mt_rand(0,0xffff),
@@ -126,24 +127,6 @@ $amount_rupees = round($meta_amount / 100, 2);
 $verified_at   = date('Y-m-d H:i:s');
 
 try {
-    // Ensure payment_logs table exists (creates silently if missing)
-    $conn->exec("CREATE TABLE IF NOT EXISTS `payment_logs` (
-        `id` VARCHAR(36) PRIMARY KEY,
-        `payment_id` VARCHAR(100) NOT NULL,
-        `order_id` VARCHAR(100) NOT NULL,
-        `user_id` VARCHAR(36) NULL,
-        `user_email` VARCHAR(255) NULL,
-        `user_name` VARCHAR(255) NULL,
-        `amount_paise` INT DEFAULT 0,
-        `amount_rupees` DECIMAL(10,2) DEFAULT 0.00,
-        `plan_id` VARCHAR(100) NULL,
-        `plan_name` VARCHAR(255) NULL,
-        `stream` VARCHAR(100) NULL,
-        `status` VARCHAR(50) DEFAULT 'verified',
-        `verified_at` VARCHAR(50) NULL,
-        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
-
     $stmt = $conn->prepare("INSERT INTO `payment_logs`
         (`id`, `payment_id`, `order_id`, `user_id`, `user_email`, `user_name`, `amount_paise`, `amount_rupees`, `plan_id`, `plan_name`, `stream`, `status`, `verified_at`)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?)");
@@ -164,18 +147,16 @@ try {
 
     // If user_id provided + plan has an expiry, update subscription on profile
     if ($meta_user_id && $meta_plan_id) {
-        // Calculate expiry: default 30 days
         $expiry = date('Y-m-d H:i:s', strtotime('+30 days'));
         try {
             $upd = $conn->prepare("UPDATE `profiles` SET `subscription_tier` = ?, `subscription_expires_at` = ? WHERE `id` = ?");
             $upd->execute([$meta_plan_id, $expiry, $meta_user_id]);
         } catch (Exception $upd_e) {
-            // Non-fatal — log silently
+            // Non-fatal
         }
     }
 
 } catch (Exception $log_e) {
-    // Payment is still verified even if DB logging fails — don't reject the user
     error_log("[verify-payment] DB log failed: " . $log_e->getMessage());
 }
 

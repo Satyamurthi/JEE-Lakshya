@@ -198,6 +198,15 @@ class LocalSupabaseBuilder {
     const doFetch = async () => {
       const activeStream = localStorage.getItem('active_stream') || 'JEE Main & Advanced';
       const apiUrl = await getApiUrl();
+      let token = '';
+      try {
+        const lp = localStorage.getItem('user_profile');
+        if (lp) {
+          const user = JSON.parse(lp);
+          token = user.session_token || '';
+        }
+      } catch (e) {}
+
       const body = JSON.stringify({
         table: this.table,
         action: this.action,
@@ -214,7 +223,11 @@ class LocalSupabaseBuilder {
       });
       const response = await fetch(`${apiUrl}/local_db.php`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Active-Stream': activeStream },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Active-Stream': activeStream,
+          'Authorization': `Bearer ${token}`
+        },
         body
       });
       return response;
@@ -357,7 +370,11 @@ export const logActivity = async (
     // Fire and forget — don't await the response
     fetch(`${apiUrl}/activity_log.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Active-Stream': activeStream },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Active-Stream': activeStream,
+        'Authorization': `Bearer ${profile.session_token || ''}`
+      },
       body: JSON.stringify({
         user_id:    profile.id,
         user_email: profile.email,
@@ -466,7 +483,8 @@ export const fetchQuestionsFromDB = async (
   topics?: string[], 
   mcqCount: number = 10, 
   numericalCount: number = 0,
-  difficulty?: string
+  difficulty?: string,
+  pyqFilter: 'all' | 'pyq_only' | 'practice_only' = 'all'
 ) => {
   try {
     const { getSeenQuestionHashes, getQuestionHash, recordSeenQuestions } = await import('./utils/questionTracker');
@@ -477,6 +495,13 @@ export const fetchQuestionsFromDB = async (
         if (subject) query = query.eq('subject', subject);
         if (chapter) query = query.eq('chapter', chapter);
         if (topics && topics.length > 0) query = query.in('concept', topics);
+        
+        if (pyqFilter === 'pyq_only') {
+          query = query.is('year', 'not null');
+        } else if (pyqFilter === 'practice_only') {
+          query = query.is('year', null);
+        }
+        
         query = query.limit(500);
         
         let { data: idData, error: idError } = await query;

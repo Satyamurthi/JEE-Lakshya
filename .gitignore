@@ -56,4 +56,7 @@ query
 start
 stop
 
+# Credentials
+.github_pat
+
 
