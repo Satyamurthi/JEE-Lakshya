@@ -63,12 +63,7 @@ if (preg_match('/Bearer\s(\S+)/i', $auth_header, $matches)) {
     $token = $matches[1];
 }
 
-$user_profile = null;
-if (!empty($token)) {
-    $stmt = $conn->prepare("SELECT * FROM profiles WHERE session_token = ?");
-    $stmt->execute([$token]);
-    $user_profile = $stmt->fetch();
-}
+$user_profile = resolve_user_from_token($token, $db_name);
 
 $allowed_without_token = ['login', 'signup'];
 if (!in_array($event_type, $allowed_without_token) && !$user_profile) {

@@ -82,4 +82,71 @@ try {
     ]);
     exit(0);
 }
+
+if (!function_exists('get_db_connection')) {
+    function get_db_connection(string $dbname): PDO {
+        global $host, $port, $username, $password;
+        $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
+        $options = [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_TIMEOUT            => 5,
+        ];
+        if (defined('PDO::MYSQL_ATTR_INIT_COMMAND')) {
+            $options[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES utf8mb4";
+        }
+        return new PDO($dsn, $username, $password, $options);
+    }
+}
+
+if (!function_exists('resolve_user_from_token')) {
+    function resolve_user_from_token(?string $token, string $active_stream_db_name): ?array {
+        if (empty($token)) {
+            return null;
+        }
+
+        global $conn; // Active stream DB connection
+        
+        try {
+            // 1. Query the active stream DB first for the session token
+            $stmt = $conn->prepare("SELECT * FROM profiles WHERE session_token = ?");
+            $stmt->execute([$token]);
+            $user_profile = $stmt->fetch();
+
+            if ($user_profile) {
+                // Check if session has expired
+                if (isset($user_profile['session_expires_at'])) {
+                    $expiry = strtotime($user_profile['session_expires_at']);
+                    if ($expiry !== false && $expiry < time()) {
+                        return null; // Session expired
+                    }
+                }
+                return $user_profile;
+            }
+
+            // 2. If not found and active stream is not already jee_nexus, fall back to checking jee_nexus
+            if ($active_stream_db_name !== 'jee_nexus') {
+                $fb_conn = get_db_connection('jee_nexus');
+                $stmt = $fb_conn->prepare("SELECT * FROM profiles WHERE session_token = ?");
+                $stmt->execute([$token]);
+                $user_profile = $stmt->fetch();
+
+                if ($user_profile && $user_profile['role'] === 'super_admin') {
+                    // Check if session has expired
+                    if (isset($user_profile['session_expires_at'])) {
+                        $expiry = strtotime($user_profile['session_expires_at']);
+                        if ($expiry !== false && $expiry < time()) {
+                            return null; // Session expired
+                        }
+                    }
+                    return $user_profile;
+                }
+            }
+        } catch (Exception $e) {
+            // Return null on database errors
+        }
+
+        return null;
+    }
+}
 ?>

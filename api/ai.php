@@ -44,20 +44,7 @@ if (preg_match('/Bearer\s(\S+)/i', $auth_header, $matches)) {
 }
 
 // 2. Lookup user profile
-$user_profile = null;
-if (!empty($token)) {
-    $stmt = $conn->prepare("SELECT * FROM profiles WHERE session_token = ?");
-    $stmt->execute([$token]);
-    $user_profile = $stmt->fetch();
-    
-    // Check if session has expired
-    if ($user_profile && isset($user_profile['session_expires_at'])) {
-        $expiry = strtotime($user_profile['session_expires_at']);
-        if ($expiry !== false && $expiry < time()) {
-            $user_profile = null; // Session expired
-        }
-    }
-}
+$user_profile = resolve_user_from_token($token, $db_name);
 
 if (!$user_profile) {
     http_response_code(401);

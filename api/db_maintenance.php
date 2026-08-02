@@ -21,19 +21,7 @@ if (php_sapi_name() !== 'cli') {
         $token = $matches[1];
     }
 
-    $user_profile = null;
-    if (!empty($token)) {
-        $stmt = $conn->prepare("SELECT * FROM profiles WHERE session_token = ?");
-        $stmt->execute([$token]);
-        $user_profile = $stmt->fetch();
-        
-        if ($user_profile && isset($user_profile['session_expires_at'])) {
-            $expiry = strtotime($user_profile['session_expires_at']);
-            if ($expiry !== false && $expiry < time()) {
-                $user_profile = null;
-            }
-        }
-    }
+    $user_profile = resolve_user_from_token($token, $db_name);
 
     if (!$user_profile || $user_profile['role'] !== 'super_admin') {
         http_response_code(403);
