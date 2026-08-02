@@ -9,6 +9,7 @@ const HISTORY_KEY = 'seen_question_hashes_history_v2';
 // Generate a unique hash from question id or full statement + options + answer
 export const getQuestionHash = (q: any): string => {
   if (!q) return '';
+  if (q.pattern_id) return String(q.pattern_id);
   if (q.id) return String(q.id);
   const stmt = (q.statement || q.question || '').replace(/\s+/g, '').toLowerCase();
   const opts = q.options ? JSON.stringify(q.options).replace(/\s+/g, '') : '';

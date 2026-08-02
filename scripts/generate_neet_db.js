@@ -1,6 +1,15 @@
 import { copyFileSync, existsSync, unlinkSync, mkdirSync, renameSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import crypto from 'node:crypto';
+
+function getQuestionPatternId(statement) {
+  const normalized = statement
+    .toLowerCase()
+    .replace(/-?\b\d+(?:\.\d+)?\b/g, '#')
+    .replace(/[^a-z]/g, '');
+  return crypto.createHash('md5').update(normalized).digest('hex');
+}
 
 const srcDb = resolve('neet/DB/questions.db');
 const destDb = resolve('Qp/NEET_temp.db');
@@ -69,8 +78,8 @@ function runWithRetry(stmt, args, retries = 5) {
 
 // Prepared statements for insertion
 const insertQuestion = db.prepare(`
-  INSERT INTO questions (id, exam_id, subject_id, chapter_id, question_text, type, difficulty, marks_correct, marks_incorrect)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO questions (id, exam_id, subject_id, chapter_id, question_text, type, difficulty, marks_correct, marks_incorrect, pattern_id)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 const insertOptions4 = db.prepare(`
   INSERT INTO options (question_id, option_text, is_correct)
@@ -546,8 +555,9 @@ for (const sub of subjectsList) {
     const { qText, ansStr, solText, isFloat } = sub.generator(i);
     const { options, correctLetter } = getOptions(ansStr, i, isFloat);
     
+    const patternId = getQuestionPatternId(qText);
     // Insert Question
-    runWithRetry(insertQuestion, [qId, practiceExamId, sub.id, chId, qText, 'single_choice', 'Hard', 4, -1]);
+    runWithRetry(insertQuestion, [qId, practiceExamId, sub.id, chId, qText, 'single_choice', 'Hard', 4, -1, patternId]);
     
     // Insert Options (4 rows in 1 insert)
     runWithRetry(insertOptions4, [

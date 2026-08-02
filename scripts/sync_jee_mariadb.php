@@ -30,6 +30,17 @@ function updateProgress($data) {
     file_put_contents($progress_file, json_encode($data));
 }
 
+function getQuestionPatternId($statement, $paper_id, $id) {
+    $is_generated = empty($paper_id) || strpos($paper_id, 'sqlite_import_') !== false || strpos($paper_id, 'practice_') !== false;
+    if (!$is_generated) {
+        return $id;
+    }
+    $normalized = strtolower($statement);
+    $normalized = preg_replace('/-?\b\d+(?:\.\d+)?\b/', '#', $normalized);
+    $normalized = preg_replace('/[^a-z]/', '', $normalized);
+    return md5($normalized);
+}
+
 echo "=== Multi-Stream Question Synchronizer ===\n";
 echo "Active Stream: $active_stream\n";
 echo "SQLite DB: $sqlite_path\n";
@@ -91,11 +102,11 @@ try {
     $insert_sql = "INSERT INTO questions (
         id, subject, chapter, type, difficulty, statement, options, 
         correctAnswer, correct_answer, solution, explanation, 
-        concept, markingScheme, paper_id, year
+        concept, markingScheme, paper_id, year, pattern_id
     ) VALUES (
         :id, :subject, :chapter, :type, :difficulty, :statement, :options, 
         :correctAnswer, :correct_answer, :solution, :explanation, 
-        :concept, :markingScheme, :paper_id, :year
+        :concept, :markingScheme, :paper_id, :year, :pattern_id
     )";
     $insert_stmt = $mdb->prepare($insert_sql);
 
@@ -217,6 +228,7 @@ try {
 
             $paper_id = 'sqlite_import_' . ($q_meta['exam_id'] ?? 1);
             $year = 2026;
+            $pattern_id = getQuestionPatternId($statement, $paper_id, $uuid);
 
             $insert_stmt->execute([
                 ':id' => $uuid,
@@ -233,7 +245,8 @@ try {
                 ':concept' => $chapter_name,
                 ':markingScheme' => $marking_scheme,
                 ':paper_id' => $paper_id,
-                ':year' => $year
+                ':year' => $year,
+                ':pattern_id' => $pattern_id
             ]);
 
             $inserted_count++;

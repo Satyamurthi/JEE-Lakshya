@@ -71,6 +71,13 @@ function getQuestionHash($statement, $options) {
     return md5($stmt . '_' . $opts);
 }
 
+function getQuestionPatternId($statement) {
+    $normalized = strtolower($statement);
+    $normalized = preg_replace('/-?\b\d+(?:\.\d+)?\b/', '#', $normalized);
+    $normalized = preg_replace('/[^a-z]/', '', $normalized);
+    return md5($normalized);
+}
+
 // =============================================================================
 // CLI Arguments Parsing Helper
 // =============================================================================
@@ -456,6 +463,8 @@ try {
         registerParameters($chapter, $t_id, $q_data['params'], $registry);
         $registry['hashes'][] = $hash;
 
+        $pattern_id = getQuestionPatternId($q_data['statement']);
+
         $q_record = [
             "id" => uuidv4(),
             "subject" => $subject,
@@ -469,11 +478,12 @@ try {
             "correctAnswer" => $correctAnswer,
             "correct_answer" => $correctAnswer,
             "solution" => $q_data['solution'],
-            "explanation" => $q_data['solution']
+            "explanation" => $q_data['solution'],
+            "pattern_id" => $pattern_id
         ];
 
         // Commit to MySQL
-        $stmt = $mysql_conn->prepare("INSERT INTO `questions` (`id`, `subject`, `chapter`, `topic`, `concept`, `type`, `difficulty`, `statement`, `options`, `correctAnswer`, `correct_answer`, `solution`, `explanation`) VALUES (:id, :sub, :ch, :tp, :cp, :ty, :df, :st, :op, :ca, :ca_snake, :sol, :exp) ON DUPLICATE KEY UPDATE id=id");
+        $stmt = $mysql_conn->prepare("INSERT INTO `questions` (`id`, `subject`, `chapter`, `topic`, `concept`, `type`, `difficulty`, `statement`, `options`, `correctAnswer`, `correct_answer`, `solution`, `explanation`, `pattern_id`) VALUES (:id, :sub, :ch, :tp, :cp, :ty, :df, :st, :op, :ca, :ca_snake, :sol, :exp, :pid) ON DUPLICATE KEY UPDATE id=id");
         $stmt->execute([
             ":id" => $q_record['id'],
             ":sub" => $q_record['subject'],
@@ -487,12 +497,13 @@ try {
             ":ca" => $q_record['correctAnswer'],
             ":ca_snake" => $q_record['correct_answer'],
             ":sol" => $q_record['solution'],
-            ":exp" => $q_record['explanation']
+            ":exp" => $q_record['explanation'],
+            ":pid" => $q_record['pattern_id']
         ]);
 
         // Commit to SQLite
         if ($sqlite_conn) {
-            $sqlite_stmt = $sqlite_conn->prepare("INSERT OR IGNORE INTO `questions` (`id`, `subject`, `chapter`, `topic`, `concept`, `type`, `difficulty`, `statement`, `options`, `correctAnswer`, `correct_answer`, `solution`, `explanation`) VALUES (:id, :sub, :ch, :tp, :cp, :ty, :df, :st, :op, :ca, :ca_snake, :sol, :exp)");
+            $sqlite_stmt = $sqlite_conn->prepare("INSERT OR IGNORE INTO `questions` (`id`, `subject`, `chapter`, `topic`, `concept`, `type`, `difficulty`, `statement`, `options`, `correctAnswer`, `correct_answer`, `solution`, `explanation`, `pattern_id`) VALUES (:id, :sub, :ch, :tp, :cp, :ty, :df, :st, :op, :ca, :ca_snake, :sol, :exp, :pid)");
             $sqlite_stmt->execute([
                 ":id" => $q_record['id'],
                 ":sub" => $q_record['subject'],
@@ -506,7 +517,8 @@ try {
                 ":ca" => $q_record['correctAnswer'],
                 ":ca_snake" => $q_record['correct_answer'],
                 ":sol" => $q_record['solution'],
-                ":exp" => $q_record['explanation']
+                ":exp" => $q_record['explanation'],
+                ":pid" => $q_record['pattern_id']
             ]);
         }
 

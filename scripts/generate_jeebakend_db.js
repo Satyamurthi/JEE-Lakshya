@@ -1,6 +1,15 @@
 import { copyFileSync, existsSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import crypto from 'node:crypto';
+
+function getQuestionPatternId(statement) {
+  const normalized = statement
+    .toLowerCase()
+    .replace(/-?\b\d+(?:\.\d+)?\b/g, '#')
+    .replace(/[^a-z]/g, '');
+  return crypto.createHash('md5').update(normalized).digest('hex');
+}
 
 const srcDb = resolve('jee/DB/questions.db');
 const destDb = resolve('jee/DB/jeebakend.DB');
@@ -45,8 +54,8 @@ db.exec('PRAGMA foreign_keys = OFF;');
 
 // Prepared statements for insertion
 const insertQuestion = db.prepare(`
-  INSERT INTO questions (id, exam_id, subject_id, chapter_id, question_text, type, difficulty, marks_correct, marks_incorrect)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO questions (id, exam_id, subject_id, chapter_id, question_text, type, difficulty, marks_correct, marks_incorrect, pattern_id)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 const insertOptions4 = db.prepare(`
   INSERT INTO options (question_id, option_text, is_correct)
@@ -504,8 +513,9 @@ for (const sub of subjectsList) {
     const { qText, ansStr, solText, isFloat } = sub.generator(i, 'MCQ');
     const { options, correctLetter } = getOptions(ansStr, i, isFloat);
     
+    const patternId = getQuestionPatternId(qText);
     // Insert Question
-    insertQuestion.run(qId, practiceExamId, sub.id, chId, qText, 'single_choice', 'Hard', 4, -1);
+    insertQuestion.run(qId, practiceExamId, sub.id, chId, qText, 'single_choice', 'Hard', 4, -1, patternId);
     
     // Insert Options (4 rows in 1 insert)
     insertOptions4.run(
@@ -535,8 +545,9 @@ for (const sub of subjectsList) {
     const chId = subChList[i % subChList.length];
     const { qText, ansStr, solText } = sub.generator(i, 'Numerical');
     
+    const patternId = getQuestionPatternId(qText);
     // Insert Question
-    insertQuestion.run(qId, practiceExamId, sub.id, chId, qText, 'numerical', 'Hard', 4, 0);
+    insertQuestion.run(qId, practiceExamId, sub.id, chId, qText, 'numerical', 'Hard', 4, 0, patternId);
     
     // Insert Solution
     insertSolution.run(qId, solText);

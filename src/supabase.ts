@@ -491,7 +491,7 @@ export const fetchQuestionsFromDB = async (
     
     const fetchByType = async (type: string, count: number) => {
         if (count <= 0) return [];
-        let query = supabase.from('questions').select('id, statement, difficulty').eq('type', type);
+        let query = supabase.from('questions').select('id, statement, difficulty, pattern_id').eq('type', type);
         if (subject) query = query.eq('subject', subject);
         if (chapter) query = query.eq('chapter', chapter);
         if (topics && topics.length > 0) query = query.in('concept', topics);
@@ -535,8 +535,30 @@ export const fetchQuestionsFromDB = async (
         const shuffledFresh = freshList.sort(() => Math.random() - 0.5);
         const shuffledSeen = seenList.sort(() => Math.random() - 0.5);
         
-        // Prefer fresh questions, then recycle already seen questions
-        const selectedList = [...shuffledFresh, ...shuffledSeen].slice(0, count);
+        // Prefer fresh questions, then recycle already seen questions,
+        // and ensure no two selected questions share the same pattern_id (or id as fallback)
+        const selectedList: any[] = [];
+        const selectedPatterns = new Set<string>();
+
+        for (const q of shuffledFresh) {
+          const pid = q.pattern_id || q.id;
+          if (!selectedPatterns.has(pid)) {
+            selectedPatterns.add(pid);
+            selectedList.push(q);
+          }
+          if (selectedList.length === count) break;
+        }
+
+        if (selectedList.length < count) {
+          for (const q of shuffledSeen) {
+            const pid = q.pattern_id || q.id;
+            if (!selectedPatterns.has(pid)) {
+              selectedPatterns.add(pid);
+              selectedList.push(q);
+            }
+            if (selectedList.length === count) break;
+          }
+        }
         
         if (selectedList.length === 0) return [];
         

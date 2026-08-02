@@ -219,6 +219,7 @@ foreach ($databases as $db_name) {
             `explanation` TEXT NULL,
             `markingScheme` JSON NULL,
             `year` INT NULL,
+            `pattern_id` VARCHAR(64) NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 
@@ -229,7 +230,9 @@ foreach ($databases as $db_name) {
             "ALTER TABLE `questions` ADD COLUMN IF NOT EXISTS `correct_answer` VARCHAR(255) NULL",
             "ALTER TABLE `questions` ADD COLUMN IF NOT EXISTS `markingScheme` JSON NULL",
             "ALTER TABLE `questions` ADD COLUMN IF NOT EXISTS `year` INT NULL",
-            "ALTER TABLE `questions` ADD COLUMN IF NOT EXISTS `solution` TEXT NULL"
+            "ALTER TABLE `questions` ADD COLUMN IF NOT EXISTS `solution` TEXT NULL",
+            "ALTER TABLE `questions` ADD COLUMN IF NOT EXISTS `pattern_id` VARCHAR(64) NULL",
+            "CREATE INDEX IF NOT EXISTS `idx_questions_pattern_id` ON `questions` (`pattern_id`)"
         ];
         foreach ($q_migrations as $mig) {
             try { $conn->exec($mig); } catch (Exception $e) {}
