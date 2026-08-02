@@ -6,13 +6,12 @@ $allowed_origins = [
     'http://localhost:5173',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
+    'https://jeelakshya.netlify.app',
 ];
 $is_allowed = false;
 if (empty($origin)) {
     $is_allowed = true; // Non-browser clients (like postman or curl)
 } elseif (in_array($origin, $allowed_origins)) {
-    $is_allowed = true;
-} elseif (preg_match('/^https:\/\/([a-zA-Z0-9\-]+\.)*netlify\.app$/', $origin)) {
     $is_allowed = true;
 }
 
