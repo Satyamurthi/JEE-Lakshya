@@ -59,4 +59,11 @@ stop
 # Credentials
 .github_pat
 
+# OS junk / Temp files
+Thumbs.db
+*.tmp
+*.bak
+*.orig
+*~
+
 
