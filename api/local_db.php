@@ -363,7 +363,26 @@ try {
     // SELECT
     // ═══════════════════════════════════════════════════════════════════════
     if ($action === 'select') {
-        $columns   = isset($input['columns']) ? trim($input['columns']) : '*';
+        $columns_raw = isset($input['columns']) ? trim($input['columns']) : '*';
+        
+        // Strict whitelist validation to prevent SQL injection in SELECT columns
+        if ($columns_raw === '*' || $columns_raw === 'count(*)' || strtolower($columns_raw) === 'count(1)') {
+            $columns = $columns_raw;
+        } else {
+            $parts = explode(',', $columns_raw);
+            $cleaned_parts = [];
+            foreach ($parts as $part) {
+                $p = trim($part);
+                if (preg_match('/^([a-zA-Z0-9_`\.-]+(?:\.\*)?)(?:\s+AS\s+([a-zA-Z0-9_`]+))?$/i', $p)) {
+                    $cleaned_parts[] = $p;
+                } else {
+                    http_response_code(400);
+                    echo json_encode(["error" => "Invalid columns parameter specified."]);
+                    exit;
+                }
+            }
+            $columns = implode(', ', $cleaned_parts);
+        }
         $params    = [];
         $filters   = isset($input['filters']) ? $input['filters'] : [];
 
