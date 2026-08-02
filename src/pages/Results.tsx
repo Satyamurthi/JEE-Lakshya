@@ -419,7 +419,14 @@ const Results = () => {
                                   <p className={`text-sm font-black ${ isCorrect ? 'text-emerald-800' : hasAnswer ? 'text-rose-800' : 'text-slate-500'}`}>
                                     {hasAnswer
                                       ? selectedOpt
-                                        ? `(${selectedOpt.label}) ${selectedOpt.val.slice(0, 60)}${selectedOpt.val.length > 60 ? '…' : ''}`
+                                        ? (
+                                          <span className="flex items-center gap-1.5 flex-wrap">
+                                            <span>({selectedOpt.label})</span>
+                                            <MathRenderer inlineOnly className="inline font-bold text-sm text-rose-800">
+                                              {selectedOpt.val}
+                                            </MathRenderer>
+                                          </span>
+                                        )
                                         : String(q.userAnswer)
                                       : 'Not Answered'}
                                   </p>
@@ -428,7 +435,14 @@ const Results = () => {
                                   <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Correct Answer</p>
                                   <p className="text-sm font-black text-emerald-800">
                                     {corrOpt
-                                      ? `(${corrOpt.label}) ${corrOpt.val.slice(0, 60)}${corrOpt.val.length > 60 ? '…' : ''}`
+                                      ? (
+                                        <span className="flex items-center gap-1.5 flex-wrap">
+                                          <span>({corrOpt.label})</span>
+                                          <MathRenderer inlineOnly className="inline font-bold text-sm text-emerald-800">
+                                            {corrOpt.val}
+                                          </MathRenderer>
+                                        </span>
+                                      )
                                       : String(q.correctAnswer || q.correct_answer || q.answer || '—')}
                                   </p>
                                 </div>
