@@ -112,6 +112,16 @@ const ExamSetup = () => {
       const { saveQuestionsToDB, fetchQuestionsFromDB } = await import('../supabase');
       const savedKey = localStorage.getItem('user_gemini_api_key') || (import.meta as any).env?.VITE_GEMINI_API_KEY;
 
+      // ── Sync per-student question history from server before selecting questions.
+      //    This ensures a student won't get repeated questions even after clearing
+      //    their browser cache or switching devices. Runs silently in background.
+      try {
+        const { syncStudentQuestionHistory } = await import('../utils/questionTracker');
+        await syncStudentQuestionHistory(supabase, activeStream);
+      } catch (syncErr) {
+        console.warn('[ExamSetup] History sync skipped (non-fatal):', syncErr);
+      }
+
       const generationPromises = selectedSubjects.map(async (sub: Subject) => {
         setProgress((prev: Record<string, string>) => ({ ...prev, [sub]: 'loading' }));
         
