@@ -34,8 +34,8 @@ export const recordSeenQuestions = (questions: any[]) => {
       const h = getQuestionHash(q);
       if (h) currentSet.add(h);
     });
-    // Keep history bounded to last 5000 unique questions
-    const arr = Array.from(currentSet).slice(-5000);
+    // Keep history bounded to last 20,000 unique questions
+    const arr = Array.from(currentSet).slice(-20000);
     localStorage.setItem(HISTORY_KEY, JSON.stringify(arr));
   } catch (e) {
     console.warn("Failed to record seen questions history:", e);
@@ -82,7 +82,7 @@ export const filterUniqueQuestions = (questions: any[], targetCount?: number): a
 
   // Persist updated global history after recycling
   try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(Array.from(globalHistory).slice(-5000)));
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(Array.from(globalHistory).slice(-20000)));
   } catch (e) {}
 
   return reusedQuestions;

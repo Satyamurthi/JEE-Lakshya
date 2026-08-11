@@ -488,28 +488,77 @@ export const fetchQuestionsFromDB = async (
 ) => {
   try {
     const { getSeenQuestionHashes, getQuestionHash, recordSeenQuestions } = await import('./utils/questionTracker');
-    
+
+    // ── Fisher-Yates shuffle: statistically unbiased, unlike .sort(() => Math.random()-0.5) ──
+    const fisherYatesShuffle = <T>(arr: T[]): T[] => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+
+    const POOL_SIZE = 1000; // Number of candidate rows to pull from DB per fetch
+
     const fetchByType = async (type: string, count: number) => {
         if (count <= 0) return [];
-        let query = supabase.from('questions').select('id, statement, difficulty, pattern_id').eq('type', type);
+
+        // ── Step 1: get total count for this filter combo so we can pick a random offset ──
+        let countQ = supabase
+          .from('questions')
+          .select('id', { count: 'exact', head: true })
+          .eq('type', type);
+        if (subject) countQ = countQ.eq('subject', subject);
+        if (chapter) countQ = countQ.eq('chapter', chapter);
+        if (topics && topics.length > 0) countQ = countQ.in('concept', topics);
+        if (pyqFilter === 'pyq_only')    countQ = countQ.is('year', 'not null');
+        else if (pyqFilter === 'practice_only') countQ = countQ.is('year', null);
+
+        const { count: totalCount } = await countQ;
+        const total = totalCount ?? 0;
+
+        // ── Step 2: pick a random starting offset so every exam draws from a different
+        //           slice of the 1M+ question pool. Without this, limit(N) always returns
+        //           the same first N rows in insertion order. ──
+        const maxOffset = Math.max(0, total - POOL_SIZE);
+        const randomOffset = Math.floor(Math.random() * (maxOffset + 1));
+
+        let query = supabase
+          .from('questions')
+          .select('id, statement, difficulty, pattern_id')
+          .eq('type', type);
         if (subject) query = query.eq('subject', subject);
         if (chapter) query = query.eq('chapter', chapter);
         if (topics && topics.length > 0) query = query.in('concept', topics);
-        
-        if (pyqFilter === 'pyq_only') {
-          query = query.is('year', 'not null');
-        } else if (pyqFilter === 'practice_only') {
-          query = query.is('year', null);
-        }
-        
-        query = query.limit(500);
-        
+        if (pyqFilter === 'pyq_only')    query = query.is('year', 'not null');
+        else if (pyqFilter === 'practice_only') query = query.is('year', null);
+
+        // Fetch POOL_SIZE rows from the random offset position
+        query = query.range(randomOffset, randomOffset + POOL_SIZE - 1);
+
         let { data: idData, error: idError } = await query;
         if (idError) throw idError;
-        
+
+        // If random offset returned nothing (edge case near end of table), retry from offset 0
+        if (!idData || idData.length === 0) {
+          let retryQ = supabase
+            .from('questions')
+            .select('id, statement, difficulty, pattern_id')
+            .eq('type', type);
+          if (subject) retryQ = retryQ.eq('subject', subject);
+          if (chapter) retryQ = retryQ.eq('chapter', chapter);
+          if (topics && topics.length > 0) retryQ = retryQ.in('concept', topics);
+          if (pyqFilter === 'pyq_only')    retryQ = retryQ.is('year', 'not null');
+          else if (pyqFilter === 'practice_only') retryQ = retryQ.is('year', null);
+          retryQ = retryQ.range(0, POOL_SIZE - 1);
+          const { data: retryData } = await retryQ;
+          idData = retryData || [];
+        }
+
         if (!idData || idData.length === 0) return [];
 
-        // Filter by difficulty in memory if specified
+        // ── Step 3: filter by difficulty in memory if specified ──
         if (difficulty) {
           const diffLower = difficulty.toLowerCase();
           const matchedDiff = idData.filter((q: any) => q.difficulty && q.difficulty.toLowerCase().includes(diffLower));
@@ -517,11 +566,12 @@ export const fetchQuestionsFromDB = async (
             idData = matchedDiff;
           }
         }
-        
+
+        // ── Step 4: split into fresh (never seen) vs seen (already attempted) ──
         const globalHistory = getSeenQuestionHashes();
         const freshList: any[] = [];
         const seenList: any[] = [];
-        
+
         for (const q of idData) {
           const h = getQuestionHash(q);
           if (h && globalHistory.has(h)) {
@@ -530,20 +580,20 @@ export const fetchQuestionsFromDB = async (
             freshList.push(q);
           }
         }
-        
-        // Shuffle both lists
-        const shuffledFresh = freshList.sort(() => Math.random() - 0.5);
-        const shuffledSeen = seenList.sort(() => Math.random() - 0.5);
-        
-        // Prefer fresh questions, then recycle already seen questions,
-        // and ensure no two selected questions share the same pattern_id (or id as fallback)
+
+        // ── Step 5: Fisher-Yates shuffle both lists for unbiased randomness ──
+        const shuffledFresh = fisherYatesShuffle(freshList);
+        const shuffledSeen  = fisherYatesShuffle(seenList);
+
+        // ── Step 6: Select required count — prefer fresh, fall back to seen.
+        //   Only deduplicate by id (not pattern_id) to avoid over-shrinking the pool.
+        //   pattern_id grouping blocked too many valid distinct questions. ──
         const selectedList: any[] = [];
-        const selectedPatterns = new Set<string>();
+        const selectedIds = new Set<string>();
 
         for (const q of shuffledFresh) {
-          const pid = q.pattern_id || q.id;
-          if (!selectedPatterns.has(pid)) {
-            selectedPatterns.add(pid);
+          if (!selectedIds.has(q.id)) {
+            selectedIds.add(q.id);
             selectedList.push(q);
           }
           if (selectedList.length === count) break;
@@ -551,23 +601,23 @@ export const fetchQuestionsFromDB = async (
 
         if (selectedList.length < count) {
           for (const q of shuffledSeen) {
-            const pid = q.pattern_id || q.id;
-            if (!selectedPatterns.has(pid)) {
-              selectedPatterns.add(pid);
+            if (!selectedIds.has(q.id)) {
+              selectedIds.add(q.id);
               selectedList.push(q);
             }
             if (selectedList.length === count) break;
           }
         }
-        
+
         if (selectedList.length === 0) return [];
-        
-        const selectedIds = selectedList.map(q => q.id);
-        const { data, error } = await supabase.from('questions').select('*').in('id', selectedIds);
+
+        // ── Step 7: fetch full question data for selected IDs ──
+        const finalIds = selectedList.map(q => q.id);
+        const { data, error } = await supabase.from('questions').select('*').in('id', finalIds);
         if (error) throw error;
-        
+
         const fetchedList = data || [];
-        // Update history
+        // Record these questions as seen so next exam avoids them (until pool is exhausted)
         recordSeenQuestions(fetchedList);
         return fetchedList;
     };
