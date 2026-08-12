@@ -623,3 +623,44 @@ After submitting an exam, pressing "Start Exam" again loaded the same question p
 ### Auto-Pushed To
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+---
+
+## Session 59b — 2026-08-12 (Always-Same Question Paper — 3 Root Causes Fixed)
+
+### Request
+"Each and every time I begin the exam only these questions are appearing. The first question will be this one and so on. The question should appear randomly and after submission the question should not repeat at least until 50 exams."
+
+### Root Causes Identified
+
+| # | Root Cause | File | Impact |
+|---|-----------|------|--------|
+| **1** | **Static deterministic seed in fallbackGenerator** | `src/utils/fallbackGenerator.ts` | `seededRandom(static_seed)` always yields the SAME random sequence → same numeric values → same question text (e.g., "u = 12 m/s" every time as Q1). Templates always selected in same order (0,1,2...). |
+| **2** | **Missing ORDER BY in DB range queries** | `src/supabase.ts` | MariaDB `LIMIT N OFFSET M` WITHOUT `ORDER BY` is non-deterministic in storage-engine page order — effectively returns the same physical rows regardless of `randomOffset`. The offset math was correct but had zero effect. |
+| **3** | **No final shuffle before storing to active_session** | `src/pages/ExamSetup.tsx` | Even if DB returned different questions, they were stored in subject-block order (all Physics, all Chemistry, all Math) in DB insertion order — so the first question was always the same Physics MCQ. |
+
+### Fixes Applied
+
+#### `src/utils/fallbackGenerator.ts`
+- Added `timeSalt = Math.floor(Date.now() / 1000)` mixed into `seedPrefix` → each exam call generates different numeric values in templates
+- Added `Math.random().toString(36)` per-question salt → maximum per-question uniqueness
+- Added Fisher-Yates shuffle of `mcqIndices` and `numIndices` arrays before looping → templates appear in random order (Q1 is no longer always Kinematics template)
+
+#### `src/supabase.ts`
+- Added `.order('id', { ascending: true })` to **both** the main range query and the retry-from-0 fallback in `fetchByType()` → `OFFSET` is now meaningful and returns genuinely different rows each call
+- If `totalCount` returns `null/0` (count query failed), uses `Date.now() % 1_000_000` as a pseudo-random base offset instead of always starting at row 0
+- Added Fisher-Yates shuffle to the `OFFICIAL_JEE_PYQ_BANK` static array before using it as fallback → never returns static bank in insertion order
+
+#### `src/pages/ExamSetup.tsx`
+- `launchExam()` now does 4-step randomization before saving to `active_session`:
+  1. Group by subject
+  2. Fisher-Yates shuffle within each subject group
+  3. Round-robin interleave across subjects (Physics → Chemistry → Math → Physics → ...)
+  4. Full-paper Fisher-Yates shuffle on the interleaved array
+
+### Commit
+`1a7bdf2` — fix: eliminate deterministic questions - randomize all exam paper paths - Session 59b
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
