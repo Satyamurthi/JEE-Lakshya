@@ -664,3 +664,22 @@ After submitting an exam, pressing "Start Exam" again loaded the same question p
 ### Auto-Pushed To
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+---
+
+## Session 59c — 2026-08-12 (Automatic Backend Startup on Windows Boot)
+
+### Request
+"I think backend has not started Make sure each and every time The system restarts or shutdown after restarts The back end should automatically run"
+
+### Actions Taken
+1. **Windows Task Scheduler Task Created**:
+   - Task Name: `JEE_StartBackend`
+   - Trigger: At system startup (`/sc ONSTART`)
+   - Action: `powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "d:\JEE\scripts\StartBackend.ps1"`
+   - Execution Level: `HIGHEST` privileges under `SYSTEM` account.
+2. **Backend Tunnel & Netlify Sync**:
+   - Launched `StartBackend.ps1` to establish PHP IIS server on `127.0.0.1:8080` and Cloudflare Quick Tunnel.
+   - Live backend URL resolved: `https://fares-determine-graduated-procedure.trycloudflare.com`.
+   - Updated `public/backend_url.txt` and auto-pushed to GitHub (`6659057`), triggering Netlify auto-deployment.
+

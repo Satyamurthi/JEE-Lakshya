@@ -847,3 +847,20 @@ After submitting an exam, if the student pressed "Start Exam" again, they someti
 | Bug | Root Cause | Fix Applied |
 |---|---|---|
 | Same question paper appears after re-starting exam | (1) bfcache restore of ExamPortal, (2) stale `active_session` on ExamSetup mount, (3) 10-min sync rate-limit blocking server history re-sync | Added `pageshow` bfcache guard in ExamPortal; clear `active_session` on ExamSetup mount; clear sync rate-limit key (`q_history_sync_ts_`) in ExamPortal handleSubmit; clear session in Results.tsx mount |
+
+---
+
+## 29. AUTOMATIC BACKEND AUTOSTART ON WINDOWS BOOT (2026-08-12)
+
+### Requirement
+Ensure that whenever the system restarts or shuts down and reboots, the backend server and Cloudflare tunnel run automatically.
+
+### Actions Taken
+1. **Windows Task Scheduler Registration**:
+   - Created scheduled task `JEE_StartBackend` running with `HIGHEST` privileges under user `SYSTEM` on trigger `ONSTART`.
+   - Command: `powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "d:\JEE\scripts\StartBackend.ps1"`
+2. **Execution Verification**:
+   - Manually triggered `StartBackend.ps1` to start local IIS/PHP on `127.0.0.1:8080` and spin up Cloudflare Quick Tunnel.
+   - Live tunnel URL generated: `https://fares-determine-graduated-procedure.trycloudflare.com`.
+   - Updated `public/backend_url.txt` and automatically committed & force-pushed to both GitHub repositories (`JEE-Lakshya` and `JEE-Nexus`).
+
