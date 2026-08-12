@@ -867,6 +867,22 @@ Questions containing KaTeX-incompatible commands (`\bf`, `\vspace`, `\hspace`, `
    - Any fetched question containing unsupported HTML or KaTeX-breaking macros is strictly **discarded in real time** before it can reach the exam.
    - Automatically sanitizes statements, solutions, and explanations using `cleanQuestionText()`.
 
-3. **KaTeX Renderer Auto-Correction in `src/components/MathRenderer.tsx`**:
-   - Added automatic brace balancing (`openBraces` tracking) and syntax repair (`\frac()`, `\frac{}`) in `normalizeForKaTeX()` so KaTeX parses formulas smoothly without console warnings or error spans.
+---
+
+## 31. FULLY FUNCTIONAL TARGET DIFFICULTY & QUESTION SOURCE FILTERS (Session 61, 2026-08-12)
+
+### Problem
+In `ExamSetup.tsx`, selecting "Target Difficulty Level" (Easy, Medium, Hard) or "Question Source Filter" (All Pool, Practice Only, PYQs Only) did not strictly filter MariaDB queries in SQL, and the Exam Portal header did not show difficulty or source badges.
+
+### Fixes Applied
+
+1. **SQL-level Difficulty & Source Filtering (`src/supabase.ts`)**:
+   - `fetchByType` now applies `countQ.ilike('difficulty', `%${difficulty}%`)`, `query.ilike(...)`, and `retryQ.ilike(...)` directly in MariaDB SQL queries so queries strictly return questions matching the chosen difficulty.
+   - `pyqFilter` enforces `year IS NOT NULL` for `pyq_only` and `year IS NULL` for `practice_only`.
+
+2. **Synthetic Fallback Parameter Alignment (`src/utils/fallbackGenerator.ts` & `src/geminiService.ts`)**:
+   - `generateDynamicQuestions` and `generateFallbackQuestions` now accept `difficulty` parameter so synthetic fallback questions also match the requested difficulty setting (Easy/Medium/Hard).
+
+3. **Exam Portal Header Badges (`src/pages/ExamPortal.tsx`)**:
+   - Added live Subject, Difficulty (`Easy` green, `Medium` amber, `Hard` purple), and Source (`PYQ` cyan vs `Practice` slate) badges in the Exam Portal question header.
 

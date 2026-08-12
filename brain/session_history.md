@@ -703,4 +703,29 @@ After submitting an exam, pressing "Start Exam" again loaded the same question p
 3. **Fast Database Purge Script (`scripts/fast_clean_db.php`)**:
    - Created and executed automated SQL cleanup script targeting `jee_nexus`, `neet_nexus`, `kcet_nexus`, and `upsc_nexus`.
 
+---
+
+## Session 61 — 2026-08-12 (Fully Functional Target Difficulty & Question Source Filters)
+
+### Request
+"Make this useful really" (with screenshot showing Target Difficulty Level and Question Source Filter controls).
+
+### Work Done & Fixes
+1. **SQL-level Difficulty Filtering (`src/supabase.ts`)**:
+   - Added `ilike('difficulty', '%Easy%')`, `%Medium%`, `%Hard%` directly into MariaDB SQL queries (`countQ`, `query`, `retryQ`) in `fetchByType()` so DB queries strictly pull candidate questions matching the user's selected difficulty.
+2. **Question Source SQL Enforcement (`src/supabase.ts`)**:
+   - Enforces `year IS NOT NULL` when `PYQs Only` is selected, and `year IS NULL` when `Practice Only` is selected.
+3. **Dynamic Synthetic Fallback Parameter Alignment (`src/utils/fallbackGenerator.ts` & `src/geminiService.ts`)**:
+   - Updated `generateDynamicQuestions` and `generateFallbackQuestions` to pass `difficulty` parameter, ensuring fallback questions match the requested difficulty setting (Easy/Medium/Hard).
+4. **Exam Portal Header Badges (`src/pages/ExamPortal.tsx`)**:
+   - Added live Subject badge, Difficulty badge (`Easy` green, `Medium` amber, `Hard` purple), and Source badge (`2023 PYQ` cyan vs `Practice` slate) to the question header in the Exam Portal.
+
+### Commit
+`e8b9b40` — fix: make Target Difficulty Level and Question Source Filter fully functional and visually active - Session 61
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+
 
