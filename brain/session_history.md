@@ -683,3 +683,24 @@ After submitting an exam, pressing "Start Exam" again loaded the same question p
    - Live backend URL resolved: `https://fares-determine-graduated-procedure.trycloudflare.com`.
    - Updated `public/backend_url.txt` and auto-pushed to GitHub (`6659057`), triggering Netlify auto-deployment.
 
+---
+
+## Session 60 — 2026-08-12 (Strict Real-Time LaTeX & HTML Compatibility Filter)
+
+### Request
+"I said to delete all the questions that are not compatible for the HTML code thing The latex questions that are not compatible for my website But we have not deleted them The question should not appear inside the exam remember that"
+
+### Work Done & Fixes
+1. **Real-time Compatibility Filter in `src/supabase.ts`**:
+   - Implemented `isQuestionCompatible` check in `fetchQuestionsFromDB`.
+   - Automatically inspects each question fetched from MariaDB for unsupported HTML tags (`<table>`, `<div>`, `<script>`), unsupported TeX macros (`\bf`, `\vspace`, `\begin{tabular}`, `\includegraphics`), missing statements, and invalid options.
+   - Any question failing compatibility is **strictly discarded in real-time** so it can NEVER enter an exam session.
+   - Sanitizes statements, solutions, and explanations via `cleanQuestionText()`.
+
+2. **KaTeX Renderer Auto-Corrections in `src/components/MathRenderer.tsx`**:
+   - Added automatic brace balancing and syntax repairs (`\frac()`, `\frac{}`) in `normalizeForKaTeX()` to prevent console warnings or rendering failures.
+
+3. **Fast Database Purge Script (`scripts/fast_clean_db.php`)**:
+   - Created and executed automated SQL cleanup script targeting `jee_nexus`, `neet_nexus`, `kcet_nexus`, and `upsc_nexus`.
+
+

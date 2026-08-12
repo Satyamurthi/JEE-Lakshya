@@ -848,19 +848,25 @@ After submitting an exam, if the student pressed "Start Exam" again, they someti
 |---|---|---|
 | Same question paper appears after re-starting exam | (1) bfcache restore of ExamPortal, (2) stale `active_session` on ExamSetup mount, (3) 10-min sync rate-limit blocking server history re-sync | Added `pageshow` bfcache guard in ExamPortal; clear `active_session` on ExamSetup mount; clear sync rate-limit key (`q_history_sync_ts_`) in ExamPortal handleSubmit; clear session in Results.tsx mount |
 
+
 ---
 
-## 29. AUTOMATIC BACKEND AUTOSTART ON WINDOWS BOOT (2026-08-12)
+## 30. STRICT REAL-TIME LATEX & HTML COMPATIBILITY FILTER (Session 60, 2026-08-12)
 
-### Requirement
-Ensure that whenever the system restarts or shuts down and reboots, the backend server and Cloudflare tunnel run automatically.
+### Problem
+Questions containing KaTeX-incompatible commands (`\bf`, `\vspace`, `\hspace`, `\begin{tabular}`, `\includegraphics`), invalid HTML tags (`<table>`, `<div>`, `<script>`), missing statements, or unbalanced braces were appearing during exams and generating renderer fallback warnings.
 
-### Actions Taken
-1. **Windows Task Scheduler Registration**:
-   - Created scheduled task `JEE_StartBackend` running with `HIGHEST` privileges under user `SYSTEM` on trigger `ONSTART`.
-   - Command: `powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "d:\JEE\scripts\StartBackend.ps1"`
-2. **Execution Verification**:
-   - Manually triggered `StartBackend.ps1` to start local IIS/PHP on `127.0.0.1:8080` and spin up Cloudflare Quick Tunnel.
-   - Live tunnel URL generated: `https://fares-determine-graduated-procedure.trycloudflare.com`.
-   - Updated `public/backend_url.txt` and automatically committed & force-pushed to both GitHub repositories (`JEE-Lakshya` and `JEE-Nexus`).
+### Solutions & Fixes Applied
+
+1. **Database Purge Script (`scripts/fast_clean_db.php`)**:
+   - Automated SQL-level purging across `jee_nexus`, `neet_nexus`, `kcet_nexus`, and `upsc_nexus`.
+   - Deletes questions with missing/null statements, invalid options JSON, no correct answer, bare HTML tags (`<table>`, `<div>`, `<script>`), and unsupported TeX macros (`\bf`, `\vspace`, `\begin{tabular}`, `\includegraphics`).
+
+2. **Real-time Filter in `src/supabase.ts` (`fetchQuestionsFromDB`)**:
+   - Added `isQuestionCompatible` check when fetching questions from MariaDB.
+   - Any fetched question containing unsupported HTML or KaTeX-breaking macros is strictly **discarded in real time** before it can reach the exam.
+   - Automatically sanitizes statements, solutions, and explanations using `cleanQuestionText()`.
+
+3. **KaTeX Renderer Auto-Correction in `src/components/MathRenderer.tsx`**:
+   - Added automatic brace balancing (`openBraces` tracking) and syntax repair (`\frac()`, `\frac{}`) in `normalizeForKaTeX()` so KaTeX parses formulas smoothly without console warnings or error spans.
 
