@@ -254,6 +254,47 @@ const ExamSetup = () => {
       finalQuestions = preparedQuestions;
     }
 
+    // \u2500\u2500 Interleave subjects then Fisher-Yates shuffle the full paper \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // Without this, questions always appear in subject-blocks (all Physics, then
+    // all Chemistry, then all Math) in database-insertion order. This guarantees
+    // each exam has a completely different question order.
+    const fisherYates = <T,>(arr: T[]): T[] => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+
+    // Step 1: group by subject
+    const bySubject: Record<string, any[]> = {};
+    for (const q of finalQuestions) {
+      const sub = q.subject || 'General';
+      if (!bySubject[sub]) bySubject[sub] = [];
+      bySubject[sub].push(q);
+    }
+
+    // Step 2: shuffle each subject's questions independently
+    Object.keys(bySubject).forEach(sub => {
+      bySubject[sub] = fisherYates(bySubject[sub]);
+    });
+
+    // Step 3: interleave round-robin so questions are mixed across subjects
+    const subjectKeys = Object.keys(bySubject);
+    const interleaved: any[] = [];
+    let maxLen = Math.max(...subjectKeys.map(k => bySubject[k].length));
+    for (let i = 0; i < maxLen; i++) {
+      for (const sub of subjectKeys) {
+        if (bySubject[sub][i] !== undefined) {
+          interleaved.push(bySubject[sub][i]);
+        }
+      }
+    }
+
+    // Step 4: final full-paper Fisher-Yates shuffle for maximum randomness
+    finalQuestions = fisherYates(interleaved);
+
     const qCount = finalQuestions.length;
     const duration = Math.ceil(qCount * 2);
     const sessionData = {
@@ -263,6 +304,7 @@ const ExamSetup = () => {
       durationMinutes: duration
     };
     localStorage.setItem('active_session', JSON.stringify(sessionData));
+
     navigate('/exam-portal');
   };
 

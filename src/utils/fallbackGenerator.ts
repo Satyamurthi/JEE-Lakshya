@@ -66,8 +66,12 @@ export const generateDynamicQuestions = (
   examType: string = "JEE"
 ): DynamicQuestion[] => {
   const result: DynamicQuestion[] = [];
-  const seedPrefix = `${subject}_${examType}_`;
-  
+  // ── Time-based seed: mix Date.now() so each exam call produces DIFFERENT numeric
+  //    variants even for the same subject. Without this, seededRandom() returns the
+  //    same values every call and Question 1 is always "u = 12 m/s" etc.
+  const timeSalt = Math.floor(Date.now() / 1000); // changes every second
+  const seedPrefix = `${subject}_${examType}_${timeSalt}_`;
+
   // Define Topic Banks
   const PHYSICS_MCQ_TEMPLATES = [
     // 1. Kinematics
@@ -671,10 +675,17 @@ export const generateDynamicQuestions = (
   if (numList.length === 0 && numericalCount > 0) numList = PHYSICS_NUM_TEMPLATES;
 
   // Process MCQ Generation
+  // Shuffle which templates are used (so even the same subject doesn't always
+  // pick template[0] as Q1). Use Math.random() for true randomness.
+  const mcqIndices = Array.from({ length: mcqCount }, (_, i) => i % mcqList.length);
+  for (let i = mcqIndices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [mcqIndices[i], mcqIndices[j]] = [mcqIndices[j], mcqIndices[i]];
+  }
+
   for (let i = 0; i < mcqCount; i++) {
-    const templateIndex = i % mcqList.length;
-    // Pass seed uniquely constructed from subject, loop index and templateIndex
-    const uniqueSeed = `${seedPrefix}_mcq_${i}_t${templateIndex}`;
+    const templateIndex = mcqIndices[i];
+    const uniqueSeed = `${seedPrefix}_mcq_${i}_t${templateIndex}_${Math.random().toString(36).slice(2, 7)}`;
     const rand = seededRandom(uniqueSeed);
     
     const qData = mcqList[templateIndex](rand, i);
@@ -695,9 +706,15 @@ export const generateDynamicQuestions = (
   }
 
   // Process Numerical Generation
+  const numIndices = Array.from({ length: numericalCount }, (_, i) => i % numList.length);
+  for (let i = numIndices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [numIndices[i], numIndices[j]] = [numIndices[j], numIndices[i]];
+  }
+
   for (let i = 0; i < numericalCount; i++) {
-    const templateIndex = i % numList.length;
-    const uniqueSeed = `${seedPrefix}_num_${i}_t${templateIndex}`;
+    const templateIndex = numIndices[i];
+    const uniqueSeed = `${seedPrefix}_num_${i}_t${templateIndex}_${Math.random().toString(36).slice(2, 7)}`;
     const rand = seededRandom(uniqueSeed);
     
     const qData = numList[templateIndex](rand, i);

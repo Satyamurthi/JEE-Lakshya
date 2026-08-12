@@ -519,9 +519,18 @@ export const fetchQuestionsFromDB = async (
         const total = totalCount ?? 0;
 
         // ── Step 2: pick a random starting offset so every exam draws from a different
-        //           slice of the 1M+ question pool. Without this, limit(N) always returns
-        //           the same first N rows in insertion order. ──
-        const maxOffset = Math.max(0, total - POOL_SIZE);
+        //           slice of the 1M+ question pool.
+        //
+        //  CRITICAL: Without ORDER BY, MariaDB's LIMIT+OFFSET is non-deterministic —
+        //  it returns the same physical rows regardless of offset value. We must add
+        //  .order('id') so the offset actually means something different each call.
+        //
+        //  If totalCount = 0 (count query failed or table empty), fall back to a
+        //  time-seeded random offset so we don't always start at row 0.
+        const safeTotalCount = (typeof totalCount === 'number' && totalCount > 0)
+          ? totalCount
+          : Math.floor((Date.now() % 1_000_000) + 50_000); // pseudo-random fallback
+        const maxOffset = Math.max(0, safeTotalCount - POOL_SIZE);
         const randomOffset = Math.floor(Math.random() * (maxOffset + 1));
 
         let query = supabase
@@ -533,6 +542,9 @@ export const fetchQuestionsFromDB = async (
         if (topics && topics.length > 0) query = query.in('concept', topics);
         if (pyqFilter === 'pyq_only')    query = query.is('year', 'not null');
         else if (pyqFilter === 'practice_only') query = query.is('year', null);
+
+        // ORDER BY id is MANDATORY — without it OFFSET is non-deterministic in MariaDB
+        query = (query as any).order('id', { ascending: true });
 
         // Fetch POOL_SIZE rows from the random offset position
         query = query.range(randomOffset, randomOffset + POOL_SIZE - 1);
@@ -551,6 +563,7 @@ export const fetchQuestionsFromDB = async (
           if (topics && topics.length > 0) retryQ = retryQ.in('concept', topics);
           if (pyqFilter === 'pyq_only')    retryQ = retryQ.is('year', 'not null');
           else if (pyqFilter === 'practice_only') retryQ = retryQ.is('year', null);
+          retryQ = (retryQ as any).order('id', { ascending: true });
           retryQ = retryQ.range(0, POOL_SIZE - 1);
           const { data: retryData } = await retryQ;
           idData = retryData || [];
@@ -633,11 +646,23 @@ export const fetchQuestionsFromDB = async (
       try {
         const { filterUniqueQuestions } = await import('./utils/questionTracker');
         const { OFFICIAL_JEE_PYQ_BANK } = await import('./data/officialJeePyqBank');
-        let filtered = OFFICIAL_JEE_PYQ_BANK || [];
+        let filtered: any[] = OFFICIAL_JEE_PYQ_BANK || [];
         if (subject) filtered = filtered.filter((q: any) => q.subject && q.subject.toLowerCase().includes(subject.toLowerCase()));
         if (chapter) filtered = filtered.filter((q: any) => q.chapter && q.chapter.toLowerCase().includes(chapter.toLowerCase()));
         if (difficulty) filtered = filtered.filter((q: any) => q.difficulty && q.difficulty.toLowerCase().includes(difficulty.toLowerCase()));
+        // Fisher-Yates shuffle the static bank before filtering so it's never
+        // returned in the same fixed insertion order every time.
+        const shuffleBank = (arr: any[]) => {
+          const a = [...arr];
+          for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+          }
+          return a;
+        };
+        filtered = shuffleBank(filtered);
         resultQuestions = filterUniqueQuestions(filtered, mcqCount + numericalCount);
+        console.warn('[fetchQuestionsFromDB] DB returned 0 questions; using shuffled local PYQ bank fallback.');
       } catch (err) {
         console.error("Local bank fallback in fetchQuestionsFromDB failed:", err);
       }
