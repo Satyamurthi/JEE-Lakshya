@@ -815,3 +815,35 @@ Then commit + push the brain files themselves.
 | PHP | `C:\xampp\php\php.exe` |
 | Node.js | **NOT in PATH** — use PHP for DB scripts |
 | Git | Available via `git` command in PowerShell |
+
+---
+
+## 28. SAME QUESTION PAPER BUG — FIXED (Session 59, 2026-08-12)
+
+### Problem
+After submitting an exam, if the student pressed "Start Exam" again, they sometimes received the **same question paper** they just completed.
+
+### Root Causes (3 layers)
+
+| # | Root Cause | Where |
+|---|-----------|--------|
+| 1 | **bfcache restore** | Browser Back-button from `/results` → `/exam-portal` restored the full React component state from the back-forward cache WITHOUT re-running `useEffect`. Old questions, timer, and config all reappeared. |
+| 2 | **`active_session` not cleared on ExamSetup mount** | If the student navigated back via unusual paths, the old `active_session` key in localStorage could still be present when `ExamPortal` loaded for the new exam. |
+| 3 | **Question-tracker sync rate-limited** | `syncStudentQuestionHistory()` in `questionTracker.ts` is rate-limited to once per 10 minutes (`SYNC_INTERVAL_MS`). After submitting an exam, if the student started another within 10 minutes, the server sync was skipped, and the local history hadn't been seeded with the just-submitted exam's questions yet, so the same pool could be returned by `fetchQuestionsFromDB`. |
+
+### Fixes Applied
+
+#### `src/pages/ExamPortal.tsx`
+1. **handleSubmit() — clears sync rate-limit key**: After removing `active_session`, also removes `q_history_sync_ts_{userId}` from localStorage. This bypasses the 10-minute cooldown so the NEXT `preparePaper()` immediately re-syncs seen IDs from the server.
+2. **New `pageshow` useEffect — bfcache guard**: Listens for `pageshow` with `e.persisted === true`. If `active_session` is absent (exam already submitted), redirects to `/exam-setup` with `replace: true`, so the back-forward cache page is discarded.
+
+#### `src/pages/ExamSetup.tsx`
+- **Mount useEffect**: Now removes `active_session`, `active_exam_questions`, `active_exam_config` from localStorage on **every mount**, in addition to clearing the DB exam-lock. This guarantees a student configuring a new exam always starts clean.
+
+#### `src/pages/Results.tsx`
+- **Mount useEffect**: Removes the same 3 localStorage keys at the start of the results-page load — belt-and-suspenders safety net in case `handleSubmit` had any edge-case skip in cleanup.
+
+### Known Bugs Table Addition
+| Bug | Root Cause | Fix Applied |
+|---|---|---|
+| Same question paper appears after re-starting exam | (1) bfcache restore of ExamPortal, (2) stale `active_session` on ExamSetup mount, (3) 10-min sync rate-limit blocking server history re-sync | Added `pageshow` bfcache guard in ExamPortal; clear `active_session` on ExamSetup mount; clear sync rate-limit key (`q_history_sync_ts_`) in ExamPortal handleSubmit; clear session in Results.tsx mount |

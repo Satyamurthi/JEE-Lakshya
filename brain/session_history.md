@@ -593,3 +593,33 @@ This file records the chronological history of tasks, major changes, and feature
 | `1d8acff` | fix: randomize exam questions on every launch |
 | `632fca1` | feat: guarantee no repeated questions for 50+ exams per student |
 | `(this)` | chore: update AGENTS.md + brain with workflow rules |
+
+---
+
+## Session 59 — 2026-08-12 (Same Question Paper Bug Fix)
+
+### Request
+After submitting an exam, pressing "Start Exam" again loaded the same question paper the student had just solved.
+
+### Root Causes Identified
+
+| # | Root Cause | Mechanism |
+|---|-----------|------------|
+| 1 | **bfcache restore** | Browser Back-button from `/results` → `/exam-portal` restores React component state from back-forward cache WITHOUT re-running `useEffect`. Old questions, timer, config all reappear. |
+| 2 | **Stale `active_session` on ExamSetup mount** | If the student navigated back via unusual paths (e.g. sidebar), the old `active_session` localStorage key could persist into the new exam's `ExamPortal` load. |
+| 3 | **Question-tracker sync rate-limited** | `syncStudentQuestionHistory()` is rate-limited to once per 10 minutes. If a student starts a second exam within that window, the just-submitted questions haven't been synced to the local dedup history yet, so `fetchQuestionsFromDB` could serve the same paper. |
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/pages/ExamPortal.tsx` | (1) `handleSubmit()` now clears `q_history_sync_ts_{userId}` after session cleanup to bypass 10-min sync cooldown for next exam. (2) New `useEffect` adds `pageshow` event listener — when browser restores from bfcache and `active_session` is absent, redirects to `/exam-setup` with `replace: true`. |
+| `src/pages/ExamSetup.tsx` | Mount `useEffect` now explicitly removes `active_session`, `active_exam_questions`, `active_exam_config` from localStorage before DB lock clear, guaranteeing a clean slate for every new exam. |
+| `src/pages/Results.tsx` | Mount `useEffect` removes the same 3 localStorage keys as a belt-and-suspenders safety net the moment results are displayed. |
+
+### Commit
+`7de81df` — fix: prevent same question paper repeating after exam submission - Session 59
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
