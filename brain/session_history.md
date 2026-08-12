@@ -727,5 +727,27 @@ After submitting an exam, pressing "Start Exam" again loaded the same question p
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
 
+---
+
+## Session 62 — 2026-08-12 (Resolved geminiService.ts Errors)
+
+### Request
+"Make sure clear all the errors" (@[geminiService.ts:current_problems] - Cannot find name 'delay', 'getAIClient', 'callAIWithFallback').
+
+### Work Done & Fixes
+1. **Added & Exported `delay` Helper (`src/geminiService.ts`)**:
+   - Defined `export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));`.
+   - Imported `delay` into `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts`.
+2. **Re-engineered `getQuickHint` (`src/geminiService.ts`)**:
+   - Replaced legacy SDK calls `getAIClient()` and `callAIWithFallback()` with modern `callAIProxy` helper.
+
+### Commit
+`9773eb0` — fix: resolve delay, getAIClient, callAIWithFallback TypeScript errors in geminiService.ts - Session 62
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+
 
 

@@ -883,6 +883,18 @@ In `ExamSetup.tsx`, selecting "Target Difficulty Level" (Easy, Medium, Hard) or 
 2. **Synthetic Fallback Parameter Alignment (`src/utils/fallbackGenerator.ts` & `src/geminiService.ts`)**:
    - `generateDynamicQuestions` and `generateFallbackQuestions` now accept `difficulty` parameter so synthetic fallback questions also match the requested difficulty setting (Easy/Medium/Hard).
 
-3. **Exam Portal Header Badges (`src/pages/ExamPortal.tsx`)**:
-   - Added live Subject, Difficulty (`Easy` green, `Medium` amber, `Hard` purple), and Source (`PYQ` cyan vs `Practice` slate) badges in the Exam Portal question header.
+
+---
+
+## 32. RESOLVED GEMINISERVICE.TS TYPESCRIPT & MISSING DEFINITION ERRORS (Session 62, 2026-08-12)
+
+### Problem
+`geminiService.ts` had missing helper definition errors (`Cannot find name 'delay'`, `Cannot find name 'getAIClient'`, `Cannot find name 'callAIWithFallback'`).
+
+### Fixes Applied
+1. **Added & Exported `delay` Helper (`src/geminiService.ts`)**:
+   - Defined `export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));`.
+   - Imported `delay` into `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts`.
+2. **Rewrote `getQuickHint` to use `callAIProxy` (`src/geminiService.ts`)**:
+   - Replaced legacy SDK calls `getAIClient()` and `callAIWithFallback()` with the modern `callAIProxy` function.
 
