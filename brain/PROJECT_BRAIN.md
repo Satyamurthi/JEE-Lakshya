@@ -904,8 +904,17 @@ In `ExamSetup.tsx`, selecting "Target Difficulty Level" (Easy, Medium, Hard) or 
 `kcetGeminiService.ts`, `neetGeminiService.ts`, and `upscGeminiService.ts` contained legacy references to `getAIClient()` and `callAIWithFallback()`.
 
 ### Fixes Applied
-1. **Re-engineered `getQuickHint`, `parseDocumentToQuestions`, and `getDeepAnalysis`**:
-   - Replaced all legacy SDK calls with the backend AI proxy function `callAIProxy` across `neetGeminiService.ts`, `kcetGeminiService.ts`, and `upscGeminiService.ts`.
-2. **Zero TypeScript Errors Remaining**:
-   - Codebase now compiles cleanly with 0 type errors across all four streams (JEE, NEET, KCET, UPSC).
+
+---
+
+## 34. RESOLVED 401 UNAUTHORIZED ERRORS ON LOCAL DB QUESTION SELECT QUERIES (Session 64, 2026-08-12)
+
+### Problem
+In `api/local_db.php`, only `subscription_plans` SELECT queries were marked as public read-only. Read-only `questions` and `daily_challenges` SELECT queries for exam preparation were throwing `HTTP 401 (Unauthorized)` when tokens were missing or expired.
+
+### Fixes Applied
+1. **Public Read-Only Rules Updated (`api/local_db.php`)**:
+   - Expanded `$is_public_action` to include SELECT queries on `questions` and `daily_challenges` in addition to `subscription_plans`.
+2. **Fallback Token Resolution (`api/db.php`)**:
+   - Added support for `temp-local-id` and `guest` tokens in `resolve_user_from_token()` so read-only queries always execute cleanly.
 

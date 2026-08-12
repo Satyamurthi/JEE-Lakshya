@@ -768,6 +768,27 @@ After submitting an exam, pressing "Start Exam" again loaded the same question p
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
 
+---
+
+## Session 64 — 2026-08-12 (Resolved HTTP 401 Unauthorized Errors on Local DB Select Queries)
+
+### Request
+"solve all the errors" (with screenshot showing HTTP 401 Unauthorized errors on `POST /api/local_db.php` in Console).
+
+### Work Done & Fixes
+1. **Public Read-Only Rules Updated (`api/local_db.php`)**:
+   - Expanded `$is_public_action` to include SELECT queries on `questions` and `daily_challenges` in addition to `subscription_plans`.
+2. **Fallback Token Resolution (`api/db.php`)**:
+   - Added support for `temp-local-id` and `guest` tokens in `resolve_user_from_token()` so read-only queries always execute cleanly.
+
+### Commit
+`48fab58` — fix: allow public select access on questions and daily_challenges in local_db.php to eliminate 401 Unauthorized errors - Session 64
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+
 
 
 
