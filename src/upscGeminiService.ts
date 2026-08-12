@@ -114,9 +114,11 @@ export const generateJEEQuestions = async (subject: Subject, count: number, type
 
 export const getQuickHint = async (statement: string, subject: string): Promise<string> => {
   try {
-    const ai = getAIClient();
-    const response = await callAIWithFallback(ai, `Provide a single-sentence strategic analytical hint for this UPSC ${subject} question: ${statement.substring(0, 500)}`, { systemInstruction: "You are a helpful UPSC mentor." });
-    return response.text || "Eliminate incorrect options based on historical facts or core concepts.";
+    const text = await callAIProxy(
+      `Provide a single-sentence strategic analytical hint for this UPSC ${subject} question: ${statement.substring(0, 500)}`,
+      "You are a helpful UPSC mentor."
+    );
+    return text || "Eliminate incorrect options based on historical facts or core concepts.";
   } catch (e) { 
     return "Hint unavailable."; 
   }
@@ -138,11 +140,10 @@ export const generateFullJEEDailyPaper = async (config: any): Promise<{ history:
 
 export const parseDocumentToQuestions = async (questionFile: File, solutionFile?: File): Promise<Question[]> => {
   try {
-    const ai = getAIClient();
-    const prompt = `Digitize and structure the UPSC questions. Output a JSON array matching the question schema. Format as an EXACT JSON array.`;
-    const response = await callAIWithFallback(ai, prompt, { responseMimeType: "application/json", responseSchema: questionSchema });
-    const text = response.text || '[]';
-    return JSON.parse(text);
+    const prompt = `Digitize and structure the UPSC questions from ${questionFile.name}. Output a JSON array matching the question schema. Format as an EXACT JSON array.`;
+    const text = await callAIProxy(prompt, "You are a UPSC question parser.", questionSchema);
+    const textRes = text || '[]';
+    return JSON.parse(textRes);
   } catch (error) { 
     throw error; 
   }

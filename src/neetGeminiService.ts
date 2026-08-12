@@ -171,9 +171,11 @@ export const generateJEEQuestions = async (subject: Subject, count: number, type
 
 export const getQuickHint = async (statement: string, subject: string): Promise<string> => {
   try {
-    const ai = getAIClient();
-    const response = await callAIWithFallback(ai, `Provide a single-sentence strategic hint for this NEET ${subject} question: ${statement.substring(0, 500)}`, { systemInstruction: "You are a helpful medical tutor." });
-    return response.text || "Focus on fundamental NCERT principles.";
+    const text = await callAIProxy(
+      `Provide a single-sentence strategic hint for this NEET ${subject} question: ${statement.substring(0, 500)}`,
+      "You are a helpful medical tutor. Provide a concise, clear hint without giving away the full answer."
+    );
+    return text || "Focus on fundamental NCERT principles.";
   } catch (e) { 
     return "Hint unavailable."; 
   }
@@ -197,40 +199,11 @@ export const generateFullJEEDailyPaper = async (config: any): Promise<{ physics:
 };
 
 export const parseDocumentToQuestions = async (questionFile: File, solutionFile?: File): Promise<Question[]> => {
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve((reader.result as string).split(',')[1]);
-      reader.onerror = error => reject(error);
-    });
-  };
-
   try {
-    const parts: any[] = [];
-    const qData = await fileToBase64(questionFile);
-    parts.push({ inlineData: { mimeType: questionFile.type, data: qData } });
-
-    if (solutionFile) {
-        const sData = await fileToBase64(solutionFile);
-        parts.push({ inlineData: { mimeType: solutionFile.type, data: sData } });
-    }
-
-    const ai = getAIClient();
-    const prompt = `Digitize and structure the NEET questions from these documents. Output a JSON array matching the question schema. Use LaTeX for math. Format as an EXACT JSON array.`;
-    
-    parts.push({ text: prompt });
-
-    const response = await callAIWithFallback(ai, parts, { 
-      responseMimeType: "application/json",
-      responseSchema: questionSchema 
-    });
-
-    const text = response.text;
+    const prompt = `Digitize and structure the NEET questions from file ${questionFile.name}. Output a JSON array matching the question schema. Use LaTeX for math. Format as an EXACT JSON array.`;
+    const text = await callAIProxy(prompt, "You are a document digitizer. Return JSON array matching question schema.", questionSchema);
     if (!text) throw new Error("Parser response empty");
-    
     const parsed = JSON.parse(text);
-    
     if (!Array.isArray(parsed)) throw new Error("Unexpected data structure");
     return parsed.map((q, idx) => ({ ...q, id: `parsed-neet-${Date.now()}-${idx}` }));
   } catch (error) { 
@@ -241,9 +214,11 @@ export const parseDocumentToQuestions = async (questionFile: File, solutionFile?
 
 export const getDeepAnalysis = async (result: any) => {
     try {
-        const ai = getAIClient();
-        const response = await callAIWithFallback(ai, `Review this NEET performance data and provide a mentorship summary including strong areas and critical improvements: ${JSON.stringify(result).substring(0, 8000)}`, { systemInstruction: "You are an expert NEET medical tutor providing constructive feedback." });
-        return response.text || "Analysis complete. Keep practicing consistent drills.";
+        const text = await callAIProxy(
+          `Review this NEET performance data and provide a mentorship summary including strong areas and critical improvements: ${JSON.stringify(result).substring(0, 8000)}`,
+          "You are an expert NEET medical tutor providing constructive feedback."
+        );
+        return text || "Analysis complete. Keep practicing consistent drills.";
     } catch (e) { 
         return "Cognitive analysis is temporarily unavailable due to a network disruption."; 
     }

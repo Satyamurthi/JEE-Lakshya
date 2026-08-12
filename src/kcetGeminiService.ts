@@ -115,9 +115,11 @@ export const generateJEEQuestions = async (subject: Subject, count: number, type
 
 export const getQuickHint = async (statement: string, subject: string): Promise<string> => {
   try {
-    const ai = getAIClient();
-    const response = await callAIWithFallback(ai, `Provide a single-sentence strategic hint for this KCET ${subject} question: ${statement.substring(0, 500)}`, { systemInstruction: "You are a helpful KCET tutor." });
-    return response.text || "Focus on speed and basic formulas.";
+    const text = await callAIProxy(
+      `Provide a single-sentence strategic hint for this KCET ${subject} question: ${statement.substring(0, 500)}`,
+      "You are a helpful KCET tutor. Provide a concise, clear hint."
+    );
+    return text || "Focus on speed and basic formulas.";
   } catch (e) { 
     return "Hint unavailable."; 
   }
@@ -139,11 +141,10 @@ export const generateFullJEEDailyPaper = async (config: any): Promise<{ physics:
 
 export const parseDocumentToQuestions = async (questionFile: File, solutionFile?: File): Promise<Question[]> => {
   try {
-    const ai = getAIClient();
-    const prompt = `Digitize and structure the KCET questions. Output a JSON array matching the question schema. Format as an EXACT JSON array.`;
-    const response = await callAIWithFallback(ai, prompt, { responseMimeType: "application/json", responseSchema: questionSchema });
-    const text = response.text || '[]';
-    return JSON.parse(text);
+    const prompt = `Digitize and structure the KCET questions from ${questionFile.name}. Output a JSON array matching the question schema. Format as an EXACT JSON array.`;
+    const text = await callAIProxy(prompt, "You are a KCET question parser.", questionSchema);
+    const textRes = text || '[]';
+    return JSON.parse(textRes);
   } catch (error) { 
     throw error; 
   }
