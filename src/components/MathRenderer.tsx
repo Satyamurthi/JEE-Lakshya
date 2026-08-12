@@ -194,6 +194,10 @@ const normalizeForKaTeX = (mathContent: string): string => {
   // Fix double-escaped backslash before commands
   t = t.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
 
+  // Fix \frac() or empty \frac{}
+  t = t.replace(/\\frac\(\)/g, '');
+  t = t.replace(/\\frac\{\}/g, '');
+
   // Fix {- \frac → -\frac
   t = t.replace(/\{\s*-\s*\\frac/g, ' -\\frac');
   t = t.replace(/\{\s*-\s*/g, ' - ');
@@ -209,6 +213,17 @@ const normalizeForKaTeX = (mathContent: string): string => {
   // Remove trailing \right / \left with nothing after
   t = t.replace(/\\right\s*$/g, '');
   t = t.replace(/\\left\s*$/g, '');
+
+  // Automatically balance unclosed braces '{'
+  let openBraces = 0;
+  for (let i = 0; i < t.length; i++) {
+    if (t[i] === '{' && (i === 0 || t[i - 1] !== '\\')) openBraces++;
+    else if (t[i] === '}' && (i === 0 || t[i - 1] !== '\\')) openBraces--;
+  }
+  while (openBraces > 0) {
+    t += '}';
+    openBraces--;
+  }
 
   return t;
 };

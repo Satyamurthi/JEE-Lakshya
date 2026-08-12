@@ -629,7 +629,34 @@ export const fetchQuestionsFromDB = async (
         const { data, error } = await supabase.from('questions').select('*').in('id', finalIds);
         if (error) throw error;
 
-        const fetchedList = data || [];
+        const rawFetched = data || [];
+
+        // ── Real-time LaTeX & HTML Compatibility Filter ──────────────────────────
+        // Strictly filters out any questions with unsupported HTML, KaTeX-breaking
+        // commands (\bf, \vspace, \begin{tabular}, \includegraphics), missing
+        // statements, or invalid options before they can ever reach the exam.
+        const fetchedList = rawFetched.filter((q: any) => {
+          if (!q || !q.statement || typeof q.statement !== 'string' || !q.statement.trim() || q.statement === 'null') return false;
+          if (!q.options && (q.type === 'MCQ' || !q.type)) return false;
+          // Disallow bare HTML tags that break rendering
+          if (/<(table|tr|td|th|div|p|script|style)[^>]*>/i.test(q.statement)) return false;
+          // Disallow KaTeX-unsupported TeX commands
+          if (/\\(bf|it|rm|sc|tt|sl|vspace|hspace|vskip|hskip|newpage|clearpage|pagebreak|begin\{tabular\}|begin\{table\}|begin\{figure\}|includegraphics|usepackage|documentclass)\b/i.test(q.statement)) return false;
+          return true;
+        }).map((q: any) => {
+          try {
+            const { cleanQuestionText } = require('./utils/sanitizer');
+            return {
+              ...q,
+              statement: cleanQuestionText(q.statement),
+              explanation: q.explanation ? cleanQuestionText(q.explanation) : q.explanation,
+              solution: q.solution ? cleanQuestionText(q.solution) : q.solution
+            };
+          } catch (e) {
+            return q;
+          }
+        });
+
         // Record these questions as seen so next exam avoids them (until pool is exhausted)
         recordSeenQuestions(fetchedList);
         return fetchedList;
