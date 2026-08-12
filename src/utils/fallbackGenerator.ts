@@ -63,9 +63,13 @@ export const generateDynamicQuestions = (
   subject: string,
   mcqCount: number,
   numericalCount: number,
-  examType: string = "JEE"
+  examType: string = "JEE",
+  targetDifficulty?: string
 ): DynamicQuestion[] => {
   const result: DynamicQuestion[] = [];
+  const selectedDiff = (targetDifficulty && targetDifficulty !== 'Medium')
+    ? (targetDifficulty.charAt(0).toUpperCase() + targetDifficulty.slice(1).toLowerCase()) as any
+    : "Medium";
   // ── Time-based seed: mix Date.now() so each exam call produces DIFFERENT numeric
   //    variants even for the same subject. Without this, seededRandom() returns the
   //    same values every call and Question 1 is always "u = 12 m/s" etc.
@@ -694,7 +698,7 @@ export const generateDynamicQuestions = (
       subject: subject,
       chapter: qData.chapter || "General Practice",
       type: QuestionType.MCQ,
-      difficulty: "Hard",
+      difficulty: selectedDiff,
       statement: qData.statement,
       options: qData.options,
       correctAnswer: qData.correctAnswer,
@@ -723,7 +727,7 @@ export const generateDynamicQuestions = (
       subject: subject,
       chapter: qData.chapter || "General Practice",
       type: QuestionType.Numerical,
-      difficulty: "Hard",
+      difficulty: selectedDiff,
       statement: qData.statement,
       correctAnswer: qData.correctAnswer,
       solution: qData.solution,

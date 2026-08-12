@@ -512,6 +512,7 @@ export const fetchQuestionsFromDB = async (
         if (subject) countQ = countQ.eq('subject', subject);
         if (chapter) countQ = countQ.eq('chapter', chapter);
         if (topics && topics.length > 0) countQ = countQ.in('concept', topics);
+        if (difficulty) countQ = countQ.ilike('difficulty', `%${difficulty}%`);
         if (pyqFilter === 'pyq_only')    countQ = countQ.is('year', 'not null');
         else if (pyqFilter === 'practice_only') countQ = countQ.is('year', null);
 
@@ -540,6 +541,7 @@ export const fetchQuestionsFromDB = async (
         if (subject) query = query.eq('subject', subject);
         if (chapter) query = query.eq('chapter', chapter);
         if (topics && topics.length > 0) query = query.in('concept', topics);
+        if (difficulty) query = query.ilike('difficulty', `%${difficulty}%`);
         if (pyqFilter === 'pyq_only')    query = query.is('year', 'not null');
         else if (pyqFilter === 'practice_only') query = query.is('year', null);
 
@@ -561,6 +563,7 @@ export const fetchQuestionsFromDB = async (
           if (subject) retryQ = retryQ.eq('subject', subject);
           if (chapter) retryQ = retryQ.eq('chapter', chapter);
           if (topics && topics.length > 0) retryQ = retryQ.in('concept', topics);
+          if (difficulty) retryQ = retryQ.ilike('difficulty', `%${difficulty}%`);
           if (pyqFilter === 'pyq_only')    retryQ = retryQ.is('year', 'not null');
           else if (pyqFilter === 'practice_only') retryQ = retryQ.is('year', null);
           retryQ = (retryQ as any).order('id', { ascending: true });

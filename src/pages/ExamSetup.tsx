@@ -207,7 +207,7 @@ const ExamSetup = () => {
 
           if (neededMcq > 0 || neededNum > 0) {
             source = (mcqs.length > 0 || nums.length > 0) ? "Database + Top-up Bank" : "Synthesized Exam Bank";
-            const fallbackQs = service.generateFallbackQuestions(sub, neededMcq, neededNum);
+            const fallbackQs = service.generateFallbackQuestions(sub, neededMcq, neededNum, difficulty);
             const fallbackMcqs = fallbackQs.filter((q: any) => q.type !== 'Numerical');
             const fallbackNums = fallbackQs.filter((q: any) => q.type === 'Numerical');
             mcqs = [...mcqs, ...fallbackMcqs];

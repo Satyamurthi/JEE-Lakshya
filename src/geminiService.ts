@@ -352,6 +352,6 @@ export const getDeepAnalysis = async (result: any) => {
     }
 };
 
-export const generateFallbackQuestions = (subject: Subject, mcqCount: number = 8, numericalCount: number = 2): Question[] => {
-  return generateDynamicQuestions(subject, mcqCount, numericalCount, "JEE") as any;
+export const generateFallbackQuestions = (subject: Subject, mcqCount: number = 8, numericalCount: number = 2, difficulty?: string): Question[] => {
+  return generateDynamicQuestions(subject, mcqCount, numericalCount, "JEE", difficulty) as any;
 };

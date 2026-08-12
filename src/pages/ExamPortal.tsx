@@ -994,10 +994,37 @@ const ExamPortal = () => {
           /* Question Area */
           <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
             <div className="max-w-4xl mx-auto space-y-8">
-              <div className="flex items-center justify-between">
-                 <span className="px-4 py-1 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg">
-                   Question {currentIndex + 1}
-                 </span>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                 <div className="flex items-center gap-2">
+                   <span className="px-4 py-1.5 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg">
+                     Question {currentIndex + 1}
+                   </span>
+                   {currentQuestion?.subject && (
+                     <span className="px-3 py-1 bg-indigo-50 text-indigo-700 font-black text-[10px] uppercase tracking-widest rounded-lg border border-indigo-100">
+                       {currentQuestion.subject}
+                     </span>
+                   )}
+                   {currentQuestion?.difficulty && (
+                     <span className={`px-3 py-1 font-black text-[10px] uppercase tracking-widest rounded-lg border ${
+                       String(currentQuestion.difficulty).toLowerCase().includes('easy')
+                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                         : String(currentQuestion.difficulty).toLowerCase().includes('hard')
+                         ? 'bg-purple-50 text-purple-700 border-purple-200'
+                         : 'bg-amber-50 text-amber-700 border-amber-200'
+                     }`}>
+                       {currentQuestion.difficulty}
+                     </span>
+                   )}
+                   {currentQuestion?.year ? (
+                     <span className="px-3 py-1 bg-cyan-50 text-cyan-700 font-black text-[10px] uppercase tracking-widest rounded-lg border border-cyan-200">
+                       {currentQuestion.year} PYQ
+                     </span>
+                   ) : (
+                     <span className="px-3 py-1 bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-lg border border-slate-200">
+                       Practice
+                     </span>
+                   )}
+                 </div>
                  <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> +4 Correct</span>
                     <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500" /> -1 Wrong</span>
