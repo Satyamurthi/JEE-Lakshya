@@ -537,3 +537,59 @@ This file records the chronological history of tasks, major changes, and feature
     6. **MCQ "Your Answer" summary row in `Results.tsx`**: Added explicit "Your Answer / Correct Answer" row below MCQ option cards showing option letter + truncated text. Color-coded green (correct) / red (wrong) / grey (not answered).
     7. **Numerical answer zero-fix**: Changed `userAnswer !== undefined` to `userAnswer != null` so numeric zero displays correctly as an answer rather than "Not Answered".
     8. **GitHub Push**: Committed as `6b9350b` to `JEE-Lakshya` and `JEE-Nexus` main branches.
+
+---
+
+## Session 2026-08-12: LaTeX Cleanup + Exam Randomization + Workflow Rules
+
+### Task 1 — LaTeX-Incompatible Question Cleanup
+- **Request**: Delete questions from the DB that break KaTeX rendering on the website.
+- **Problem**: Questions with `<table>`, `<div>`, invalid JSON options, `\vspace` etc. caused the site to look broken.
+- **Scripts created**:
+  - `scripts/cleanup_latex_incompatible.php` — PHP (XAMPP) audit+delete script
+  - `scripts/cleanup_latex_incompatible.js` — Node.js version
+- **Result**:
+  - jee_nexus: 13,619 deleted (10,348 bad HTML tags, 3,152 invalid JSON, 117 bad commands, 2 unbalanced `$$`)
+  - neet_nexus: 0 deleted (already clean)
+  - Remaining: **1,094,108 clean questions** in jee_nexus
+- **Commits**: `56daf2c` on both remotes
+
+### Task 2 — Exam Question Randomization Fix
+- **Request**: Every exam launch was showing the same questions.
+- **Root causes** in `src/supabase.ts` → `fetchQuestionsFromDB()`:
+  1. `query.limit(500)` → always same first 500 rows from 1M+ pool
+  2. `.sort(() => Math.random() - 0.5)` → biased shuffle
+  3. `pattern_id` dedup blocked valid distinct questions
+- **Fixes applied**:
+  1. Count total rows → pick random offset → `query.range(offset, offset+999)` (1000 rows from random position)
+  2. Fisher-Yates shuffle replacing biased sort
+  3. Removed `pattern_id` from selection dedup (kept only `id` dedup)
+  4. Pool size 500 → 1000
+- **Commit**: `1d8acff`
+
+### Task 3 — Per-Student 50-Exam No-Repeat Guarantee
+- **Request**: No student should see the same question for at least 50 exams.
+- **Implementation** (`src/utils/questionTracker.ts` full rewrite + `src/pages/ExamSetup.tsx`):
+  1. History key changed from shared `seen_question_hashes_history_v2` to per-student `q_history_v3_{userId}`
+  2. New `syncStudentQuestionHistory(supabase)` — fetches student's last 50 `exam_attempts`, extracts all question IDs, seeds localStorage. Survives cache clearing and device switching.
+  3. History cap: 5000 → 10,000 (covers 111 full exams)
+  4. Sync called from `ExamSetup.tsx → preparePaper()` before question fetch
+  5. Rate-limited (10 min) and non-fatal
+- **Math**: 50 exams × 90 Qs = 4,500 IDs; cap = 10,000 = 2× buffer
+- **Commit**: `632fca1`
+
+### Task 4 — Mandatory Workflow Rules Established
+- **Request**: Auto-push to GitHub after every change; save everything to brain.
+- **Files updated**:
+  - `.agents/AGENTS.md` — added Rules 5, 6, 7 (auto-push, brain update, tool paths)
+  - `brain/PROJECT_BRAIN.md` — sections 25, 26, 27 added
+  - `brain/session_history.md` — this entry
+- **Commit**: (this commit)
+
+### All commits this session (chronological)
+| Commit | Description |
+|--------|-------------|
+| `56daf2c` | feat: add LaTeX-incompatible question cleanup scripts |
+| `1d8acff` | fix: randomize exam questions on every launch |
+| `632fca1` | feat: guarantee no repeated questions for 50+ exams per student |
+| `(this)` | chore: update AGENTS.md + brain with workflow rules |

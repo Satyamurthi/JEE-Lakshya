@@ -732,3 +732,86 @@ FROM payment_logs GROUP BY user_email ORDER BY total_paid DESC;
 
 The `getActualTotalRevenue()` function in `supabase.ts` queries `payment_logs` as primary source and returns `{ total: number, breakdown: any[] }`.
 
+---
+
+## 25. LATEX CLEANUP — COMPLETED 2026-08-12
+
+### Script
+- `scripts/cleanup_latex_incompatible.php` — scans all 4 databases for KaTeX-incompatible questions and deletes them
+- `scripts/cleanup_latex_incompatible.js` — Node.js version (for future use when Node is in PATH)
+
+### What was deleted (jee_nexus only, 2026-08-12)
+| Reason | Count |
+|--------|-------|
+| Unsupported HTML tags (`<table>`, `<div>`, `<br>` etc.) | 10,348 |
+| Invalid/broken options JSON | 3,152 |
+| KaTeX-unsupported commands (`\vspace`, `\hspace`, `\begin{tabular}`, etc.) | 117 |
+| Unbalanced `$$` delimiters | 2 |
+| **Total deleted** | **13,619** |
+| **Remaining in jee_nexus** | **1,094,108** |
+
+### Run periodically after bulk question imports
+```bash
+# Dry-run first:
+C:\xampp\php\php.exe scripts\cleanup_latex_incompatible.php
+
+# Then delete:
+C:\xampp\php\php.exe scripts\cleanup_latex_incompatible.php --delete
+
+# Single DB:
+C:\xampp\php\php.exe scripts\cleanup_latex_incompatible.php --db=jee_nexus --delete
+```
+
+---
+
+## 26. EXAM QUESTION RANDOMIZATION — FIXED 2026-08-12
+
+### Root causes fixed in `src/supabase.ts` → `fetchQuestionsFromDB()`
+
+1. **Always-same pool**: `query.limit(500)` returned the same first 500 rows every time.
+   **Fix**: Count total rows first, pick a random offset, then fetch 1000 rows from that position.
+
+2. **Biased shuffle**: `.sort(() => Math.random() - 0.5)` is statistically biased.
+   **Fix**: Fisher-Yates shuffle (inside `fisherYatesShuffle<T>()` helper).
+
+3. **Over-aggressive pattern_id dedup**: Questions sharing `pattern_id` were blocked.
+   **Fix**: Removed pattern_id from selection; only dedup by exact `id`.
+
+4. **Pool size too small**: Was 500 candidates, now **1000**.
+
+### Per-student 50-exam guarantee in `src/utils/questionTracker.ts`
+
+- **History key is per-student**: `q_history_v3_{userId}` — students on same device no longer share history.
+- **Server sync**: `syncStudentQuestionHistory(supabase)` runs at exam start, fetches last 50 `exam_attempts`, extracts all question IDs, seeds localStorage. Even clearing the browser won't lose history.
+- **History cap**: 10,000 entries (covers 111 full exams; 50 exams × 90 Qs = 4,500 IDs).
+- **Sync rate-limited**: once per 10 minutes, non-fatal if it fails.
+- Called from `ExamSetup.tsx` → `preparePaper()` before `fetchQuestionsFromDB()`.
+
+---
+
+## 27. MANDATORY WORKFLOW RULES (set 2026-08-12)
+
+> **Every future AI session MUST follow these rules without being asked.**
+
+### Rule 1 — Auto-push after every code change ⚡
+```powershell
+git -C d:\JEE add -A
+git -C d:\JEE commit -m "<descriptive message>"
+git -C d:\JEE push origin main
+```
+- Push **immediately** after each file edit — do not batch at end
+- Remote is pre-authenticated (embedded in URL), no extra credentials needed
+
+### Rule 2 — Update brain after every session 🧠
+After any task completion, update:
+- `brain/PROJECT_BRAIN.md` — add new section or update "Current Operational State"
+- `brain/session_history.md` — append dated session entry
+Then commit + push the brain files themselves.
+
+### Rule 3 — Tool paths
+| Tool | Path |
+|------|------|
+| MySQL / MariaDB | `C:\Program Files\MariaDB 12.3\bin\mysql.exe` |
+| PHP | `C:\xampp\php\php.exe` |
+| Node.js | **NOT in PATH** — use PHP for DB scripts |
+| Git | Available via `git` command in PowerShell |
