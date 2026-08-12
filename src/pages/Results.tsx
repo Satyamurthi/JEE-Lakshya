@@ -16,6 +16,13 @@ const Results = () => {
   const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
 
   useEffect(() => {
+    // \u2500\u2500 Safety net: always clear the exam session from localStorage when the results
+    //    page loads. This ensures that even if the student uses the browser Back
+    //    button back to /exam-portal, there is no active_session to reload.
+    localStorage.removeItem('active_session');
+    localStorage.removeItem('active_exam_questions');
+    localStorage.removeItem('active_exam_config');
+
     const lastResult = localStorage.getItem('last_exam_result');
     if (lastResult) {
       setResult(JSON.parse(lastResult));

@@ -273,6 +273,15 @@ const ExamPortal = () => {
         const sessionKey = `start_time_${config.type}_${config.date || config.chapter || 'practice'}`;
         localStorage.removeItem(sessionKey);
       }
+
+      // ── Clear question-tracker sync rate-limit so the NEXT exam's preparePaper()
+      //    immediately re-syncs seen question IDs from the server instead of waiting
+      //    the 10-minute cooldown. This prevents the same paper from reappearing.
+      try {
+        if (profile.id) {
+          localStorage.removeItem(`q_history_sync_ts_${profile.id}`);
+        }
+      } catch (_) {}
       
       // Store result for analytics page
       localStorage.setItem('last_exam_result', JSON.stringify(attemptData));
@@ -415,7 +424,24 @@ const ExamPortal = () => {
     };
   }, [isRestricted, questions.length, isInitialGateActive, hasEnteredFullscreen, handleSubmit]);
 
-  
+  // ── bfcache guard: browser Back-button after exam submission restores the page
+  //    from the back-forward cache WITHOUT re-running useEffect, so the old exam
+  //    questions and timer would re-appear. Fix: on pageshow with persisted=true,
+  //    redirect away if active_session no longer exists in localStorage.
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        const activeSession = localStorage.getItem('active_session');
+        const dailyQuestions = localStorage.getItem('active_exam_questions');
+        if (!activeSession && !dailyQuestions) {
+          // Exam was already submitted — redirect to exam setup, not back into the exam
+          navigate('/exam-setup', { replace: true });
+        }
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [navigate]);
 
   
 

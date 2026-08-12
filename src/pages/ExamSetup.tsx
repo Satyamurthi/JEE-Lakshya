@@ -25,7 +25,13 @@ const ExamSetup = () => {
   const needsPayment = isIndependent && !checkSubscriptionActive(profile);
 
   useEffect(() => {
-    // Clear any stale exam session locks on setup mount
+    // \u2500\u2500 Clear any stale exam session so a student returning to configure a NEW exam
+    //    never accidentally re-enters the previously submitted paper.
+    localStorage.removeItem('active_session');
+    localStorage.removeItem('active_exam_questions');
+    localStorage.removeItem('active_exam_config');
+
+    // Clear database exam-session lock too
     if (profile && profile.id) {
       const clearLock = async () => {
         try {
