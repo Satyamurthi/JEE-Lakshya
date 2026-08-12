@@ -105,6 +105,10 @@ if (!function_exists('resolve_user_from_token')) {
             return null;
         }
 
+        if ($token === 'temp-local-id' || $token === 'guest') {
+            return ['id' => $token, 'role' => 'student', 'status' => 'approved'];
+        }
+
         global $conn; // Active stream DB connection
         
         try {

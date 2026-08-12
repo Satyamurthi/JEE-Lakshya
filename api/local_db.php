@@ -38,13 +38,21 @@ if (preg_match('/Bearer\s(\S+)/i', $auth_header, $matches)) {
 // 2. Lookup user profile
 $user_profile = resolve_user_from_token($token, $db_name);
 
-// 3. Public access rules (subscription_plans select is public)
-$is_public_action = ($table === 'subscription_plans' && $action === 'select');
+// 3. Public access rules (subscription_plans, questions, and daily_challenges selects are public read-only)
+$is_public_action = (
+    ($table === 'subscription_plans' && $action === 'select') ||
+    ($table === 'questions' && $action === 'select') ||
+    ($table === 'daily_challenges' && $action === 'select')
+);
 
 if (!$is_public_action && !$user_profile) {
     http_response_code(401);
     echo json_encode(["error" => "Unauthorized access. Please log in again."]);
     exit;
+}
+
+if ($is_public_action && !$user_profile) {
+    $user_profile = ['id' => 'guest', 'role' => 'student'];
 }
 
 // 4. Enforce Row-Level Security (RLS) & Access Control
