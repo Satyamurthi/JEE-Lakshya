@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Subject, ExamType, Question, QuestionType } from "./types";
 import { generateDynamicQuestions } from "./utils/fallbackGenerator";
-import { callAIProxy, isNvidiaKey } from "./geminiService";
+import { callAIProxy, isNvidiaKey, delay } from "./geminiService";
 
 const questionSchema: Schema = {
   type: Type.ARRAY,

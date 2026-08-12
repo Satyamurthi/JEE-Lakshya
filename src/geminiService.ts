@@ -281,11 +281,15 @@ export const generateJEEQuestions = async (subject: Subject, count: number, type
   return results;
 };
 
+export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const getQuickHint = async (statement: string, subject: string): Promise<string> => {
   try {
-    const ai = getAIClient();
-    const response = await callAIWithFallback(ai, `Provide a single-sentence strategic hint for this ${subject} question: ${statement.substring(0, 500)}`, { systemInstruction: "You are a helpful tutor." });
-    return response.text || "Focus on fundamental principles.";
+    const text = await callAIProxy(
+      `Provide a single-sentence strategic hint for this ${subject} question: ${statement.substring(0, 500)}`,
+      "You are a helpful tutor. Provide a concise, clear hint without giving away the full answer."
+    );
+    return text || "Focus on fundamental principles.";
   } catch (e) { 
     return "Hint unavailable."; 
   }
