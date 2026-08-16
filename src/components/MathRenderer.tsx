@@ -553,7 +553,7 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   const htmlBlocks: string[] = [];
   const addHtmlBlock = (html: string): string => {
     htmlBlocks.push(html);
-    return `___HTMLBLOCK_${htmlBlocks.length - 1}___`;
+    return `HTMLBLOCKPH${htmlBlocks.length - 1}END`;
   };
   let textToProcess = rawDecoded.replace(
     /<table\b[^>]*>[\s\S]*?<\/table>/gi, m => addHtmlBlock(m)
@@ -571,7 +571,7 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   const katexBlocks: string[] = [];
   const addKaTeXBlock = (html: string): string => {
     katexBlocks.push(html);
-    return `___KATEXBLOCK_${katexBlocks.length - 1}___`;
+    return `KATEXBLOCKPH${katexBlocks.length - 1}END`;
   };
 
   const segments = splitIntoSegments(text);
@@ -593,9 +593,16 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   // Step 6: Render markdown & tables
   let finalHtml = renderMarkdownAndTables(parts.join(''));
 
-  // Step 7: Restore HTML blocks and run sanitizer on raw HTML parts
-  finalHtml = finalHtml.replace(/___KATEXBLOCK_(\d+)___/g, (_, i) => katexBlocks[+i] || '');
-  finalHtml = finalHtml.replace(/___HTMLBLOCK_(\d+)___/g, (_, i) => sanitizeHtml(htmlBlocks[+i] || ''));
+  // Step 7: Restore KaTeX blocks and HTML blocks with fuzzy fallback matching
+  finalHtml = finalHtml.replace(/KATEXBLOCKPH(\d+)END/g, (_, i) => katexBlocks[+i] || '');
+  finalHtml = finalHtml.replace(/HTMLBLOCKPH(\d+)END/g, (_, i) => sanitizeHtml(htmlBlocks[+i] || ''));
+
+  // Fallback cleanup for any legacy placeholder corruptions
+  finalHtml = finalHtml.replace(/%*%*\\?%*%*KATEXBLOCK_?(\d+)%*%*\\?%*%*/gi, (_, i) => katexBlocks[+i] || '');
+  finalHtml = finalHtml.replace(/_?_?_?KATEXBLOCK_?(\d+)_?_?_?/gi, (_, i) => katexBlocks[+i] || '');
+  finalHtml = finalHtml.replace(/%*%*\\?%*%*HTMLBLOCK_?(\d+)%*%*\\?%*%*/gi, (_, i) => sanitizeHtml(htmlBlocks[+i] || ''));
+  finalHtml = finalHtml.replace(/_?_?_?HTMLBLOCK_?(\d+)_?_?_?/gi, (_, i) => sanitizeHtml(htmlBlocks[+i] || ''));
+
 
   // Cache management
   if (RENDER_CACHE.size > MAX_CACHE_SIZE) {
