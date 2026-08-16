@@ -875,3 +875,30 @@ Fix broken LaTeX display issues (`\%%\HTMLBLOCK0\%%`, orphan `$`, double braces 
 ### Auto-Pushed To
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+---
+
+## Session 68 — 2026-08-16 (Resolution of Markdown Bold Placeholder Corruption `_KATEXBLOCK_0_`)
+
+### Request
+Diagnose and resolve `_KATEXBLOCK_0_` and `_HTMLBLOCK_0_` placeholder leak text showing in questions on web portal.
+
+### Root Cause & Diagnostics
+1. `MathRenderer.tsx` used `___KATEXBLOCK_0___` and `___HTMLBLOCK_0___` with leading/trailing triple underscores (`___`).
+2. When `renderMarkdownAndTables` executed, its markdown bold regex `(\*\*|__)(.*?)\1` matched the outer `__` double underscores, mutating `___KATEXBLOCK_0___` into `<strong>_KATEXBLOCK_0_</strong>`.
+3. Step 7 restoration regex `/___KATEXBLOCK_(\d+)___/g` failed to match the mutated single-underscore string `_KATEXBLOCK_0_`, leaving `_KATEXBLOCK_0_` literally rendered in HTML.
+
+### Work Done & Fixes
+1. **Placeholder Token Re-design (`src/components/MathRenderer.tsx`)**:
+   - Replaced underscore and percent placeholders with `KATEXBLOCKPH${i}END` and `HTMLBLOCKPH${i}END` (pure alphanumeric tokens without `_`, `%`, `*`, or `<>`).
+   - Added regex fallback cleaners to strip any legacy or corrupted placeholder strings (`_KATEXBLOCK_`, `%%%KATEXBLOCK`).
+2. **Git Commit & Push**:
+   - Synced `MathRenderer.tsx` fix to `d:\JEE\src\components\MathRenderer.tsx`.
+   - Auto-pushed updates to GitHub `main` branch (`Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus`).
+
+### Commit
+`9971147` — fix: LaTeX MathRenderer placeholder escaping, orphan dollar fix, and auto-wrapping math in sanitizer - Session 68
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
