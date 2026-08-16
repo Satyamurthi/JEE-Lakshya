@@ -47,15 +47,23 @@ def clean_latex(text):
     for uni, ltx in unicode_latex_map.items():
         text = text.replace(uni, ltx)
         
-    # 3. Fix double brace artifacts {{1}} -> {1}
-    text = re.sub(r'\{\{([^{}]*)\}\}', r'{\1}', text)
-    text = re.sub(r'\{\{([^{}]*)\}\}', r'{\1}', text)
+    # 3. Collapse double brace artifacts {{1}} -> {1}
+    for _ in range(5):
+        text = re.sub(r'\{\{([^{}]*)\}\}', r'{\1}', text)
+        
+    # 4. Fix mismatched \left( / \right. orphans
+    text = re.sub(r'\\left\(\s*([a-zA-Z0-9_,\s\.\-]+?)\s*\\right\.', r'(\1)', text)
+    text = re.sub(r'\\left\.\s*([a-zA-Z0-9_,\s\.\-]+?)\s*\\right\)', r'(\1)', text)
+    text = re.sub(r'\\left\(', '(', text)
+    text = re.sub(r'\\right\)', ')', text)
+    text = re.sub(r'\\left\.', '', text)
+    text = re.sub(r'\\right\.', '', text)
     
-    # 4. Fix dots artifacts \,.....,\, -> \dots
+    # 5. Fix dots artifacts \,.....,\, -> \dots
     text = re.sub(r'\\,\s*\.{3,}\s*,\\', r' \\dots ', text)
     text = re.sub(r'\.{4,}', r' \\dots ', text)
     
-    # 5. Auto-wrap bare TeX commands in $...$ math mode
+    # 6. Auto-wrap bare TeX commands in $...$ math mode
     pattern = r'(?<![\$\w\\])\\(frac|sqrt|lim|sum|int|vec|hat|bar|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|pi|sigma|omega|Delta|Omega|mathbb|left|right|infty|leq|geq|neq|approx|in|notin|subset|cup|cap|to|Rightarrow|mathop)\b(\{[^{}]*\}|\s*_[^{}\s]+|\s*\^[^{}\s]+|\s*\\to\s*|\s*\\infty)*([^\$\n\r<>]*?)(?=\s+(?:and|or|are|is|then|equal|to|where|when|find|if|both|with)\b|\$|,|\.|\n|\r|$)'
     
     def wrap_tex(m):
@@ -65,8 +73,17 @@ def clean_latex(text):
         return f' ${val}$ '
         
     text = re.sub(pattern, wrap_tex, text)
+    
+    # 7. De-nest inner dollars (e.g. $ \sum $a_i$ = 192 $ -> $ \sum a_i = 192 $)
+    text = re.sub(r'\$([^\$\n]+?)\$', lambda m: f"${m.group(1).replace('$', '')}$" if '$' in m.group(1) else m.group(0), text)
+    
+    # 8. Strip orphan trailing $ at end of line or standalone $
+    text = re.sub(r'(?<!\\)\$\s*$', '', text, flags=re.M)
+    text = re.sub(r'^\s*\$\s*$', '', text, flags=re.M)
+    
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     return ' '.join(lines)
+
 
 def extract_year_session_source(filename):
     year_match = re.search(r'20\d\d', filename)
