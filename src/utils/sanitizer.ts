@@ -229,19 +229,27 @@ export const fixTeXSyntax = (tex: string): string => {
   t = t.replace(/\^\{\s*(-?\s*\d+)\s*\}/g, (_, n) => `^{${n.replace(/\s+/g, '')}}`);
   t = t.replace(/_\{\s*(\w+)\s*\}/g, (_, n) => `_{${n.trim()}}`);
 
-  // Fix \frac missing denominator: \frac{X}nonBrace → \frac{X}{1}
-  t = t.replace(/\\frac(\{(?:[^{}]|\{[^{}]*\})*\})(?!\s*\{)/g, '\\frac$1{1}');
+  // Fix \mathrm{X_y} and \text{X_y} subscript issues
+  t = t.replace(/\\mathrm\s*\{\s*([a-zA-Z0-9]+)_([a-zA-Z0-9]+)\s*\}/g, '\\mathrm{$1}_{$2}');
+  t = t.replace(/\\text\s*\{\s*([a-zA-Z0-9]+)_([a-zA-Z0-9]+)\s*\}/g, '\\text{$1}_{$2}');
+
+  // Fix \left( / \right. orphan mismatched delimiters
+  t = t.replace(/\\left\(\s*([a-zA-Z0-9_,\s\.\-]+?)\s*\\right\./g, '($1)');
+  t = t.replace(/\\left\.\s*([a-zA-Z0-9_,\s\.\-]+?)\s*\\right\)/g, '($1)');
+  t = t.replace(/\\left\(/g, '(').replace(/\\right\)/g, ')');
+  t = t.replace(/\\left\./g, '').replace(/\\right\./g, '');
 
   // Fix double-escaped braces: \\{\\{N\\}\\} → N
   t = t.replace(/\\\{\\\{([^{}\\]*)\\\}\\\}/g, '$1');
   t = t.replace(/\{\{([^{}\\]*)\}\}/g, '{$1}');
 
   // Collapse {{...}} → {...}
-  for (let pass = 0; pass < 4; pass++) {
+  for (let pass = 0; pass < 5; pass++) {
     const prev = t;
     t = t.replace(/\{\{([^{}]*)\}\}/g, '{$1}');
     if (t === prev) break;
   }
+
 
   // Fix \mathrm{X_y} and \text{X_y} subscript issues
   t = t.replace(/\\mathrm\s*\{\s*([a-zA-Z0-9]+)_([a-zA-Z0-9]+)\s*\}/g, '\\mathrm{$1}_{$2}');
@@ -459,11 +467,21 @@ export const autoWrapMathInText = (text: string): string => {
   // Pattern 2: Coordinates like (-3, -5)
   t = t.replace(/(?<!\$)\(\s*-\d+\s*,\s*-\d+\s*\)(?!\$)/g, '$$&$$');
 
-  // Pattern 3: Subscripts/superscripts like q_1, q_2, r^2 when they are standalone
-  t = t.replace(/(?<![\w$])([a-zA-Z])([_^])([0-9a-zA-Z\-+]+)(?![\w$])/g, '$$$1$2$3$$');
+  // De-nest inner dollars (e.g. $ \sum $a_i$ = 192 $ -> $ \sum a_i = 192 $)
+  t = t.replace(/\$([^\$\n]+?)\$/g, (m, inner) => {
+    if (inner.includes('$')) {
+      return `$${inner.replace(/\$/g, '')}$`;
+    }
+    return m;
+  });
+
+  // Strip orphan trailing $ at end of lines or standalone lines
+  t = t.replace(/(?<!\\)\$\s*$/gm, '');
+  t = t.replace(/^\s*\$\s*$/gm, '');
 
   return t;
 };
+
 
 
 // === Main text cleaning pipeline =============================================
