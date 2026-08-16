@@ -940,3 +940,33 @@ Diagnose and resolve remaining red uncompiled TeX errors shown in 4 user screens
 ### Auto-Pushed To
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+---
+
+## Session 70 — 2026-08-16 (Deep Automated Database Audit & Ultimate TeX Command Auto-Wrapping)
+
+### Request
+Perform deep automated audit across all 177 paper databases to eliminate all remaining TeX errors and bare unwrapped commands.
+
+### Root Cause & Diagnostics
+1. **Digit-Prefixed TeX Commands (`2\sqrt{2}a`, `54\sqrt{2}m`)**:
+   Previous regex `(?<![\$\w\\])` treated digits `2` or `54` before `\sqrt` as word characters (`\w`), skipping auto-wrapping in `$` delimiters.
+2. **Concatenated TeX Commands (`\rightarrowp`, `\epsilon0`)**:
+   OCR extraction merged `\rightarrow` and `p` into `\rightarrowp` and `\epsilon0` into `\epsilon0`.
+
+### Work Done & Fixes
+1. **Ultimate TeX Normalizer (`scripts/build_yearwise_pyq_db.py`, `src/utils/sanitizer.ts`)**:
+   - Enhanced TeX wrapping regex to capture digit-prefixed expressions: `(?<![\$\\])(\b\d+)?\\[a-zA-Z]+\b...` $\rightarrow$ `$2\sqrt{2}a$`.
+   - Added OCR command separation for `\rightarrowp` $\rightarrow$ `\rightarrow p` and `\epsilon0` $\rightarrow$ `\epsilon_0`.
+   - Added combination symbol normalization: `21𝐶1` $\rightarrow$ `^{21}C_{1}`.
+   - Performed deep automated audit across all 177 paper folders (`deep_latex_audit.py`).
+2. **Git Commit & Push**:
+   - Synced updated paper databases and `build_yearwise_pyq_db.py` to `d:\JEE\`.
+   - Auto-pushed updates to GitHub `main` branch (`Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus`).
+
+### Commit
+`37ea1f2` — feat: generate year-wise PYQ exam databases for 177 papers (2013-2026)
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
