@@ -902,3 +902,41 @@ Diagnose and resolve `_KATEXBLOCK_0_` and `_HTMLBLOCK_0_` placeholder leak text 
 ### Auto-Pushed To
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+---
+
+## Session 69 — 2026-08-16 (Resolution of Nested Dollars, Double Braces `\frac{{1}}`, and Parens `\left(` Orphans)
+
+### Request
+Diagnose and resolve remaining red uncompiled TeX errors shown in 4 user screenshots (`\left( a_1 \right.`, `\sum $a_i$`, `\frac{{1}}{{1}+2}}`, trailing orphan `$`).
+
+### Root Cause & Diagnostics
+1. **Nested Dollar Signs (`$ \sum $a_i$ $`)**:
+   `autoWrapMathInText` in `sanitizer.ts` matched subscripts `a_i` and wrapped `$a_i$` inside already-wrapped math expressions, creating nested dollars which broke KaTeX parsing.
+2. **Double Brace Corruption (`\frac{{1}}{{1}+2}}`)**:
+   Line 233 in `sanitizer.ts` (`\frac(\{(?:[^{}]|\{[^{}]*\})*\})(?!\s*\{)`) forcefully appended `{1}` when denominator whitespace interfered, producing `\frac{{1}}{{1}+2}}`.
+3. **Mismatched Parens (`\left( a_1 \right.`)**:
+   Unmatched `\left(` parens across comma-separated terms caused KaTeX syntax errors.
+
+### Work Done & Fixes
+1. **Sanitizer & Sanitization Pipeline (`src/utils/sanitizer.ts`)**:
+   - Removed `\frac` denominator auto-insertion that caused `\frac{{1}}{{1}+2}}` corruptions.
+   - Removed standalone subscript `$a_i$` auto-wrapping regex in `autoWrapMathInText` that created nested dollar signs.
+   - Added dollar de-nesting logic (`t.replace(/\$([^\$\n]+?)\$/g, ...)`) to automatically strip inner dollar signs inside math blocks.
+   - Added `\left(` / `\right.` paren repair regexes to normalize mismatched `\left(` parens to standard `(a_1, a_2)`.
+   - Added 5-pass double brace collapse logic (`{{1}}` -> `{1}`).
+   - Added orphan trailing dollar stripping logic.
+2. **Database Re-generation (`scripts/build_yearwise_pyq_db.py`)**:
+   - Updated `clean_latex` with the new paren repair, brace collapse, and dollar de-nesting cleanups.
+   - Regenerated all 177 year-wise paper databases.
+3. **Git Commit & Push**:
+   - Synced updated paper databases and `sanitizer.ts` to `d:\JEE\`.
+   - Auto-pushed updates to GitHub `main` branch (`Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus`).
+
+### Commits
+- `9ca3877` — feat: generate year-wise PYQ exam databases for 177 papers (2013-2026)
+- `8f998b1` — fix: LaTeX MathRenderer placeholder escaping, orphan dollar fix, and auto-wrapping math in sanitizer
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
