@@ -841,3 +841,37 @@ Extract diagram/figure images from PDFs into paper folders and support Match the
 ### Auto-Pushed To
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+---
+
+## Session 67 — 2026-08-16 (Full Text Statement/Option Extraction & KaTeX LaTeX Rendering Diagnostics & Resolution)
+
+### Request
+Fix broken LaTeX display issues (`\%%\HTMLBLOCK0\%%`, orphan `$`, double braces `{{1}}`, raw TeX commands) and extract actual full question text and options from all 177 PDF papers.
+
+### Root Cause & Diagnostics
+1. `\%%\HTMLBLOCK0\%%` occurred because `MathRenderer.tsx` used `%%%HTMLBLOCK0%%%` placeholders which got escaped to `\%%\HTMLBLOCK0\%%` during TeX macro regexes.
+2. Orphan `$` at the end of text lines was caused by `autoFixDollarDelimiters` appending `$` on odd dollar counts.
+3. Unrendered red TeX text occurred because bare TeX commands (`\lim`, `\frac`, `\sqrt`, `\alpha`, `\beta`, `\vec`, `\mathbb`) were not wrapped in `$` delimiters.
+
+### Work Done & Fixes
+1. **MathRenderer & Sanitizer Fixes (`src/components/MathRenderer.tsx`, `src/utils/sanitizer.ts`)**:
+   - Switched placeholders from `%%%HTMLBLOCK...%%%` and `%%%KATEXBLOCK...%%%` to `___HTMLBLOCK_...___` and `___KATEXBLOCK_...___` (no percent sign).
+   - Fixed `autoFixDollarDelimiters` to strip unclosed orphan dollar signs instead of appending them.
+   - Enhanced `autoWrapMathInText` to automatically detect bare TeX macros and wrap them in `$...$` inline math mode.
+2. **Full Text & LaTeX PDF Extractor (`scripts/build_yearwise_pyq_db.py`)**:
+   - Built full text question and option block extractor separating paper pages from answer keys.
+   - Added PUA font character map to translate PDF Private Use Area glyphs (`\uf02b`, `\uf02d`, `\uf03d`, `\uf0ce`, etc.) to standard TeX operators (`+`, `-`, `=`, `\in`).
+   - Cleaned double braces `{{...}}` and dot artifacts `\,.....,\,`.
+   - Regenerated all 177 paper databases in `d:\JEE V2\DB\JEE\PYQ's\`.
+3. **Git Commit & Push**:
+   - Synced all 177 updated paper databases, `MathRenderer.tsx`, and `sanitizer.ts` to `d:\JEE\`.
+   - Auto-pushed updates to GitHub `main` branch (`Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus`).
+
+### Commits
+- `4292da2` — feat: generate year-wise PYQ exam databases for 177 papers (2013-2026)
+- `3102884` — fix: LaTeX MathRenderer placeholder escaping, orphan dollar fix, and auto-wrapping math in sanitizer
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
