@@ -406,9 +406,16 @@ export const autoFixDollarDelimiters = (raw: string): string => {
   const count = singleDollarMatches ? singleDollarMatches.length : 0;
   let fixed = withPlaceholders;
   if (count % 2 !== 0) {
+    // Attempt inline closing at sentence boundary or end of TeX command
     fixed = fixed.replace(/((?<!\\)\$[^\$\n]*?\\[a-zA-Z]+[^\$\n]*?)(?=\.|,|$|\n|\?)/g, '$1$');
     const newCount = (fixed.match(/(?<!\\)\$/g) || []).length;
-    if (newCount % 2 !== 0) fixed += '$';
+    // If still odd, strip unclosed orphan dollar sign instead of appending one at end
+    if (newCount % 2 !== 0) {
+      const lastDollarIdx = fixed.lastIndexOf('$');
+      if (lastDollarIdx !== -1) {
+        fixed = fixed.slice(0, lastDollarIdx) + fixed.slice(lastDollarIdx + 1);
+      }
+    }
   }
   return fixed.replace(/___DISPLAY_MATH_(\d+)___/g,
     (_, idx) => `$$${placeholders[parseInt(idx, 10)]}$$`);
@@ -430,14 +437,20 @@ export const autoFixSlashDelimiters = (raw: string): string => {
 // === autoWrapMathInText =======================================================
 export const autoWrapMathInText = (text: string): string => {
   if (!text) return '';
-  const dollarCount = (text.match(/(?<!\\)\$/g) || []).length;
-  if (dollarCount >= 4) return text;
 
   let t = text;
 
+  // Auto-wrap bare LaTeX commands (e.g. \frac{1}{2}, \lim_{x \to \infty}, \alpha, \sqrt{x}) not surrounded by $
+  t = t.replace(/(?<![\$\w\\])\\(frac|sqrt|lim|sum|int|vec|hat|bar|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|pi|sigma|omega|Delta|Omega|mathbb|left|right|infty|leq|geq|neq|approx|in|notin|subset|cup|cap|to|Rightarrow|mathop)\b(\{[^{}]*\}|\s*_[^{}\s]+|\s*\^[^{}\s]+|\s*\\to\s*|\s*\\infty)*([^\$\n\r<>]*?)(?=\s+(?:and|or|are|is|then|equal|to|where|when|find|if|both|with)\b|\$|,|\.|\n|\r|$)/g, (match) => {
+    if (match.startsWith('$') || match.startsWith('\\text') || match.startsWith('\\begin') || match.startsWith('\\end')) return match;
+    const trimmed = match.trim();
+    if (!trimmed) return match;
+    return ` $${trimmed}$ `;
+  });
+
   // Pattern 1: q_1 = 38 \mu C or similar math equations
   t = t.replace(/(?<!\$)\b([a-zA-Z_][0-9a-zA-Z_]*(\^|\_)[0-9a-zA-Z_]*)?\s*([=<>])\s*([^$\n\r]+?)(?=\s+(?:and|or|are|is|placed|at|in|vacuum|meters|respectively|find|the|to)\b|$)/gi, (match, p1, p2, op, p3) => {
-    if (/\b(and|or|are|is|placed|at|in|vacuum|meters|respectively|find|the|to|with|of)\b/i.test(p3)) {
+    if (/\b(and|or|are|is|placed|at|in|vacuum|meters|respectively|find|the|to|with|of)\b/i.test(p3) || match.includes('$')) {
       return match;
     }
     return `$${match.trim()}$`;
@@ -451,6 +464,7 @@ export const autoWrapMathInText = (text: string): string => {
 
   return t;
 };
+
 
 // === Main text cleaning pipeline =============================================
 export const cleanQuestionText = (text: string): string => {

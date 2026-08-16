@@ -553,7 +553,7 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   const htmlBlocks: string[] = [];
   const addHtmlBlock = (html: string): string => {
     htmlBlocks.push(html);
-    return `%%%HTMLBLOCK${htmlBlocks.length - 1}%%%`;
+    return `___HTMLBLOCK_${htmlBlocks.length - 1}___`;
   };
   let textToProcess = rawDecoded.replace(
     /<table\b[^>]*>[\s\S]*?<\/table>/gi, m => addHtmlBlock(m)
@@ -571,7 +571,7 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   const katexBlocks: string[] = [];
   const addKaTeXBlock = (html: string): string => {
     katexBlocks.push(html);
-    return `%%%KATEXBLOCK${katexBlocks.length - 1}%%%`;
+    return `___KATEXBLOCK_${katexBlocks.length - 1}___`;
   };
 
   const segments = splitIntoSegments(text);
@@ -594,8 +594,8 @@ export const renderMathInText = (rawText: string, inlineOnly = false): string =>
   let finalHtml = renderMarkdownAndTables(parts.join(''));
 
   // Step 7: Restore HTML blocks and run sanitizer on raw HTML parts
-  finalHtml = finalHtml.replace(/%%%KATEXBLOCK(\d+)%%%/g, (_, i) => katexBlocks[+i] || '');
-  finalHtml = finalHtml.replace(/%%%HTMLBLOCK(\d+)%%%/g, (_, i) => sanitizeHtml(htmlBlocks[+i] || ''));
+  finalHtml = finalHtml.replace(/___KATEXBLOCK_(\d+)___/g, (_, i) => katexBlocks[+i] || '');
+  finalHtml = finalHtml.replace(/___HTMLBLOCK_(\d+)___/g, (_, i) => sanitizeHtml(htmlBlocks[+i] || ''));
 
   // Cache management
   if (RENDER_CACHE.size > MAX_CACHE_SIZE) {
