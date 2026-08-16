@@ -970,3 +970,36 @@ Perform deep automated audit across all 177 paper databases to eliminate all rem
 ### Auto-Pushed To
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+---
+
+## Session 71 — 2026-08-17 (Comprehensive LaTeX Error Fix Pass Across All 177 Paper Databases)
+
+### Request
+"now clear all the errors in other papers, once analyse and catch the error and solve it after that push it to github"
+
+### Work Done
+1. **Sample Paper Analysis (`jee_main_2013_07apr.json`)**:
+   - Full 90-question audit: identified real errors vs false positives from multi-span inline math.
+   - Fixed Q9/Q30: Unicode en-dash `–` between `$P$–$V$` → ASCII hyphen `$P$-$V$`.
+   - Fixed Q44: Missing dash after stereo descriptor `$(-)$1-chloro` → `$(-)$-1-chloro`.
+   - Fixed Q56: Triple-escaped quotes `\\\"Lucas reagent\\\"` → `'Lucas reagent'`.
+   - Fixed Q57: Mixed organic notation `p-CH$_3$-C$_6$H$_4$` → proper `($p$-$\text{CH}_3$-$\text{C}_6\text{H}_4$...)`.
+   - Verified Q84 correctOption=2 via numerical integration (integral = π/12, not π/6).
+
+2. **Comprehensive Fix Script (`scripts/fix_all_papers.py`)**:
+   - Wrote 257-line fixer applying 12 targeted fix categories to every `questions.json`.
+   - Fix categories: Unicode dash normalization, escaped quote removal, stereo descriptor dash, PUA character mapping, Unicode Greek/math → LaTeX, OCR TeX concatenation repair, double brace collapse, `\left(`/`\right.` mismatch normalization, nested dollar flattening, odd dollar stripping, combination notation, non-breaking space removal.
+   - Ran across all **177 paper directories** → **354 files updated** (questions.json + paper.json per paper).
+   - All 177 papers had fixes applied with 7–30 field fixes per paper.
+
+3. **Git Commit & Push**:
+   - Committed `scripts/fix_all_papers.py` to `d:\JEE`.
+   - Pushed to `Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus` (`main` branch).
+
+### Commit
+`e85696a` — feat: add fix_all_papers.py - comprehensive LaTeX fixer for all 177 PYQ paper databases
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
