@@ -6,12 +6,33 @@ import fitz  # PyMuPDF
 PDF_DIR = r"d:\JEE V2\DB\JEE\PYQ's PDF\JEE PYQ"
 TARGET_BASE_DIR = r"d:\JEE V2\DB\JEE\PYQ's"
 
+PUA_MAP = {
+    '\uf02d': '-', '\uf02b': '+', '\uf03d': '=', '\uf03c': '<', '\uf03e': '>',
+    '\uf0b3': '>=', '\uf0a3': '<=', '\uf0b9': '!=', '\uf0ce': r'\in ',
+    '\uf0cd': r'\notin ', '\uf0c8': r'\cup ', '\uf0c7': r'\cap ',
+    '\uf0ae': r'\rightarrow ', '\uf0be': r'\rightarrow ', '\uf0de': r'\rightarrow ',
+    '\uf0b4': r'\times ', '\uf0d7': r'\cdot ', '\uf0b7': r'\cdot ',
+    '\uf0b0': r'^{\circ}', '\uf0b1': r'\pm ', '\uf020': ' ',
+    '\uf028': '(', '\uf029': ')', '\uf05b': '[', '\uf05d': ']',
+    '\uf07b': '{', '\uf07d': '}', '\uf0f2': r'\int ', '\uf0e5': r'\sum ',
+    '\uf061': r'\alpha ', '\uf062': r'\beta ', '\uf067': r'\gamma ',
+    '\uf064': r'\delta ', '\uf065': r'\varepsilon ', '\uf066': r'\phi ',
+    '\uf068': r'\eta ', '\uf06c': r'\lambda ', '\uf06d': r'\mu ',
+    '\uf06e': r'\nu ', '\uf070': r'\pi ', '\uf071': r'\theta ',
+    '\uf072': r'\rho ', '\uf073': r'\sigma ', '\uf077': r'\omega ',
+    '\uf0a5': r'\infty ', '\uf0bc': r'\cdot ', '\uf0ba': r'\equiv ', '\uf0b5': r'\mu ',
+}
+
 def clean_latex(text):
     if not text:
         return ""
     text = text.replace('\xa0', ' ').replace('\r', '')
     
-    # Common Unicode math replacement map to LaTeX
+    # 1. Map PUA font characters
+    for pua, val in PUA_MAP.items():
+        text = text.replace(pua, val)
+        
+    # 2. Map Unicode math symbols
     unicode_latex_map = {
         'α': r'\alpha', 'β': r'\beta', 'γ': r'\gamma', 'δ': r'\delta', 'ε': r'\epsilon',
         'θ': r'\theta', 'λ': r'\lambda', 'μ': r'\mu', 'π': r'\pi', 'σ': r'\sigma',
@@ -26,8 +47,26 @@ def clean_latex(text):
     for uni, ltx in unicode_latex_map.items():
         text = text.replace(uni, ltx)
         
+    # 3. Fix double brace artifacts {{1}} -> {1}
+    text = re.sub(r'\{\{([^{}]*)\}\}', r'{\1}', text)
+    text = re.sub(r'\{\{([^{}]*)\}\}', r'{\1}', text)
+    
+    # 4. Fix dots artifacts \,.....,\, -> \dots
+    text = re.sub(r'\\,\s*\.{3,}\s*,\\', r' \\dots ', text)
+    text = re.sub(r'\.{4,}', r' \\dots ', text)
+    
+    # 5. Auto-wrap bare TeX commands in $...$ math mode
+    pattern = r'(?<![\$\w\\])\\(frac|sqrt|lim|sum|int|vec|hat|bar|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|pi|sigma|omega|Delta|Omega|mathbb|left|right|infty|leq|geq|neq|approx|in|notin|subset|cup|cap|to|Rightarrow|mathop)\b(\{[^{}]*\}|\s*_[^{}\s]+|\s*\^[^{}\s]+|\s*\\to\s*|\s*\\infty)*([^\$\n\r<>]*?)(?=\s+(?:and|or|are|is|then|equal|to|where|when|find|if|both|with)\b|\$|,|\.|\n|\r|$)'
+    
+    def wrap_tex(m):
+        val = m.group(0).strip()
+        if val.startswith('$') or val.startswith('\\text') or val.startswith('\\begin'):
+            return val
+        return f' ${val}$ '
+        
+    text = re.sub(pattern, wrap_tex, text)
     lines = [line.strip() for line in text.split('\n') if line.strip()]
-    return '\n'.join(lines)
+    return ' '.join(lines)
 
 def extract_year_session_source(filename):
     year_match = re.search(r'20\d\d', filename)
@@ -56,8 +95,8 @@ def parse_answer_key(doc):
 def extract_and_map_images(doc, target_dir):
     images_dir = os.path.join(target_dir, "images")
     page_images_map = {}
-    
     img_counter = 1
+    
     for page_idx, page in enumerate(doc):
         image_list = page.get_images(full=True)
         if not image_list:
@@ -71,7 +110,6 @@ def extract_and_map_images(doc, target_dir):
                 image_bytes = base_image["image"]
                 image_ext = base_image["ext"]
                 
-                # Filter out tiny watermark images (< 1.5 KB)
                 if len(image_bytes) < 1500:
                     continue
                     
@@ -89,6 +127,55 @@ def extract_and_map_images(doc, target_dir):
                 pass
                 
     return page_images_map
+
+def extract_question_blocks(doc):
+    paper_text_pages = []
+    for page in doc:
+        p_text = page.get_text("text")
+        if "ANSWER KEY" in p_text.upper() or "ANSWER KEYS" in p_text.upper():
+            continue
+        paper_text_pages.append(p_text)
+        
+    paper_text = "\n".join(paper_text_pages)
+    
+    # Strip watermarks/headers
+    paper_text = re.sub(r'JEE\s*Main.*?\n', '', paper_text, flags=re.I)
+    paper_text = re.sub(r'MathonGo.*?\n', '', paper_text, flags=re.I)
+    paper_text = re.sub(r'Competishun.*?\n', '', paper_text, flags=re.I)
+    paper_text = re.sub(r'Page\s*#.*?\n', '', paper_text, flags=re.I)
+    paper_text = re.sub(r'Join the Most Relevant Test Series.*?\n', '', paper_text, flags=re.I)
+    
+    q_matches = list(re.finditer(r'(?:^|\n)\s*(?:Q\.?\s*|Question\s*)?(\d{1,2})\s*[\.\:\)]\s*', paper_text))
+    q_dict = {}
+    
+    for i in range(len(q_matches)):
+        q_num = int(q_matches[i].group(1))
+        if not (1 <= q_num <= 90):
+            continue
+        start_pos = q_matches[i].end()
+        end_pos = q_matches[i+1].start() if i+1 < len(q_matches) else len(paper_text)
+        
+        chunk = paper_text[start_pos:end_pos].strip()
+        
+        opt_matches = list(re.finditer(r'(?:\n|^)\s*\(([1-4A-D])\)\s*', chunk))
+        if len(opt_matches) >= 4:
+            stmt = chunk[:opt_matches[0].start()].strip()
+            opts = []
+            for o_idx in range(4):
+                o_start = opt_matches[o_idx].end()
+                o_end = opt_matches[o_idx+1].start() if o_idx+1 < len(opt_matches) else len(chunk)
+                opt_text = chunk[o_start:o_end].strip().replace('\n', ' ')
+                opts.append(clean_latex(f"({o_idx+1}) {opt_text}"))
+        else:
+            stmt = chunk
+            opts = None
+            
+        q_dict[q_num] = {
+            "statement": clean_latex(stmt.replace('\n', ' ')),
+            "options": opts
+        }
+        
+    return q_dict
 
 def detect_match_the_following(text):
     if not text:
@@ -113,6 +200,7 @@ def process_pdf(pdf_path):
         
     answer_keys = parse_answer_key(doc)
     page_images_map = extract_and_map_images(doc, target_dir)
+    extracted_q_dict = extract_question_blocks(doc)
     
     total_pages = len(doc)
     questions = []
@@ -122,20 +210,27 @@ def process_pdf(pdf_path):
         subject = "Physics" if q_num <= 30 else ("Chemistry" if q_num <= 60 else "Mathematics")
         section = "MCQ" if (q_num <= 20 or (30 < q_num <= 50) or (60 < q_num <= 80)) else "Numerical"
         
-        # Estimate page for question
         approx_page = min(total_pages, max(1, int(((q_num - 1) / total_q_count) * (total_pages - 2)) + 1))
-        
-        # Check if page has extracted figures
         page_imgs = page_images_map.get(approx_page, [])
         has_image = len(page_imgs) > 0
         image_url = page_imgs[0] if has_image else None
         
         ans = answer_keys.get(q_num, "1" if section == "MCQ" else "0")
         
-        stmt = f"JEE Main {year} ({session_str}) Question {q_num} [{subject}]: Refer to paper statement."
-        opts = ["(1) Option A", "(2) Option B", "(3) Option C", "(4) Option D"] if section == "MCQ" else None
+        # Get extracted statement and options if available
+        q_data = extracted_q_dict.get(q_num, {})
+        raw_stmt = q_data.get("statement", "")
+        raw_opts = q_data.get("options", None)
         
-        is_match = detect_match_the_following(stmt)
+        if not raw_stmt:
+            raw_stmt = f"JEE Main {year} ({session_str}) Question {q_num} [{subject}]: Refer to paper diagram/statement."
+            
+        if section == "MCQ" and not raw_opts:
+            raw_opts = ["(1) Option A", "(2) Option B", "(3) Option C", "(4) Option D"]
+        elif section == "Numerical":
+            raw_opts = None
+            
+        is_match = detect_match_the_following(raw_stmt)
         
         q_obj = {
             "id": f"pyq_{year}_{q_num}",
@@ -145,8 +240,8 @@ def process_pdf(pdf_path):
             "isMatchTheFollowing": is_match,
             "hasImage": has_image,
             "imageUrl": image_url,
-            "statement": clean_latex(stmt),
-            "options": opts,
+            "statement": raw_stmt,
+            "options": raw_opts,
             "correctAnswer": str(ans),
             "solution": f"Step-by-step solution for Question {q_num} of JEE Main {year} ({session_str}). Correct Answer: {ans}.",
             "explanation": f"Detailed concept analysis for Question {q_num}.",
@@ -199,7 +294,7 @@ def main():
         return
         
     pdf_files = [f for f in os.listdir(PDF_DIR) if f.endswith(".pdf")]
-    print(f"=== Starting Enhanced PYQ Generator (Images & Match The Following) ===")
+    print(f"=== Starting Full Text & LaTeX PYQ Generator ===")
     print(f"Found {len(pdf_files)} PYQ PDF papers in source folder.")
     
     count = 0
@@ -209,7 +304,7 @@ def main():
         if created:
             count += 1
             if count % 20 == 0 or count == len(pdf_files):
-                print(f"Processed {count}/{len(pdf_files)} paper databases with image and match detection...")
+                print(f"Processed {count}/{len(pdf_files)} paper databases with full text and LaTeX...")
                 
     print(f"\nSuccessfully generated {count} year-wise exam paper databases in:\n{TARGET_BASE_DIR}")
 
