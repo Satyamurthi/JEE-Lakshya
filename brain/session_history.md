@@ -815,3 +815,29 @@ Analyse project thoroughly, clean up unwanted files, and generate year-wise ques
 ### Auto-Pushed To
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+---
+
+## Session 66 — 2026-08-16 (Image Extraction & Match the Following Support in PYQ Databases)
+
+### Request
+Extract diagram/figure images from PDFs into paper folders and support Match the Following questions.
+
+### Work Done & Fixes
+1. **PyMuPDF Image Extractor Integration**:
+   - Enhanced `scripts/build_yearwise_pyq_db.py` to extract embedded figures and diagrams from PDF pages into an `images/` directory inside each paper folder.
+   - Extracted **5,301 total diagram/figure images** across all 177 paper folders.
+   - Associated extracted images with question objects (`hasImage: true`, `imageUrl: "images/fig_p...png"`).
+2. **Match the Following Detection & Matrix Structuring**:
+   - Added automated detection for List-I / List-II and Column-I / Column-II questions (`isMatchTheFollowing: true`).
+   - Populated structured `matchMatrix` data (`list1`, `list2`) in `questions.json` for seamless rendering.
+3. **Git Commit & Push**:
+   - Synced updated paper databases and images to `d:\JEE\DB\JEE\PYQ's\`.
+   - Auto-pushed updates to GitHub main branch (`Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus`).
+
+### Commit
+`256ce3a` — feat: generate year-wise PYQ exam databases for 177 papers (2013-2026) with images & match support
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
