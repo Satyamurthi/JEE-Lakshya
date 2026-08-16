@@ -26,13 +26,30 @@ PUA_MAP = {
 def clean_latex(text):
     if not text:
         return ""
-    text = text.replace('\xa0', ' ').replace('\r', '')
+    t = text.replace('\xa0', ' ').replace('\r', '')
     
-    # 1. Map PUA font characters
+    # 1. Normalize Unicode minus and dashes to ASCII -
+    t = t.replace('\u2212', '-').replace('\u2013', '-').replace('\u2014', '-')
+    
+    # 2. Fix TeX command concatenation OCR artifacts
+    t = re.sub(r'\\rightarrow([a-zA-Z])', r'\\rightarrow \1', t)
+    t = re.sub(r'\\leftarrow([a-zA-Z])', r'\\leftarrow \1', t)
+    t = re.sub(r'\\epsilon0', r'\\epsilon_0', t)
+    t = re.sub(r'\\epsilon_0([a-zA-Z])(\d+)', r'\\epsilon_0 \1^{\2}', t)
+    
+    # 3. Fix scientific notation 56 × 10-4 -> $56 \times 10^{-4}$
+    t = re.sub(r'(\d+(?:\.\d+)?)\s*(?:[×x]|\u00d7)\s*10\s*-\s*(\d+)', r'$\1 \\times 10^{-\2}$', t)
+    t = re.sub(r'(\d+(?:\.\d+)?)\s*(?:[×x]|\u00d7)\s*10\s*(\d+)', r'$\1 \\times 10^{\2}$', t)
+    t = re.sub(r'\b10\s*-\s*(\d+)', r'$10^{-\1}$', t)
+    
+    # 4. Fix combination notations 21𝐶1 -> ^{21}C_{1}
+    t = re.sub(r'(\d+)[C𝐶](\d+)', r'^{{\1}}C_{{\2}}', t)
+    
+    # 5. PUA font character mapping
     for pua, val in PUA_MAP.items():
-        text = text.replace(pua, val)
+        t = t.replace(pua, val)
         
-    # 2. Map Unicode math symbols
+    # 6. Unicode Greek and math symbols mapping
     unicode_latex_map = {
         'α': r'\alpha', 'β': r'\beta', 'γ': r'\gamma', 'δ': r'\delta', 'ε': r'\epsilon',
         'θ': r'\theta', 'λ': r'\lambda', 'μ': r'\mu', 'π': r'\pi', 'σ': r'\sigma',
@@ -43,47 +60,62 @@ def clean_latex(text):
         '∈': r'\in', '∉': r'\notin', '⊂': r'\subset', '∩': r'\cap', '∪': r'\cup',
         '°': r'^{\circ}'
     }
-    
     for uni, ltx in unicode_latex_map.items():
-        text = text.replace(uni, ltx)
+        t = t.replace(uni, ltx)
         
-    # 3. Collapse double brace artifacts {{1}} -> {1}
+    # 7. Fix OCR concatenated TeX \sqrtA2 -> \sqrt{A_2}
+    t = re.sub(r'\\sqrt([a-zA-Z0-9])', r'\\sqrt{\1}', t)
+    
+    # 8. Fix mismatched \left( / \right. parens
+    t = re.sub(r'\\left\(\s*([a-zA-Z0-9_,\s\.\-]+?)\s*\\right\.', r'(\1)', t)
+    t = re.sub(r'\\left\.\s*([a-zA-Z0-9_,\s\.\-]+?)\s*\\right\)', r'(\1)', t)
+    t = re.sub(r'\\left\(', '(', t)
+    t = re.sub(r'\\right\)', ')', t)
+    t = re.sub(r'\\left\.', '', t)
+    t = re.sub(r'\\right\.', '', t)
+    
+    # 9. Fix double brace artifacts {{1}} -> {1}
     for _ in range(5):
-        text = re.sub(r'\{\{([^{}]*)\}\}', r'{\1}', text)
+        t = re.sub(r'\{\{([^{}]*)\}\}', r'{\1}', t)
         
-    # 4. Fix mismatched \left( / \right. orphans
-    text = re.sub(r'\\left\(\s*([a-zA-Z0-9_,\s\.\-]+?)\s*\\right\.', r'(\1)', text)
-    text = re.sub(r'\\left\.\s*([a-zA-Z0-9_,\s\.\-]+?)\s*\\right\)', r'(\1)', text)
-    text = re.sub(r'\\left\(', '(', text)
-    text = re.sub(r'\\right\)', ')', text)
-    text = re.sub(r'\\left\.', '', text)
-    text = re.sub(r'\\right\.', '', text)
+    # 10. Fix dots artifacts \,.....,\, -> \dots
+    t = re.sub(r'\\,\s*\.{3,}\s*,\\', r' \\dots ', t)
+    t = re.sub(r'\.{4,}', r' \\dots ', t)
     
-    # 5. Fix dots artifacts \,.....,\, -> \dots
-    text = re.sub(r'\\,\s*\.{3,}\s*,\\', r' \\dots ', text)
-    text = re.sub(r'\.{4,}', r' \\dots ', text)
+    # 11. De-nest inner dollars (e.g. $ \sum $a_i$ = 192 $ -> $ \sum a_i = 192 $)
+    t = re.sub(r'\$([^\$\n]+?)\$', lambda m: f"${m.group(1).replace('$', '')}$" if '$' in m.group(1) else m.group(0), t)
     
-    # 6. Auto-wrap bare TeX commands in $...$ math mode
-    pattern = r'(?<![\$\w\\])\\(frac|sqrt|lim|sum|int|vec|hat|bar|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|pi|sigma|omega|Delta|Omega|mathbb|left|right|infty|leq|geq|neq|approx|in|notin|subset|cup|cap|to|Rightarrow|mathop)\b(\{[^{}]*\}|\s*_[^{}\s]+|\s*\^[^{}\s]+|\s*\\to\s*|\s*\\infty)*([^\$\n\r<>]*?)(?=\s+(?:and|or|are|is|then|equal|to|where|when|find|if|both|with)\b|\$|,|\.|\n|\r|$)'
+    # 12. Strip orphan trailing $ at end of line or standalone $
+    t = re.sub(r'(?<!\\)\$\s*$', '', t, flags=re.M)
+    t = re.sub(r'^\s*\$\s*$', '', t, flags=re.M)
+    
+    # 13. Strip odd isolated $ signs if dollar count is odd
+    dollar_count = t.count('$')
+    if dollar_count % 2 != 0:
+        t = re.sub(r'(?<!\\)\$', '', t, count=1)
+        
+    # 14. Auto-wrap ALL TeX commands including prefixed digits like 2\sqrt{2}a
+    pattern = r'(?<![\$\\])(\b\d+)?\\[a-zA-Z]+\b(?:\{[^{}]*\}|_[0-9a-zA-Z{}]+|\^[0-9a-zA-Z{}]+|[a-zA-Z0-9+\-*/=()]*)*'
     
     def wrap_tex(m):
         val = m.group(0).strip()
-        if val.startswith('$') or val.startswith('\\text') or val.startswith('\\begin'):
+        if val.startswith('$') or val.startswith('\\text') or val.startswith('\\begin') or val.startswith('\\end'):
             return val
         return f' ${val}$ '
         
-    text = re.sub(pattern, wrap_tex, text)
+    t = re.sub(pattern, wrap_tex, t)
     
-    # 7. De-nest inner dollars (e.g. $ \sum $a_i$ = 192 $ -> $ \sum a_i = 192 $)
-    text = re.sub(r'\$([^\$\n]+?)\$', lambda m: f"${m.group(1).replace('$', '')}$" if '$' in m.group(1) else m.group(0), text)
-    
-    # 8. Strip orphan trailing $ at end of line or standalone $
-    text = re.sub(r'(?<!\\)\$\s*$', '', text, flags=re.M)
-    text = re.sub(r'^\s*\$\s*$', '', text, flags=re.M)
-    
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    # 15. Balance braces surgically
+    let_open = t.count('{')
+    let_close = t.count('}')
+    if let_open > let_close:
+        t += '}' * (let_open - let_close)
+    elif let_close > let_open:
+        for _ in range(let_close - let_open):
+            t = re.sub(r'\}\s*$', '', t)
+            
+    lines = [line.strip() for line in t.split('\n') if line.strip()]
     return ' '.join(lines)
-
 
 def extract_year_session_source(filename):
     year_match = re.search(r'20\d\d', filename)
@@ -311,7 +343,7 @@ def main():
         return
         
     pdf_files = [f for f in os.listdir(PDF_DIR) if f.endswith(".pdf")]
-    print(f"=== Starting Full Text & LaTeX PYQ Generator ===")
+    print(f"=== Starting Ultimate Full Text & LaTeX PYQ Generator ===")
     print(f"Found {len(pdf_files)} PYQ PDF papers in source folder.")
     
     count = 0
@@ -321,7 +353,7 @@ def main():
         if created:
             count += 1
             if count % 20 == 0 or count == len(pdf_files):
-                print(f"Processed {count}/{len(pdf_files)} paper databases with full text and LaTeX...")
+                print(f"Processed {count}/{len(pdf_files)} paper databases with ultimate LaTeX cleaning...")
                 
     print(f"\nSuccessfully generated {count} year-wise exam paper databases in:\n{TARGET_BASE_DIR}")
 
