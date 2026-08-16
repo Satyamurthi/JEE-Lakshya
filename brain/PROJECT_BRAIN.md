@@ -918,3 +918,17 @@ In `api/local_db.php`, only `subscription_plans` SELECT queries were marked as p
 2. **Fallback Token Resolution (`api/db.php`)**:
    - Added support for `temp-local-id` and `guest` tokens in `resolve_user_from_token()` so read-only queries always execute cleanly.
 
+---
+
+## 35. PROJECT CLEANUP & YEAR-WISE PYQ DATABASE GENERATION 2013–2026 (Session 65, 2026-08-16)
+
+### Work Summary
+1. **Repository Audit & Log Cleanup**:
+   - Cleaned up transient root log files (`cf_quicktunnel.log`, `cf_quicktunnel_err.log`, `serveo_err.log`, `serveo_run.log`, `StartBackend.log`, `sync_progress.json`).
+2. **Automated PYQ Parser Engine (`scripts/build_yearwise_pyq_db.py`)**:
+   - Developed PyMuPDF text & answer key extractor to parse all 177 JEE Main PYQ PDFs (2013-2026) located in `d:\JEE V2\DB\JEE\PYQ's PDF\JEE PYQ\`.
+   - Extracted questions, options, answer key maps, and formatted math expressions into LaTeX syntax.
+3. **Year-Wise Exam Database Structure**:
+   - Generated 177 year-wise paper directories in `d:\JEE V2\DB\JEE\PYQ's\` and `d:\JEE\DB\JEE\PYQ's\`.
+   - Populated each paper folder with `paper.json` (exam metadata) and `questions.json` (90 questions with LaTeX statements, options, answer keys, solutions).
+

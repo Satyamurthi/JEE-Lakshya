@@ -788,8 +788,30 @@ After submitting an exam, pressing "Start Exam" again loaded the same question p
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
 
+---
 
+## Session 65 — 2026-08-16 (Project Cleanup & Automated Year-Wise PYQ Database Generation 2013–2026)
 
+### Request
+Analyse project thoroughly, clean up unwanted files, and generate year-wise question paper databases in LaTeX format for all 177 JEE Main PYQ PDFs (2013-2026) in folder format under `d:\JEE V2\DB\JEE\PYQ's\`.
 
+### Work Done & Fixes
+1. **Project Cleanup**:
+   - Analyzed project repository and safely removed transient log/temporary files: `cf_quicktunnel.log`, `cf_quicktunnel_err.log`, `serveo_err.log`, `serveo_run.log`, `StartBackend.log`, `sync_progress.json`.
+2. **Automated PYQ Database Builder (`scripts/build_yearwise_pyq_db.py`)**:
+   - Built a Python generator script using `pymupdf` to parse all 177 JEE Main PYQ PDF papers (2013–2026) in `d:\JEE V2\DB\JEE\PYQ's PDF\JEE PYQ\`.
+   - Extracted questions, section types (MCQ / Numerical), subject divisions (Physics, Chemistry, Mathematics), and answer keys directly from PDF answer tables.
+   - Formatted mathematical formulas into LaTeX syntax (`\alpha`, `\beta`, `\pi`, `\frac{...}{...}`, `\sqrt{...}`, etc.) and sanitized syntax for KaTeX/MathJax rendering.
+3. **Database Folder Generation**:
+   - Generated 177 individual year-wise paper directories inside `d:\JEE V2\DB\JEE\PYQ's\`.
+   - Each folder contains `paper.json` (metadata: year, shift, session, subject counts, duration) and `questions.json` (90 questions with LaTeX statements, options, answer key, and solutions).
+4. **Git Sync & Push**:
+   - Synced the generated databases to `d:\JEE\DB\JEE\PYQ's\`.
+   - Auto-pushed updates to GitHub main branch (`Satyamurthi/JEE-Lakshya` and `Satyamurthi/JEE-Nexus`).
 
+### Commit
+`7a6b10c` — feat: generate year-wise PYQ exam databases for 177 papers (2013-2026)
 
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
