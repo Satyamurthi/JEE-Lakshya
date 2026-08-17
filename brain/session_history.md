@@ -1003,3 +1003,40 @@ Perform deep automated audit across all 177 paper databases to eliminate all rem
 ### Auto-Pushed To
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+---
+
+## Session 72 — 2026-08-17 (Comprehensive LaTeX Error Fix - Full Audit + Reparse)
+
+### Request
+"there are too many latex errors inside the website fix each and every error"
+
+### Work Done
+
+1. **Deep Audit (15,930 questions across 177 papers)**:
+   - Discovered 6 error categories: placeholder_options (6916), orphan_dollar_word (1738), placeholder_statement (1377), nested_dollars (478), pua_chars (148), unconverted_unicode (76)
+   - Root cause: PDF parser had ~50% option extraction success rate; OCR couldn't match option patterns for many questions
+
+2. **PDF Re-parser (`reparse_all_papers.py`)**:
+   - Improved option extraction supporting 5 formats: (A)/(B), (1)/(2), A./B., 1./2., A)/B)
+   - Better question boundary detection with multiple regex patterns
+   - Comprehensive `clean_latex()` with all fixes: \root \of, \leqslant, PUA, Unicode, double-$, orphan $, nested $, double-backslash, \leqslant/\geqslant
+   - Ran across all **177 papers** → **1,980 questions updated** (options populated, statements fixed)
+
+3. **Sanitizer.ts Comprehensive Overhaul (sanitizer.ts)**:
+   - `autoWrapMathInText()`: Added multi-pass nested dollar flattening, adjacent math span merging ($a$+$b$ → $a+b$), orphan dollar stripping (word$word), proper consecutive passes
+   - `cleanQuestionText()`: Added steps 17-22: double-backslash fix, \implies/\iff/\because/\therefore aliases, empty math removal, comprehensive PUA handling
+   - `fixTeXSyntax()`: Added \root \of → \sqrt[N]{}, \leqslant → \leq
+   - `MathRenderer.tsx`: Extended KATEX_MACROS with \leqslant/\geqslant/\implies/\iff aliases
+
+4. **Git Commits**:
+   - `17b58e9` — initial leqslant/root-of/orphan dollar fixes
+   - `580f774` — comprehensive sanitizer overhaul (nested dollars, merging, aliases)
+
+### Files Changed
+- `src/utils/sanitizer.ts` — comprehensive rewrite of autoWrapMathInText + cleanQuestionText
+- `src/components/MathRenderer.tsx` — extended KATEX_MACROS, added normalizeForKaTeX fixes
+
+### Auto-Pushed To
+- `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
+- `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
