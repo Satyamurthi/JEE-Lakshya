@@ -36,7 +36,24 @@ def clean_latex(text):
     t = re.sub(r'\\leftarrow([a-zA-Z])', r'\\leftarrow \1', t)
     t = re.sub(r'\\epsilon0', r'\\epsilon_0', t)
     t = re.sub(r'\\epsilon_0([a-zA-Z])(\d+)', r'\\epsilon_0 \1^{\2}', t)
-    
+
+    # 2b. Fix \root N \of{X} → \sqrt[N]{X} (plain TeX not KaTeX)
+    t = re.sub(r'\\root\s*(\d+)\s*\\of\s*\{([^}]*)\}', r'\\sqrt[\1]{\2}', t)
+    t = re.sub(r'\\root\s*(\d+)\s*\\of\s+([a-zA-Z0-9_^{}\\]+)', r'\\sqrt[\1]{\2}', t)
+    t = re.sub(r'\\root\s*\\of\s*\{([^}]*)\}', r'\\sqrt{\1}', t)
+
+    # 2c. Fix \leqslant / \geqslant → \leq / \geq (not in KaTeX)
+    t = re.sub(r'\\leqslant\b', r'\\leq', t)
+    t = re.sub(r'\\geqslant\b', r'\\geq', t)
+    t = re.sub(r'\\nleqslant\b', r'\\nleq', t)
+    t = re.sub(r'\\ngeqslant\b', r'\\ngeq', t)
+
+    # 2d. Fix $$expr (double-$ prefix without closing $$) → $expr$
+    t = re.sub(r'\$\$([^$\n]+?)(?=\s*$|\n|[.,:;?!])', lambda m: f'${m.group(1).strip()}$', t, flags=re.MULTILINE)
+
+    # 2e. Fix orphan $ stuck to plain word: "then$" → "then"
+    t = re.sub(r'([a-zA-Z])\$(?=[a-zA-Z\s])', r'\1', t)
+
     # 3. Fix scientific notation 56 × 10-4 -> $56 \times 10^{-4}$
     t = re.sub(r'(\d+(?:\.\d+)?)\s*(?:[×x]|\u00d7)\s*10\s*-\s*(\d+)', r'$\1 \\times 10^{-\2}$', t)
     t = re.sub(r'(\d+(?:\.\d+)?)\s*(?:[×x]|\u00d7)\s*10\s*(\d+)', r'$\1 \\times 10^{\2}$', t)

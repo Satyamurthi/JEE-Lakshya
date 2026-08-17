@@ -210,6 +210,17 @@ const normalizeForKaTeX = (mathContent: string): string => {
   // fracfrac last resort
   t = t.replace(/(?<!\\)fracfrac/gi, '\\frac{\\frac');
 
+  // Fix \root N \of{X} → \sqrt[N]{X}  (TeX syntax not supported in KaTeX)
+  t = t.replace(/\\root\s*(\d+)\s*\\of\s*\{([^}]*)\}/g, '\\sqrt[$1]{$2}');
+  t = t.replace(/\\root\s*(\d+)\s*\\of\s+([a-zA-Z0-9_^{}\\]+)/g, '\\sqrt[$1]{$2}');
+  t = t.replace(/\\root\s*\\of\s*\{([^}]*)\}/g, '\\sqrt{$1}');
+
+  // Fix \leqslant / \geqslant → \leq / \geq (not in KaTeX, covered by macros but be defensive)
+  t = t.replace(/\\leqslant\b/g, '\\leq');
+  t = t.replace(/\\geqslant\b/g, '\\geq');
+  t = t.replace(/\\nleqslant\b/g, '\\nleq');
+  t = t.replace(/\\ngeqslant\b/g, '\\ngeq');
+
   // Remove trailing \right / \left with nothing after
   t = t.replace(/\\right\s*$/g, '');
   t = t.replace(/\\left\s*$/g, '');
@@ -235,6 +246,15 @@ const KATEX_MACROS = {
   '\\d': '\\mathrm{d}',
   '\\therefore': '\\Rightarrow ',
   '\\because': '\\Leftarrow ',
+  // Aliases not in KaTeX core
+  '\\leqslant': '\\leq',
+  '\\geqslant': '\\geq',
+  '\\nleqslant': '\\nleq',
+  '\\ngeqslant': '\\ngeq',
+  '\\varleq': '\\leq',
+  '\\vargeq': '\\geq',
+  '\\implies': '\\Rightarrow',
+  '\\iff': '\\Leftrightarrow',
 };
 
 const renderKaTeX = (mathContent: string, displayMode: boolean): string => {

@@ -290,6 +290,17 @@ export const fixTeXSyntax = (tex: string): string => {
   }
   t = result;
 
+  // Fix \root N \of{X} → \sqrt[N]{X} (plain TeX syntax not supported in KaTeX)
+  t = t.replace(/\\root\s*(\d+)\s*\\of\s*\{([^}]*)\}/g, '\\sqrt[$1]{$2}');
+  t = t.replace(/\\root\s*(\d+)\s*\\of\s+([a-zA-Z0-9_^{}\\]+)/g, '\\sqrt[$1]{$2}');
+  t = t.replace(/\\root\s*\\of\s*\{([^}]*)\}/g, '\\sqrt{$1}');
+
+  // Fix \leqslant / \geqslant → \leq / \geq (not in KaTeX core)
+  t = t.replace(/\\leqslant\b/g, '\\leq');
+  t = t.replace(/\\geqslant\b/g, '\\geq');
+  t = t.replace(/\\nleqslant\b/g, '\\nleq');
+  t = t.replace(/\\ngeqslant\b/g, '\\ngeq');
+
   return t;
 };
 
@@ -406,18 +417,40 @@ export const isOptionCorrect = (
 export const autoFixDollarDelimiters = (raw: string): string => {
   if (!raw || !raw.includes('$')) return raw;
   const placeholders: string[] = [];
+
+  // 1. Stash display math $$...$$ first
   const withPlaceholders = raw.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => {
     placeholders.push(inner);
     return `___DISPLAY_MATH_${placeholders.length - 1}___`;
   });
-  const singleDollarMatches = withPlaceholders.match(/(?<!\\)\$/g);
+
+  // 2. Fix $$expr (double-$ prefix with no closing $$) — treat as $expr$
+  // This catches patterns like $$3x + 4y = 40 at end of text / before punctuation
+  let fixed = withPlaceholders.replace(/\$\$([^\n$]+?)(?=\s*$|\n|[.,:;?!])/gm, (_, inner) => `$${inner.trim()}$`);
+
+  // 3. Fix orphan $ attached to word boundary: "then$" or "word$" without opening
+  // Pattern: word character immediately followed by $ without a preceding \$ or $ ... match
+  fixed = fixed.replace(/(\w)\$(?=[^$\n]{0,80}$)/gm, (match, pre) => {
+    // If there's a closing $ later on this line, it's likely an inline math span — leave it
+    return pre;
+  });
+
+  // 4. Fix orphan $ at start of word: "$then" where $ is not an opening math delimiter
+  // i.e. $ immediately followed by a normal English word (not TeX command)
+  fixed = fixed.replace(/\$([A-Za-z]{2,}(?:\s|$))/gm, (match, word) => {
+    // Skip if it looks like TeX: \frac etc. wouldn't start with plain letters directly after $
+    // This strips things like "then$ the" → "then the"
+    return word;
+  });
+
+  // 5. Check dollar parity and fix orphan trailing/leading $ signs
+  const singleDollarMatches = fixed.match(/(?<!\\)\$/g);
   const count = singleDollarMatches ? singleDollarMatches.length : 0;
-  let fixed = withPlaceholders;
   if (count % 2 !== 0) {
     // Attempt inline closing at sentence boundary or end of TeX command
     fixed = fixed.replace(/((?<!\\)\$[^\$\n]*?\\[a-zA-Z]+[^\$\n]*?)(?=\.|,|$|\n|\?)/g, '$1$');
     const newCount = (fixed.match(/(?<!\\)\$/g) || []).length;
-    // If still odd, strip unclosed orphan dollar sign instead of appending one at end
+    // If still odd, strip unclosed orphan dollar sign
     if (newCount % 2 !== 0) {
       const lastDollarIdx = fixed.lastIndexOf('$');
       if (lastDollarIdx !== -1) {
@@ -425,6 +458,7 @@ export const autoFixDollarDelimiters = (raw: string): string => {
       }
     }
   }
+
   return fixed.replace(/___DISPLAY_MATH_(\d+)___/g,
     (_, idx) => `$$${placeholders[parseInt(idx, 10)]}$$`);
 };
