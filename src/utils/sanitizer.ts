@@ -501,17 +501,41 @@ export const autoWrapMathInText = (text: string): string => {
   // Pattern 2: Coordinates like (-3, -5)
   t = t.replace(/(?<!\$)\(\s*-\d+\s*,\s*-\d+\s*\)(?!\$)/g, '$$&$$');
 
-  // De-nest inner dollars (e.g. $ \sum $a_i$ = 192 $ -> $ \sum a_i = 192 $)
-  t = t.replace(/\$([^\$\n]+?)\$/g, (m, inner) => {
-    if (inner.includes('$')) {
-      return `$${inner.replace(/\$/g, '')}$`;
-    }
-    return m;
-  });
+  // --- Nested dollar flattening: $A$$B$C$ → merge inner $ fragments ---
+  // Pass 1: $expr$text$expr$ → flatten (text between spans is the problem)
+  for (let pass = 0; pass < 5; pass++) {
+    const prev = t;
+    t = t.replace(/\$([^\$\n]+?)\$/g, (m, inner) => {
+      if (inner.includes('$')) {
+        return `$${inner.replace(/\$/g, '')}$`;
+      }
+      return m;
+    });
+    if (t === prev) break;
+  }
 
-  // Strip orphan trailing $ at end of lines or standalone lines
+  // --- Merge consecutive adjacent math spans: $A$ $B$ → $A B$ ---
+  // This handles $a$+$b$ and $x$ - $y$ patterns
+  for (let pass = 0; pass < 3; pass++) {
+    const prev = t;
+    // $expr1$ OP $expr2$ where OP is +, -, *, /, =, <, >, or empty
+    t = t.replace(/\$([^\$\n]{1,60})\$\s*([+\-*/=<>,.;:!?\s]{0,3})\s*\$([^\$\n]{1,60})\$/g,
+      (_, e1, op, e2) => {
+        const o = op.trim();
+        return o ? `$${e1}${o}${e2}$` : `$${e1}${e2}$`;
+      }
+    );
+    if (t === prev) break;
+  }
+
+  // --- Strip orphan trailing $ at end of lines or standalone lines ---
   t = t.replace(/(?<!\\)\$\s*$/gm, '');
   t = t.replace(/^\s*\$\s*$/gm, '');
+
+  // --- Fix orphan $ stuck to word: "then$" → "then", "$the" → "the" ---
+  // Only strip when the $ is NOT opening/closing a math span (i.e. no LaTeX follows)
+  t = t.replace(/([a-zA-Z])\$(?=[a-zA-Z\s,.])/g, '$1');
+  t = t.replace(/(?<=\s|^)\$([a-zA-Z]{2,}(?:\s|$))/gm, '$1');
 
   return t;
 };
@@ -569,7 +593,7 @@ export const cleanQuestionText = (text: string): string => {
     /\[\s*(?:JEE|NEET|KCET|UPSC)?\s*(?:Hard|Medium|Easy|Advanced|Main)?\s*#\d+\s*\]/gi, '');
   cleaned = cleaned.replace(/\[\s*#\d+\s*\]/gi, '');
 
-  // 10. Replace PUA font glyphs
+  // 10. Replace ALL PUA font glyphs (Private Use Area U+F000–U+F0FF)
   cleaned = cleaned.replace(/[\uf000-\uf0ff]/g, (char) => PUA_MAP[char] || '');
 
   // 11. Replace Unicode replacement chars adjacent to numbers
@@ -594,11 +618,26 @@ export const cleanQuestionText = (text: string): string => {
   // 16. Fix }}\s*WORD → } WORD
   cleaned = cleaned.replace(/\}\}\s*([a-zA-Z0-9_\^]+)/g, '} $1');
 
-  // 17. Normalize whitespace
+  // 17. Fix double-backslash before TeX commands: \\frac → \frac
+  cleaned = cleaned.replace(/\\\\(frac|sqrt|sum|int|lim|prod|oint|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|nu|pi|sigma|omega|phi|chi|psi|Gamma|Delta|Sigma|Omega|times|cdot|pm|mp|leq|geq|neq|in|cup|cap|rightarrow|leftarrow|Rightarrow|Leftarrow|infty|partial|nabla|text|mathrm|mathbf|mathcal|vec|hat|bar|tilde|dot|ddot|begin|end|left|right|over(?:line|brace|set|arrow)?)/g, '\\$1');
+
+  // 18. Fix \implies → \Rightarrow, \iff → \Leftrightarrow (KaTeX aliases)
+  cleaned = cleaned.replace(/\\implies\b/g, '\\Rightarrow ');
+  cleaned = cleaned.replace(/\\iff\b/g, '\\Leftrightarrow ');
+
+  // 19. Fix \because / \therefore not supported by KaTeX without package
+  cleaned = cleaned.replace(/\\because\b/g, '\\Leftarrow ');
+  cleaned = cleaned.replace(/\\therefore\b/g, '\\Rightarrow ');
+
+  // 20. Fix empty math spans: $$ or $ $ → remove
+  cleaned = cleaned.replace(/\$\s*\$/g, '');
+  cleaned = cleaned.replace(/\$\$\s*\$\$/g, '');
+
+  // 21. Normalize whitespace
   cleaned = cleaned.replace(/[ \t]+/g, ' ');
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
 
-  // 18. Strip orphan leading curly braces
+  // 22. Strip orphan leading curly braces
   cleaned = cleaned.replace(/^\{{2,}\s*/gm, '');
   cleaned = cleaned.replace(/\{{2,}\s*([A-Za-z])/g, '$1');
 
