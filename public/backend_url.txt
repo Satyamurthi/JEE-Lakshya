@@ -1,1 +1,1 @@
-https://api.trycloudflare.com
+https://gateway-latina-inspection-mandatory.trycloudflare.com
