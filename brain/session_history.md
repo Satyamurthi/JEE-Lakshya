@@ -1040,3 +1040,26 @@ Perform deep automated audit across all 177 paper databases to eliminate all rem
 ### Auto-Pushed To
 - `https://github.com/Satyamurthi/JEE-Lakshya.git` main ✅
 - `https://github.com/Satyamurthi/JEE-Nexus.git` main ✅
+
+---
+
+## Session 59: Complete Supabase SDK & Variable Audit & Removal (JEE V2)
+*   **Request**: Perform a 2-step process: (1) Scan codebase and produce a comprehensive status report covering tech stack, working vs broken features, third-party services, technical debt, and Supabase usage. (2) Completely remove Supabase SDK, env variables, config, and orphan packages, ensuring project builds and runs cleanly.
+*   **Work Done**:
+    1.  **Step 1 Status Analysis**:
+        *   Discovered `d:\JEE V2` did NOT use the real `@supabase/supabase-js` library. `src/supabase.ts` was a 1,671-line custom proxy routing requests directly to a local PHP+MariaDB server (`api/local_db.php`).
+        *   Identified 7 orphan `@supabase/*` packages in `node_modules` that were absent from `package.json` and never imported.
+        *   Identified dead `SUPABASE_URL` / `SUPABASE_ANON_KEY` defines in `vite.config.ts`.
+        *   Identified an ESM `require()` bug on line 651 of `supabase.ts` that silently failed during question fetches.
+        *   Created detailed report artifact `JEE_V2_Status_Report.md`.
+    2.  **Step 2 Complete Removal & Refactoring**:
+        *   Created `src/localApi.ts` as the official local PHP backend client wrapper, renaming `supabase` proxy to `db`, `switchSupabaseBackend` to `switchActiveStream`, and adding deprecation aliases for backward compatibility.
+        *   Fixed the ESM `require()` bug in `localApi.ts` by using dynamic `await import('./utils/sanitizer')`.
+        *   Replaced `src/supabase.ts` with a minimal deprecation re-export shim (`export * from './localApi'`).
+        *   Updated import paths across 20 source files from `supabase` to `localApi`.
+        *   Removed dead `SUPABASE_URL` and `SUPABASE_ANON_KEY` defines from `vite.config.ts`.
+        *   Removed unused server-side `razorpay` dependency from `package.json`.
+        *   Ran `npm install` to flush all orphan `@supabase/*` packages from `node_modules`. Verified 100% clean removal.
+        *   Updated `lucide-react` to latest version, resolving missing icon bundle error.
+        *   Verified production build (`npm run build`) succeeded with 0 errors.
+
