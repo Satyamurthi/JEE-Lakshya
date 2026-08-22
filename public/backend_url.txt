@@ -1,1 +1,1 @@
-https://happens-artificial-various-particular.trycloudflare.com
+https://api.trycloudflare.com
