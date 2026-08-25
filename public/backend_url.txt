@@ -1,1 +1,1 @@
-https://category-actually-exchanges-thumbs.trycloudflare.com
+https://api.trycloudflare.com
