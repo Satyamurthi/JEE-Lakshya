@@ -1,1 +1,1 @@
-https://particular-wind-digital-screen.trycloudflare.com
+https://api.trycloudflare.com
