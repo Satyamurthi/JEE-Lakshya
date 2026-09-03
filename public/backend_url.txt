@@ -1,1 +1,1 @@
-https://always-copying-pupils-tackle.trycloudflare.com
+https://api.trycloudflare.com
