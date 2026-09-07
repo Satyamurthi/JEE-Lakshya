@@ -1,1 +1,1 @@
-https://punch-protected-copy-montana.trycloudflare.com
+https://api.trycloudflare.com
