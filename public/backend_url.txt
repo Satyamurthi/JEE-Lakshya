@@ -1,1 +1,1 @@
-https://mason-guaranteed-ground-practitioners.trycloudflare.com
+https://api.trycloudflare.com
