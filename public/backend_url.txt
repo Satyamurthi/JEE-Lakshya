@@ -1,1 +1,1 @@
-https://fabric-bidder-pipeline-farm.trycloudflare.com
+https://api.trycloudflare.com
