@@ -1,1 +1,1 @@
-https://enormous-adaptation-weighted-angela.trycloudflare.com
+https://api.trycloudflare.com
