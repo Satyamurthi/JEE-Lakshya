@@ -1,1 +1,1 @@
-https://viewpicture-modified-pictures-suppose.trycloudflare.com
+https://api.trycloudflare.com
