@@ -1,1 +1,1 @@
-https://mighty-housewares-titled-quoted.trycloudflare.com
+https://api.trycloudflare.com
