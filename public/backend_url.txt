@@ -1,1 +1,1 @@
-https://forecasts-strongly-got-warm.trycloudflare.com
+https://api.trycloudflare.com
