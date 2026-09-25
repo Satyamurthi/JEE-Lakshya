@@ -1,1 +1,1 @@
-https://easy-kenneth-awarded-higher.trycloudflare.com
+https://api.trycloudflare.com
