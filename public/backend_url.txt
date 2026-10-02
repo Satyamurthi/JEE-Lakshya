@@ -1,1 +1,1 @@
-https://dozens-quizzes-hewlett-student.trycloudflare.com
+https://api.trycloudflare.com
