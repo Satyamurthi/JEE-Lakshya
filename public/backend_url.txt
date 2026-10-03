@@ -1,1 +1,1 @@
-https://api.trycloudflare.com
+https://showers-freight-cpu-truly.trycloudflare.com
