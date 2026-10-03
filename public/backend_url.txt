@@ -1,1 +1,1 @@
-https://reporting-values-vehicle-social.trycloudflare.com
+https://api.trycloudflare.com
