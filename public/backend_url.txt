@@ -1,1 +1,1 @@
-https://auto-attended-basement-vacations.trycloudflare.com
+https://api.trycloudflare.com
