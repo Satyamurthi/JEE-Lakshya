@@ -1,1 +1,1 @@
-https://located-buys-cooking-parent.trycloudflare.com
+https://api.trycloudflare.com
