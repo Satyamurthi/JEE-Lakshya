@@ -1,1 +1,1 @@
-https://api.trycloudflare.com
+https://rochester-pig-cap-prices.trycloudflare.com
