@@ -1,1 +1,1 @@
-https://gen-ballot-speeds-anyway.trycloudflare.com
+https://api.trycloudflare.com
